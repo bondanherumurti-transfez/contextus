@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
+<title>contextus — From Contact Us to contextus</title>
+<meta name="description" content="Replace your contact form with a conversation. contextus captures context, not just contacts.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+@media(prefers-color-scheme:dark){:root{color-scheme:light!important}body{background:#fff!important;color:#000!important}}
+:root{--black:#000;--white:#fff;--g50:#fafafa;--g100:#f5f5f5;--g200:#ebebeb;--g300:#e0e0e0;--g400:#bbb;--g500:#888;--g600:#666;--g700:#444;--g800:#222;--g900:#111;--sans:'DM Sans',-apple-system,sans-serif;--mono:'DM Mono',monospace;--max:720px;--px:1.5rem}
+html{scroll-behavior:smooth;color-scheme:light}
+body{font-family:var(--sans);color:#000;background:#fff;font-size:16px;line-height:1.7;-webkit-font-smoothing:antialiased}
+::selection{background:#000;color:#fff}
+section{padding:5rem var(--px);background:#fff}
+.container{max-width:var(--max);margin:0 auto}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:.5px solid #e0e0e0}
+nav .container{max-width:960px;display:flex;align-items:center;justify-content:space-between;padding:.875rem var(--px)}
+.logo{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--black)}
+.logo svg{display:block;flex-shrink:0}
+.logo-text{font-weight:500;font-size:15px;letter-spacing:-.3px;line-height:26px;display:block}
+.nav-cta{font-size:13px;font-weight:500;color:var(--white);background:var(--black);padding:6px 16px;border-radius:5px;text-decoration:none;transition:opacity .15s}
+.nav-cta:hover{opacity:.8}
+.hero{padding-top:8rem;padding-bottom:1rem;text-align:center}
+.hero h1{font-size:clamp(2rem,5.5vw,3.25rem);font-weight:500;letter-spacing:-1px;line-height:1.15;margin-bottom:1rem}
+.hero h1 .hl{text-decoration:underline;text-underline-offset:5px;text-decoration-thickness:2px}
+.hero .sub{font-size:1.05rem;color:var(--g600);max-width:480px;margin:0 auto .5rem;line-height:1.6}
+.hero .sub-id{font-size:.85rem;color:var(--g500);font-style:italic;max-width:480px;margin:0 auto 2.5rem}
+.ci{max-width:600px;margin:0 auto 1.5rem}
+.ci-wrap{background:var(--g100);border:.5px solid var(--g300);border-radius:16px;padding:14px 18px;transition:border-color .2s,box-shadow .2s;cursor:text}
+.ci-wrap:focus-within{border-color:var(--g500);box-shadow:0 0 0 3px rgba(0,0,0,.04)}
+.ci-row{display:flex;align-items:center;gap:12px}
+.ci-row input{flex:1;border:none;background:0 0;font-size:15px;font-family:var(--sans);color:var(--black);outline:none;padding:4px 0}
+.ci-row input::placeholder{color:var(--g400)}
+.send-btn{width:34px;height:34px;background:var(--black);border:none;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .15s;flex-shrink:0}
+.send-btn:hover{opacity:.8}
+.send-btn svg{width:16px;height:16px;fill:var(--white)}
+.pills{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.pill{font-size:12px;color:var(--g600);padding:6px 14px;border:.5px solid var(--g300);border-radius:20px;cursor:pointer;transition:border-color .15s,background .15s;background:var(--white);font-family:var(--sans)}
+.pill:hover{border-color:var(--g500);background:var(--g100)}
+.signals{display:flex;gap:2rem;justify-content:center;margin-top:2.5rem;flex-wrap:wrap}
+.signals span{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spacing:1px}
+.cp{max-width:600px;margin:0 auto;display:none;text-align:left}
+.cp.open{display:block}
+.cm{padding:.5rem 0 1rem;display:flex;flex-direction:column;gap:.75rem;max-height:400px;overflow-y:auto}
+.m{display:flex;gap:10px;align-items:flex-start}
+.m.mv{justify-content:flex-end}
+.av{width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.av svg{display:block}
+.b{max-width:80%;font-size:14px;line-height:1.6;color:var(--g800)}
+.b.bv{background:var(--g900);color:var(--white);padding:10px 16px;border-radius:14px;border-bottom-right-radius:4px}
+.b.ba{padding:2px 0}
+.td{display:flex;gap:4px;padding:8px 0}
+.td span{width:6px;height:6px;background:var(--g400);border-radius:50%;animation:dp 1.2s infinite}
+.td span:nth-child(2){animation-delay:.2s}
+.td span:nth-child(3){animation-delay:.4s}
+@keyframes dp{0%,60%,100%{opacity:.3;transform:scale(.85)}30%{opacity:1;transform:scale(1)}}
+.ai-wrap{background:var(--g100);border:.5px solid var(--g300);border-radius:16px;padding:14px 18px;display:none;transition:border-color .2s,box-shadow .2s}
+.ai-wrap:focus-within{border-color:var(--g500);box-shadow:0 0 0 3px rgba(0,0,0,.04)}
+.ai-wrap.open{display:block}
+.ai-wrap .ci-row input{font-size:14px}
+.dvd{max-width:600px;margin:0 auto;border:none;border-top:.5px solid var(--g200)}
+.problem{background:#fafafa}
+.problem .lbl{font-family:var(--mono);font-size:12px;color:var(--g500);letter-spacing:1px;margin-bottom:1rem;text-transform:uppercase}
+.problem h2,.hiw h2,.bs h2,.cta h2{font-size:1.5rem;font-weight:500;letter-spacing:-.5px;margin-bottom:.5rem}
+.problem .desc,.hiw .desc,.bs .desc,.cta .desc{color:var(--g600);margin-bottom:2rem;max-width:520px}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+@media(max-width:600px){.cmp{grid-template-columns:1fr}}
+.cc{border:.5px solid var(--g300);border-radius:10px;overflow:hidden;background:var(--white)}
+.cc-h{padding:.75rem 1rem;border-bottom:.5px solid var(--g300);font-family:var(--mono);font-size:12px;color:var(--g500);letter-spacing:.5px}
+.cc-b{padding:1.25rem 1rem}
+.ff{margin-bottom:.75rem}
+.ff label{display:block;font-size:12px;color:var(--g500);margin-bottom:4px}
+.ff .im{width:100%;height:34px;border:.5px solid var(--g300);border-radius:5px;background:var(--g100)}
+.ff .tm{width:100%;height:64px;border:.5px solid var(--g300);border-radius:5px;background:var(--g100)}
+.fsm{margin-top:.75rem;width:100%;height:34px;background:var(--g300);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--g600);font-weight:500}
+.fo{margin-top:1rem;padding-top:.75rem;border-top:.5px solid var(--g200);font-size:12px;color:var(--g500);line-height:1.8}
+.fo .ol{font-family:var(--mono);color:var(--g400);font-size:11px}
+.mcm{margin-bottom:.625rem;display:flex;gap:6px}
+.mcm.v{justify-content:flex-end}
+.mb{max-width:85%;padding:7px 11px;border-radius:10px;font-size:12px;line-height:1.5}
+.mb.ag{background:var(--g100);border-bottom-left-radius:3px;color:var(--black)}
+.mb.vb{background:var(--black);color:var(--white);border-bottom-right-radius:3px}
+.bc{margin-top:.75rem;padding-top:.75rem;border-top:.5px solid var(--g200)}
+.bt{font-size:11px;font-weight:500;margin-bottom:.4rem;font-family:var(--mono);color:var(--g500)}
+.bl{font-size:11px;line-height:1.7;color:var(--g600)}
+.bl strong{color:var(--black);font-weight:500}
+.steps{display:flex;flex-direction:column}
+.step{display:grid;grid-template-columns:48px 1fr;gap:1rem;padding:1.5rem 0;border-top:.5px solid var(--g300)}
+.step:last-child{border-bottom:.5px solid var(--g300)}
+.sn{font-family:var(--mono);font-size:24px;font-weight:500;color:var(--g300);padding-top:2px}
+.step h3{font-size:1rem;font-weight:500;margin-bottom:.35rem}
+.step p{font-size:.9rem;color:var(--g600);line-height:1.6}
+.step .sid{font-size:.8rem;color:var(--g500);font-style:italic;margin-top:.25rem}
+.bs{background:#fafafa}
+.be{background:var(--white);border:.5px solid var(--g300);border-radius:10px;overflow:hidden}
+.beh{padding:1rem 1.25rem;border-bottom:.5px solid var(--g300);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.beh-t{font-weight:500;font-size:.95rem}
+.beh-m{font-family:var(--mono);font-size:11px;color:var(--g500)}
+.beb{padding:1.25rem}
+.br{display:grid;grid-template-columns:100px 1fr;gap:.5rem;padding:.5rem 0;border-bottom:.5px solid var(--g200);font-size:.875rem}
+.br:last-child{border-bottom:none}
+.br-l{font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:.3px;padding-top:2px}
+.br-v{color:var(--g700);line-height:1.6}
+.br-v strong{color:var(--black);font-weight:500}
+.cta{text-align:center}
+.cta .desc-id{color:var(--g500);font-size:.875rem;font-style:italic;margin-bottom:2rem}
+.sf{display:flex;gap:8px;max-width:420px;margin:0 auto}
+.sf input{flex:1;padding:10px 14px;border:1px solid var(--g300);border-radius:8px;font-size:14px;font-family:var(--sans);outline:none;transition:border-color .15s;background:var(--white)}
+.sf input:focus{border-color:var(--black)}
+.sf input::placeholder{color:var(--g400)}
+.btn{display:inline-flex;align-items:center;gap:6px;background:var(--black);color:var(--white);padding:10px 22px;border-radius:8px;font-size:14px;font-weight:500;font-family:var(--sans);text-decoration:none;border:none;cursor:pointer;transition:opacity .15s}
+.btn:hover{opacity:.8}
+.sn2{margin-top:.75rem;font-size:12px;color:var(--g500)}
+footer{padding:2rem var(--px);border-top:.5px solid #e0e0e0;background:#fff}
+footer .container{max-width:960px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem}
+footer .fl{font-size:13px;color:var(--g500)}
+footer .fr{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spacing:.5px}
+.impl{background:#fff}
+.impl h2{font-size:1.5rem;font-weight:500;letter-spacing:-.5px;margin-bottom:.5rem}
+.impl .desc{color:var(--g600);margin-bottom:2rem;max-width:520px}
+.impl-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+@media(max-width:600px){.impl-grid{grid-template-columns:1fr}}
+.impl-card{border:.5px solid var(--g300);border-radius:10px;overflow:hidden;background:var(--g50)}
+.impl-card-h{padding:.625rem 1rem;border-bottom:.5px solid var(--g300);font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:.5px;display:flex;align-items:center;gap:6px}
+.impl-card-h .dot{width:8px;height:8px;border-radius:50%;background:var(--g300)}
+.impl-card-b{padding:1rem;font-family:var(--mono);font-size:12px;line-height:1.8;color:var(--g700);overflow-x:auto;white-space:pre}
+.impl-card-b .cm{color:var(--g400);font-style:italic}
+.impl-card-b .tg{color:var(--g900);font-weight:500}
+.impl-card-b .at{color:var(--g600)}
+.impl-card-b .vl{color:var(--g500)}
+.impl-note{margin-top:1.5rem;padding:1rem 1.25rem;background:var(--g100);border-radius:8px;font-size:.875rem;color:var(--g600);line-height:1.6}
+.impl-note strong{color:var(--black);font-weight:500}
+.impl-options{margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap}
+.impl-opt{flex:1;min-width:140px;padding:1rem;border:.5px solid var(--g300);border-radius:8px;text-align:center}
+.impl-opt-icon{font-size:20px;margin-bottom:.5rem;filter:grayscale(1);opacity:.6}
+.impl-opt-name{font-size:13px;font-weight:500;margin-bottom:.2rem}
+.impl-opt-desc{font-size:11px;color:var(--g500);line-height:1.5}
+@keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.fu{opacity:0;animation:fu .5s ease forwards}
+.fd1{animation-delay:.1s}.fd2{animation-delay:.2s}.fd3{animation-delay:.3s}.fd4{animation-delay:.4s}
+@keyframes mi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.ma{animation:mi .3s ease forwards}
+</style>
+</head>
+<body>
+
+<nav><div class="container">
+  <a href="#" class="logo"><svg width="26" height="26" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg><span class="logo-text">contextus</span></a>
+  <a href="#ea" class="nav-cta">Get early access</a>
+</div></nav>
+
+<section class="hero"><div class="container">
+  <h1 class="fu">From Contact Us<br>to <span class="hl">contextus</span>.</h1>
+  <p class="sub fu fd1">Your contact form captures names. contextus captures context. Every lead comes with a full story.</p>
+  <p class="sub-id fu fd2">Form kontak hanya menangkap nama. contextus menangkap konteks lengkap.</p>
+
+  <div class="ci fu fd3" id="widget-container">
+    <iframe
+      id="contextus-iframe"
+      src="/widget/widget.html?transparent=1&dynamicHeight=1&name=contextus&greeting=Ask%20anything%20about%20contextus..."
+      width="100%"
+      height="420"
+      frameborder="0"
+      scrolling="no"
+      style="border: none; display: block; min-width: 320px;"
+      title="contextus chat"
+    ></iframe>
+  </div>
+
+  <div class="signals fu fd4">
+    <span>ONE SCRIPT TAG</span><span>VERIFIED LEADS</span><span>NO CAPTCHA</span><span>BAHASA &amp; ENGLISH</span>
+  </div>
+</div></section>
+
+<hr class="dvd">
+
+<section class="problem"><div class="container">
+  <div class="lbl">The problem</div>
+  <h2>Contact forms are a dead end.</h2>
+  <p class="desc">97% of visitors leave without submitting. The 3% who do give you almost nothing to work with.</p>
+  <p class="desc" style="font-size:.85rem;color:var(--g500);font-style:italic;margin-top:-1rem">97% pengunjung pergi tanpa mengisi. 3% yang mengisi hanya memberikan informasi minim.</p>
+  <div class="cmp">
+    <div class="cc"><div class="cc-h">BEFORE — Contact form</div><div class="cc-b">
+      <div class="ff"><label>Name</label><div class="im"></div></div>
+      <div class="ff"><label>Email</label><div class="im"></div></div>
+      <div class="ff"><label>Message</label><div class="tm"></div></div>
+      <div class="fsm">Submit</div>
+      <div class="fo"><div><span class="ol">what you get:</span></div><div>Name: Budi</div><div>Email: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="375542535e77505a565e5b1954585a">[email&#160;protected]</a></div><div>Message: "Butuh bantuan pajak"</div></div>
+    </div></div>
+    <div class="cc"><div class="cc-h">AFTER — contextus</div><div class="cc-b">
+      <div class="mcm"><div class="mb ag">Hi! How can I help you with our tax services?</div></div>
+      <div class="mcm v"><div class="mb vb">Saya punya PT baru di F&B, perlu bantuan lapor SPT</div></div>
+      <div class="mcm"><div class="mb ag">Congrats on the new PT! How many employees?</div></div>
+      <div class="mcm v"><div class="mb vb">5 orang, deadline April ini</div></div>
+      <div class="bc"><div class="bt">WHAT YOU GET:</div><div class="bl"><strong>New PT in F&B, 5 employees.</strong> Needs SPT filing urgently (April deadline). Price-sensitive. Lead with setup package + deadline urgency.</div></div>
+    </div></div>
+  </div>
+</div></section>
+
+<section class="hiw" id="hiw"><div class="container">
+  <h2>How it works</h2>
+  <p class="desc">Three steps. Under fifteen minutes. No code.</p>
+  <div class="steps">
+    <div class="step"><div class="sn">01</div><div><h3>Paste your website URL</h3><p>contextus crawls your site and builds a knowledge base automatically. Answer a few quick questions to fill any gaps.</p><p class="sid">Tempel URL website Anda. contextus membangun basis pengetahuan secara otomatis.</p></div></div>
+    <div class="step"><div class="sn">02</div><div><h3>Embed one line of code</h3><p>Copy a single script tag into your website. The conversational interface appears — greeting visitors, answering questions, qualifying leads naturally.</p><p class="sid">Salin satu baris kode. Interface percakapan langsung muncul dan siap melayani.</p></div></div>
+    <div class="step"><div class="sn">03</div><div><h3>Get lead briefs, not form dumps</h3><p>Every conversation becomes a structured lead brief delivered to your WhatsApp or email. Who they are, what they need, how to approach them.</p><p class="sid">Setiap percakapan menjadi ringkasan lead yang dikirim ke WhatsApp atau email Anda.</p></div></div>
+  </div>
+</div></section>
+
+<section class="impl"><div class="container">
+  <h2>Drop it into any website</h2>
+  <p class="desc">One line of code. The interface adapts to your site. No build step, no SDK, no framework dependency.</p>
+  <p class="desc" style="font-size:.85rem;color:var(--g500);font-style:italic;margin-top:-1rem">Satu baris kode. Tidak perlu framework atau proses build apapun.</p>
+  <div class="impl-grid">
+    <div class="impl-card">
+      <div class="impl-card-h"><span class="dot"></span>SCRIPT TAG</div>
+      <div class="impl-card-b"><span class="cm">&lt;!-- Add before &lt;/head&gt; --&gt;</span>
+<span class="tg">&lt;script</span>
+  <span class="at">src</span>=<span class="vl">"https://cdn.contextus.ai/w.js"</span>
+  <span class="at">data-id</span>=<span class="vl">"your-site-id"</span>
+  <span class="at">async</span>
+<span class="tg">&gt;&lt;/script&gt;</span></div>
+    </div>
+    <div class="impl-card">
+      <div class="impl-card-h"><span class="dot"></span>WHAT RENDERS</div>
+      <div class="impl-card-b"><span class="cm">// A conversational interface</span>
+<span class="cm">// appears on your site —</span>
+<span class="cm">// matching your brand,</span>
+<span class="cm">// greeting visitors,</span>
+<span class="cm">// capturing full context.</span>
+
+<span class="tg">placement:</span> <span class="vl">inline | floating | page</span>
+<span class="tg">language:</span>  <span class="vl">auto-detected</span>
+<span class="tg">knowledge:</span> <span class="vl">your-business-profile</span>
+<span class="tg">output:</span>    <span class="vl">lead brief → WhatsApp</span></div>
+    </div>
+  </div>
+  <div class="impl-note"><strong>Implementation is still being finalized.</strong> We're exploring multiple form factors — the interface could render as an inline element that replaces your contact form, a floating panel, a full-page experience, or an embeddable iframe. The right form depends on your site. During early access, we'll work with you to find the best fit.</div>
+  <div class="impl-options">
+    <div class="impl-opt"><div class="impl-opt-icon">&#9645;</div><div class="impl-opt-name">Inline</div><div class="impl-opt-desc">Replaces your existing contact form section</div></div>
+    <div class="impl-opt"><div class="impl-opt-icon">&#9701;</div><div class="impl-opt-name">Floating</div><div class="impl-opt-desc">Appears as a panel from the corner</div></div>
+    <div class="impl-opt"><div class="impl-opt-icon">&#9634;</div><div class="impl-opt-name">Full page</div><div class="impl-opt-desc">Dedicated /contact page experience</div></div>
+    <div class="impl-opt"><div class="impl-opt-icon">&#8644;</div><div class="impl-opt-name">iframe</div><div class="impl-opt-desc">Embed anywhere with a simple URL</div></div>
+  </div>
+</div></section>
+
+<section class="bs"><div class="container">
+  <h2>What a lead brief looks like</h2>
+  <p class="desc">Not a chat transcript. An actionable intelligence card.</p>
+  <p class="desc" style="font-size:.85rem;color:var(--g500);font-style:italic;margin-top:-1rem">Bukan transkrip chat. Kartu intelijen yang bisa langsung ditindaklanjuti.</p>
+  <div class="be">
+    <div class="beh"><span class="beh-t">New lead — PT Alamii Food</span><span class="beh-m">via website · 26 Mar 2026</span></div>
+    <div class="beb">
+      <div class="br"><div class="br-l">WHO</div><div class="br-v"><strong>Finance Manager at PT Alamii Food.</strong> F&B, 51-200 employees. Healthy snacks for children. 20,000+ stores.</div></div>
+      <div class="br"><div class="br-l">NEED</div><div class="br-v">Tax compliance and financial reporting for scaling F&B. New product launched Jan 2026. Hiring Finance Controller and Tax Supervisor.</div></div>
+      <div class="br"><div class="br-l">SIGNALS</div><div class="br-v"><strong>Strong growth</strong> — 11 to 200 employees. <strong>Perfect timing</strong> — building finance team. <strong>Complex needs</strong> — VAT, excise, multi-channel.</div></div>
+      <div class="br"><div class="br-l">OPEN Qs</div><div class="br-v">Asked about PPh 21 rates — agent redirected. <em>This is your follow-up hook.</em></div></div>
+      <div class="br"><div class="br-l">APPROACH</div><div class="br-v">Lead with tax compliance for F&B FMCG. "As Alamii scales to 20K+ stores, we handle bookkeeping and SPT — so your team focuses on product."</div></div>
+      <div class="br"><div class="br-l">QUALITY</div><div class="br-v"><strong>High</strong> — coherent conversation, specific inquiry, contact info provided.</div></div>
+    </div>
+  </div>
+</div></section>
+
+<section class="cta" id="ea"><div class="container">
+  <h2>Get early access</h2>
+  <p class="desc" style="max-width:480px;margin:0 auto .25rem">Replace your contact form with something that actually works.</p>
+  <p class="desc-id">Ganti form kontak Anda dengan yang benar-benar berfungsi.</p>
+  <form class="sf" onsubmit="handleSignup(event)">
+    <input type="email" placeholder="you@company.com" required id="se">
+    <button type="submit" class="btn">Join waitlist</button>
+  </form>
+  <p class="sn2">Free during early access. No credit card.</p>
+  <p class="sn2" id="ss" style="display:none;color:var(--black);font-weight:500">Thanks! We'll be in touch.</p>
+</div></section>
+
+<footer><div class="container">
+  <div class="fl">&copy; 2026 contextus</div>
+  <div class="fr">FROM CONTACT US TO CONTEXTUS</div>
+</div></footer>
+
+<script>
+function handleSignup(e){e.preventDefault();document.getElementById('se').value='';document.getElementById('ss').style.display='block';setTimeout(()=>{document.getElementById('ss').style.display='none'},4000)}
+// Resize iframe when widget reports its height via postMessage
+window.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'contextus:resize') {
+    var iframe = document.getElementById('contextus-iframe');
+    if (iframe) iframe.style.height = e.data.height + 'px';
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light only">
+  <title>contextus</title>
+  <link rel="stylesheet" href="widget.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { font-family: 'DM Sans', sans-serif; background: #ffffff; }
+    body.transparent { background: transparent; }
+    #contextus-root { width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="contextus-root"></div>
+
+  <script src="widget.js"></script>
+  <script>
+    (function () {
+      var params = new URLSearchParams(location.search);
+
+      var transparent = params.get('transparent') === '1';
+      if (transparent) document.body.classList.add('transparent');
+
+      ContextusWidget.init({
+        root: document.getElementById('contextus-root'),
+        name: params.get('name') || 'contextus',
+        greeting: params.get('greeting') || 'Ask us anything...',
+        lang: params.get('lang') || 'auto',
+        transparent: transparent,
+        dynamicHeight: params.get('dynamicHeight') === '1',
+      });
+    })();
+  </script>
+</body>
+</html>
