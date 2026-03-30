@@ -9,12 +9,27 @@
 
 contextus is an embeddable chat widget that sits on a business's website where a "Contact Us" form would normally go. Visitors chat with an AI agent grounded in the business's knowledge base. Every conversation is automatically summarized into a structured lead brief (who they are, what they need, qualification signals, suggested follow-up approach) and delivered to the business owner via WhatsApp or email.
 
-**Current stage:** Pre-launch MVP. The first deployment target is the contextus landing page itself (dogfooding). The widget on the landing page answers questions about contextus. Second deployment will be a tax/accounting firm's website.
+**Current stage:** Pre-launch MVP. Building the "proof of magic" — not a full product yet.
+
+**MVP definition (critical — read this):**
+
+The MVP is NOT a self-service platform. It's a single-page demo that hooks potential customers by showing them their own business served by an AI agent — live, in front of them, with their actual website content. The flow:
+
+1. Visitor lands on the contextus landing page
+2. Reads the value prop, sees the before/after comparison
+3. Sees: **"See contextus on your website — paste your URL"**
+4. Pastes their URL → system crawls in real-time (showing progress)
+5. Live preview appears: a contextus widget powered by *their* content
+6. They chat with it, see it answer questions about *their* business
+7. Below: a sample lead brief generated from the demo conversation
+8. CTA: "Want this on your website? Enter your email."
+
+This validates the core hypothesis (does the crawl → agent → brief pipeline actually work?) with zero commitment from the customer. If they don't paste a URL — not a real prospect. If the agent gives bad answers — the crawl/RAG needs work before anything else gets built. If it works — they'll beg for it.
 
 **What exists already:**
 - Product Requirements Document (PRD v1.2) — full product spec
-- Landing page (HTML) — live, needs widget integration
-- Widget design guideline (HTML) — pixel-level spec for all 11 widget states
+- Landing page (HTML) — live, needs restructuring for URL-input flow
+- Widget design guideline (HTML) — pixel-level spec for all 11 widget states, animations, mobile behavior
 - Logo SVGs — finalized brand mark
 
 ---
@@ -99,20 +114,107 @@ Each plugin is essentially a wrapper around Tier 1 or Tier 2 that simplifies ins
 
 ## Build phases
 
-### Phase 1: Widget frontend
+### Phase 1: The crawl + knowledge pipeline (build first — this is the core)
+**Goal:** Given a URL, crawl the site, extract content, assess quality, and produce a usable knowledge base.
+
+**Why first:** This is the hardest unsolved problem and the foundation of everything. If the crawl produces garbage, nothing else matters — not the widget, not the embed, not the admin panel. Prove this works before building anything around it.
+
+**Build:**
+
+```
+POST /api/crawl
+  Input:  { "url": "https://example.com" }
+  Output: { "job_id": "...", "status": "crawling" }
+
+GET  /api/crawl/:job_id
+  Output: {
+    "status": "complete",
+    "pages_found": 5,
+    "quality_tier": "rich|thin|empty",
+    "company_profile": { ... },
+    "knowledge_chunks": [ ... ],
+    "gaps": ["pricing", "team", "faq"]
+  }
+
+POST /api/crawl/:job_id/enrich
+  Input:  { "answers": { "services": "...", "pricing": "...", "guardrails": "..." } }
+  Output: { "company_profile": { ...updated }, "knowledge_chunks": [ ...updated ] }
+```
+
+**Crawler implementation:**
+1. Fetch the URL + discover linked pages (same domain, max 20 pages, max 30s total)
+2. Extract text content (strip nav, footer, boilerplate — keep headings, paragraphs, lists)
+3. Chunk content into ~500 token segments with overlap
+4. Generate embeddings (Anthropic or OpenAI embeddings API)
+5. Store in vector DB (pgvector) with metadata (source URL, page title, chunk index)
+6. Generate a structured Company Profile via single LLM call:
+   ```json
+   {
+     "name": "extracted or inferred",
+     "industry": "extracted or inferred",
+     "services": ["list of services found"],
+     "location": "if found",
+     "contact": "if found",
+     "summary": "2-3 sentence description",
+     "gaps": ["what's missing — pricing? team? FAQ?"]
+   }
+   ```
+7. Assess quality tier based on content volume:
+   - **rich**: 10+ meaningful paragraphs across 3+ pages → proceed to demo
+   - **thin**: some content but significant gaps → show profile + guided interview
+   - **empty**: almost nothing extracted → skip to guided interview
+
+**Crawl quality tiers — how each is handled:**
+
+```
+RICH (≈30% of SMB sites):
+  Site has real content. Services pages, about us, maybe pricing.
+  → Show: "Here's what contextus knows about your business:" + company profile
+  → Then: Live widget demo immediately
+  → Optional: "Want to add more detail?" link to guided interview
+
+THIN (≈50% of SMB sites):
+  Some content but gaps. Maybe just homepage + one services page.
+  → Show: "We found [N] pages. Here's what contextus knows so far:" + partial profile
+  → Then: "Help contextus learn more — answer 3 quick questions:" + inline interview
+  → Then: Live widget demo with enriched knowledge base
+
+EMPTY (≈20% of SMB sites):
+  Almost nothing — logo, hero image, WhatsApp button.
+  → Show: "Your website is clean and minimal — let's teach contextus directly."
+  → Then: Guided interview (5 questions) — framed as normal, not as failure
+  → Then: Live widget demo with interview-based knowledge base
+```
+
+**Guided interview questions (asked inline on the landing page):**
+1. "What are your main services?" (free text, 1-2 sentences)
+2. "What do customers usually ask about?" (free text)
+3. "What's your typical price range?" (free text, optional)
+4. "What should contextus NOT answer? (e.g., specific pricing, legal advice)" (free text)
+5. "What's the best way for customers to reach your team?" (WhatsApp/email/phone)
+
+Each answer gets chunked, embedded, and added to the knowledge base. The Company Profile updates in real-time.
+
+**Deliverable:** An API that takes a URL, produces a knowledge base and company profile, honestly reports quality, and accepts enrichment from guided interview answers. Ephemeral by default — demo knowledge bases expire after 30 minutes.
+
+---
+
+### Phase 2: Widget frontend
 **Goal:** A standalone, embeddable inline chat component that matches the design guideline exactly.
 
-**Read:** `docs/contextus-widget-design-guideline.html` — it has every color hex, font spec, border radius, button state, and widget state mockup.
+**Read:** `docs/contextus-widget-design-guideline.html` — it has every color hex, font spec, border radius, button state, widget state mockup, animation spec, and mobile behavior rules.
 
 **Key specs:**
 - Monochrome only. All colors hardcoded (no CSS variables). Prevents dark mode bleed on host sites.
 - Font: DM Sans (400, 500, 700) + DM Mono (400). Load from Google Fonts.
 - Input wrapper: `#f0f0f0` background, `16px` border-radius, `15px` font.
-- Logo mark: Black rounded square, white "C" at DM Sans 700. Used in header (18px), agent avatar (24px), and nav.
+- Logo mark: Black rounded square, white "C" at DM Sans 700. Used in header (18px), agent avatar (24px).
 - **Send button has 3 states:**
   - EMPTY: `bg #e0e0e0, fill #999, cursor default` — input is empty
   - ACTIVE: `bg #000, fill #fff, cursor pointer` — input has text
   - DISABLED: `bg #e0e0e0, fill #bbb, cursor not-allowed` — agent is responding, input also disabled
+- **Animations:** See design guideline Section 05. Messages fade in + slide up (200-300ms). Container height transitions smoothly. Send button transitions 120ms between empty/active, snaps instantly to disabled.
+- **Mobile:** See design guideline Section 06. 16px input font (prevents iOS zoom), 50vh scroll max-height, 36px send button touch target, horizontal-scrolling pills.
 
 **11 widget states to implement:**
 
@@ -147,11 +249,11 @@ Both share the same widget code. The standalone page just wraps it in a minimal 
 <script src="https://cdn.contextus.ai/embed.js" async></script>
 ```
 
-**For MVP/demo:** Wire to a mock response engine (keyword matching, like the landing page currently does). Real LLM integration comes in Phase 2.
+**The widget must accept a knowledge base ID** (or ephemeral session ID for demos) so it can connect to the right backend context. For the MVP demo, this is a temporary ID generated by the crawl pipeline.
 
 ---
 
-### Phase 2: Backend API
+### Phase 3: Chat backend + RAG
 **Goal:** API server that handles chat sessions, LLM orchestration, and knowledge retrieval.
 
 **Read:** PRD Sections 5 (Functional Requirements) and 7 (Technical Architecture).
@@ -159,12 +261,10 @@ Both share the same widget code. The standalone page just wraps it in a minimal 
 **Endpoints:**
 
 ```
-POST   /api/session          — Create new chat session (returns session_id)
+POST   /api/session          — Create new chat session (returns session_id, accepts knowledge_base_id)
 WS     /api/chat/:session_id — WebSocket for streaming messages
 POST   /api/message           — Fallback REST endpoint if WS unavailable (SSE response)
 GET    /api/session/:id       — Get session state (for returning visitors)
-POST   /api/knowledge/crawl   — Trigger website crawl for tenant
-PUT    /api/knowledge/:tenant — Update knowledge base
 GET    /api/health            — Health check
 ```
 
@@ -172,10 +272,10 @@ GET    /api/health            — Health check
 1. Visitor message received via WebSocket
 2. Tier 1 security checks (rate limit per IP, behavioral fingerprint score, pattern detection)
 3. RAG retrieval: embed visitor message → vector similarity search against tenant knowledge base
-4. LLM call with: system prompt (business profile + guardrails) + retrieved context + conversation history + visitor message
+4. LLM call with: system prompt (company profile + guardrails) + retrieved context + conversation history + visitor message
 5. Stream response tokens back via WebSocket
 6. Persist message pair to PostgreSQL with extracted metadata tags
-7. On conversation end: trigger lead brief generation (Phase 3)
+7. On conversation end: trigger lead brief generation (Phase 4)
 
 **Key constraints:**
 - `tenant_id` on every table, even though MVP is single-tenant
@@ -185,7 +285,7 @@ GET    /api/health            — Health check
 
 ---
 
-### Phase 3: Lead brief engine
+### Phase 4: Lead brief engine
 **Goal:** Summarize conversations into structured lead briefs and deliver them.
 
 **Read:** PRD Section 3.3 (Lead Brief Generation) and the Alamii Food example in the landing page.
@@ -215,27 +315,72 @@ GET    /api/health            — Health check
 4. Store lead record in PostgreSQL
 5. Deliver via configured channel (WhatsApp message or email) to business owner
 
+**For MVP demo:** Generate a sample lead brief from the demo conversation and display it on the landing page below the widget. This shows the potential customer what their sales team would receive. No delivery yet — just the visual output.
+
 ---
 
-### Phase 4: Landing page integration
-**Goal:** Replace the demo keyword-matching chat on the landing page with the real widget.
+### Phase 5: Landing page — the "proof of magic"
+**Goal:** Restructure the landing page so the primary CTA is "paste your URL" instead of "join waitlist."
 
 **Read:** `site/index.html`
 
-**Steps:**
-1. Remove the inline demo chat JS from the landing page
-2. Replace with the iframe embed pointing at the real backend:
-   ```html
-   <iframe src="https://contextus.ai/embed/contextus-demo?transparent=1&dynamicHeight=1"
-     width="100%" height="400" frameborder="0" style="border:none;"></iframe>
-   ```
-3. Create a "contextus-about" knowledge base with: what contextus is, how it works, pricing direction, Bahasa support, comparison to competitors, embed instructions
-4. The landing page itself becomes the first live deployment — visitors experience the product by asking about the product
-5. Once validated, swap iframe for inline embed (Tier 2) for the smoother experience
+**The landing page becomes three acts:**
+
+**Act 1 — The pitch (above the fold):**
+- Hero: "From Contact Us to contextus."
+- Subtitle + before/after comparison (already exists)
+- The contextus widget about contextus (dogfooding — already exists as demo)
+
+**Act 2 — The proof (mid-page, primary CTA):**
+- Heading: "See contextus on your website"
+- Subtext: "Paste your URL. In 60 seconds, you'll see your business served by an AI agent."
+- URL input field (same monochrome style as the chat input — `#f0f0f0` background, 16px radius)
+- On submit:
+  - Show crawl progress: "Reading your homepage... Found 4 pages... Building knowledge base..."
+  - Assess quality → branch to rich/thin/empty flow
+  - If thin/empty: show guided interview inline
+  - Show live widget preview with their content
+  - Show sample lead brief from a demo conversation
+  - CTA below: "Want this on your website? Enter your email."
+
+**Act 3 — The details (below the fold):**
+- How it works (3 steps — already exists)
+- Implementation section (already exists)
+- Lead brief example (Alamii Food — already exists)
+- Final email capture CTA
+
+**Key technical decisions for the demo:**
+- Demo knowledge bases are ephemeral — stored with a TTL of 30 minutes, then purged
+- Rate limit: max 3 URL crawls per IP per hour (prevent abuse)
+- The demo widget uses the same component as the real widget — it's not a mock
+- No account creation. No login. No sign-up before trying.
 
 ---
 
-### Phase 5: Platform plugins (NOT MVP — build at traction)
+### Phase 6: Customer onboarding (build only after Phase 5 converts)
+**Goal:** The people who tried the demo and said "I want this" get onboarded.
+
+**Only build this when you have 10+ email signups from the demo who explicitly asked for it.**
+
+**Flow:**
+1. Customer receives email: "Your contextus agent is ready to set up"
+2. Link takes them to onboarding page (simple, no account yet)
+3. Shows the Company Profile generated during their demo (it was saved when they signed up)
+4. "Review and edit" — they can fix anything the crawl got wrong
+5. Define guardrails: "What should contextus NOT answer?"
+6. Choose notification channel: WhatsApp or email for lead briefs
+7. Get embed code: iframe URL (Tier 1) — copy and paste
+8. Done. Widget is live on their site.
+
+**Admin panel (minimal):**
+- List of lead briefs received
+- Conversation transcripts (expandable)
+- Knowledge base editor (edit Company Profile, add/remove content)
+- Embed code reference
+
+---
+
+### Phase 7: Platform plugins (NOT MVP — build at traction)
 **Goal:** Native integrations for popular website builders. Only pursue when paying customers request them.
 
 **Priority order (by market size and customer demand):**
@@ -248,8 +393,6 @@ GET    /api/health            — Health check
 | Shopify | Shopify App that injects the script via theme extension. For e-commerce support/contact. | Medium-High |
 | Squarespace | Code injection guide (Squarespace supports `<script>` in page headers). | Low (docs only) |
 | Framer | Embed component guide. Framer supports iframes natively. | Low (docs only) |
-
-**Key insight:** Webflow, Squarespace, and Framer don't need plugins — they support raw HTML/iframe embedding out of the box. For these, a well-written "How to add contextus to your [platform] site" guide with screenshots is sufficient. Only WordPress, Wix, and Shopify need actual native plugins to reduce friction meaningfully.
 
 **Don't build any of this until:**
 - You have 10+ paying customers asking for a specific platform
@@ -293,11 +436,16 @@ GET    /api/health            — Health check
 ## Suggested starting command
 
 ```bash
-# Start with Phase 1 — build the widget frontend
-# Read the design guideline first, then implement
+# Start with Phase 1 — the crawl + knowledge pipeline
+# This is the core of the product. Everything else is a wrapper.
 
-cat docs/contextus-widget-design-guideline.html
-# Then build widget.js following the 11 states spec
+# Build the crawler:
+#   Input: a URL
+#   Output: company profile + knowledge chunks + quality tier
+#
+# Test it against 10 real Indonesian SMB websites before moving to Phase 2.
+# If the crawl produces useful content for 7/10 sites, proceed.
+# If not, improve the crawler before building anything else.
 ```
 
 ---
