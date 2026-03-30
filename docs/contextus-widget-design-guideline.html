@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
+<title>contextus — Inline Widget Design Guideline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; color-scheme: light; }
+body { font-family: 'DM Sans', sans-serif; color: #000; background: #fff; font-size: 15px; line-height: 1.7; -webkit-font-smoothing: antialiased; }
+::selection { background: #000; color: #fff; }
+
+.page { max-width: 780px; margin: 0 auto; padding: 3rem 1.5rem 6rem; }
+
+/* ── Header ── */
+.doc-header { padding-bottom: 2.5rem; border-bottom: 0.5px solid #e0e0e0; margin-bottom: 3rem; }
+.doc-header .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; }
+.doc-header .logo-row svg { display: block; }
+.doc-header .logo-row span { font-size: 20px; font-weight: 500; letter-spacing: -0.5px; }
+.doc-header h1 { font-size: 28px; font-weight: 500; letter-spacing: -0.5px; margin-bottom: 0.5rem; }
+.doc-header .meta { font-family: 'DM Mono', monospace; font-size: 12px; color: #888; letter-spacing: 0.5px; }
+
+/* ── Section ── */
+.section { margin-bottom: 3.5rem; }
+.section-label { font-family: 'DM Mono', monospace; font-size: 11px; color: #888; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 0.75rem; }
+.section h2 { font-size: 20px; font-weight: 500; letter-spacing: -0.3px; margin-bottom: 0.5rem; }
+.section h3 { font-size: 16px; font-weight: 500; margin-bottom: 0.5rem; margin-top: 1.5rem; }
+.section p { color: #444; margin-bottom: 1rem; }
+.section p.muted { color: #888; font-size: 13px; }
+
+/* ── Brand tokens ── */
+.token-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 1rem 0; }
+@media (max-width: 560px) { .token-grid { grid-template-columns: 1fr; } }
+.token-card { border: 0.5px solid #e0e0e0; border-radius: 8px; padding: 12px 14px; }
+.token-label { font-family: 'DM Mono', monospace; font-size: 11px; color: #888; letter-spacing: 0.5px; margin-bottom: 4px; }
+.token-value { font-size: 14px; font-weight: 500; }
+.token-swatch { display: flex; align-items: center; gap: 10px; }
+.swatch { width: 28px; height: 28px; border-radius: 6px; border: 0.5px solid #e0e0e0; flex-shrink: 0; }
+
+/* ── Send button states ── */
+.btn-states { display: flex; gap: 1.5rem; margin: 1rem 0; flex-wrap: wrap; }
+.btn-state { text-align: center; }
+.btn-state-label { font-family: 'DM Mono', monospace; font-size: 10px; color: #888; margin-top: 6px; letter-spacing: 0.5px; }
+.sbtn { width: 34px; height: 34px; border: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+.sbtn svg { width: 16px; height: 16px; display: block; }
+.sbtn.active { background: #000; }
+.sbtn.active svg { fill: #fff; }
+.sbtn.empty { background: #e0e0e0; }
+.sbtn.empty svg { fill: #999; }
+.sbtn.dis { background: #e0e0e0; }
+.sbtn.dis svg { fill: #bbb; }
+
+/* ── Widget preview ── */
+.widget-preview { border: 0.5px solid #e0e0e0; border-radius: 12px; overflow: hidden; max-width: 480px; margin: 1.25rem 0; }
+.wp-inner { background: #fff; }
+.wp-header { padding: 10px 14px; border-bottom: 0.5px solid #e0e0e0; display: flex; align-items: center; gap: 6px; background: #fff; }
+.wp-header svg { display: block; }
+.wp-header span { font-size: 13px; font-weight: 500; color: #000; }
+.wp-header .wp-powered { margin-left: auto; font-size: 10px; color: #bbb; font-family: 'DM Mono', monospace; }
+.wp-body { padding: 14px; background: #fff; }
+.wp-input { background: #f0f0f0; border: 0.5px solid #e0e0e0; border-radius: 16px; padding: 12px 12px 12px 18px; display: flex; align-items: center; gap: 10px; }
+.wp-input input { flex: 1; border: none; background: transparent; font-size: 15px; font-family: 'DM Sans', sans-serif; color: #000; outline: none; }
+.wp-input input::placeholder { color: #bbb; }
+.wp-input input:disabled::placeholder { color: #ccc; }
+.wp-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.wp-pill { font-size: 11px; color: #666; padding: 5px 11px; border: 0.5px solid #e0e0e0; border-radius: 14px; background: #fff; }
+.wp-msg { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 10px; }
+.wp-msg.v { justify-content: flex-end; }
+.wp-av { width: 24px; height: 24px; flex-shrink: 0; }
+.wp-bbl { max-width: 80%; font-size: 13px; line-height: 1.55; color: #222; }
+.wp-bbl.vb { background: #111; color: #fff; padding: 8px 13px; border-radius: 12px; border-bottom-right-radius: 3px; }
+.wp-bbl.ab { padding: 2px 0; }
+.wp-dots { display: flex; gap: 3px; padding: 6px 0; }
+.wp-dots span { width: 5px; height: 5px; background: #bbb; border-radius: 50%; animation: dp 1.2s infinite; }
+.wp-dots span:nth-child(2) { animation-delay: 0.2s; }
+.wp-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dp { 0%,60%,100% { opacity: 0.3; transform: scale(0.85); } 30% { opacity: 1; transform: scale(1); } }
+.wp-scroll { max-height: 200px; overflow-y: auto; margin-bottom: 10px; padding-right: 4px; }
+.wp-scroll::-webkit-scrollbar { width: 3px; }
+.wp-scroll::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+.wp-err { font-size: 12px; color: #a32d2d; padding: 8px 12px; background: #fcebeb; border-radius: 8px; margin-bottom: 10px; }
+.wp-boundary { font-size: 12px; color: #854f0b; padding: 8px 12px; background: #faeeda; border-radius: 8px; margin-top: 6px; }
+.wp-contact { font-size: 11px; color: #0f6e56; padding: 6px 10px; background: #e1f5ee; border-radius: 6px; margin-top: 8px; font-family: 'DM Mono', monospace; }
+.wp-nudge { font-size: 12px; color: #888; font-style: italic; margin-top: 8px; }
+.wp-session { padding: 8px 14px; background: #fafafa; border-top: 0.5px solid #e0e0e0; font-size: 11px; color: #888; display: flex; align-items: center; gap: 6px; }
+.wp-complete { margin-top: 12px; text-align: center; padding: 10px; background: #fafafa; border-radius: 8px; font-size: 12px; color: #888; }
+.wp-complete span { color: #0f6e56; font-weight: 500; }
+.wp-input-bottom { margin-top: 10px; }
+
+/* ── Behavior spec ── */
+.behavior { background: #fafafa; border: 0.5px solid #e0e0e0; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #444; line-height: 1.7; margin: 0.75rem 0 0; }
+.behavior strong { color: #000; font-weight: 500; }
+
+/* ── State card ── */
+.state-card { margin-bottom: 2.5rem; padding-bottom: 2.5rem; border-bottom: 0.5px solid #e0e0e0; }
+.state-card:last-child { border-bottom: none; }
+.state-id { font-family: 'DM Mono', monospace; font-size: 11px; color: #bbb; letter-spacing: 1px; margin-bottom: 4px; }
+.state-title { font-size: 17px; font-weight: 500; margin-bottom: 4px; }
+.state-desc { font-size: 13px; color: #666; margin-bottom: 0; }
+
+/* ── Code block ── */
+.code-block { background: #f5f5f5; border: 0.5px solid #e0e0e0; border-radius: 8px; padding: 12px 14px; font-family: 'DM Mono', monospace; font-size: 12px; line-height: 1.8; color: #333; overflow-x: auto; margin: 0.75rem 0; white-space: pre; }
+
+/* ── Table ── */
+.spec-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 1rem 0; }
+.spec-table th { text-align: left; font-family: 'DM Mono', monospace; font-size: 11px; color: #888; letter-spacing: 0.5px; padding: 8px 10px; border-bottom: 0.5px solid #e0e0e0; font-weight: 400; }
+.spec-table td { padding: 8px 10px; border-bottom: 0.5px solid #f0f0f0; color: #444; vertical-align: top; }
+.spec-table td:first-child { font-weight: 500; color: #000; white-space: nowrap; }
+
+/* ── TOC ── */
+.toc { margin: 1.5rem 0 2rem; }
+.toc a { display: block; font-size: 13px; color: #666; text-decoration: none; padding: 4px 0; transition: color 0.15s; }
+.toc a:hover { color: #000; }
+.toc a .num { font-family: 'DM Mono', monospace; color: #bbb; font-size: 11px; margin-right: 8px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ── Document Header ── -->
+<div class="doc-header">
+  <div class="logo-row">
+    <svg width="32" height="32" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg>
+    <span>contextus</span>
+  </div>
+  <h1>Inline Widget — Design Guideline</h1>
+  <div class="meta">VERSION 1.0 &middot; MARCH 2026 &middot; INTERNAL</div>
+</div>
+
+<!-- ── TOC ── -->
+<div class="toc">
+  <a href="#brand"><span class="num">01</span>Brand tokens</a>
+  <a href="#anatomy"><span class="num">02</span>Widget anatomy</a>
+  <a href="#send-button"><span class="num">03</span>Send button states</a>
+  <a href="#states"><span class="num">04</span>Widget states (11 states)</a>
+  <a href="#sizing"><span class="num">05</span>Sizing &amp; responsive</a>
+  <a href="#embed"><span class="num">06</span>Embed methods</a>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- 01. BRAND TOKENS -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="brand">
+  <div class="section-label">01</div>
+  <h2>Brand tokens</h2>
+  <p>The widget uses a minimal monochrome palette. All colors are hardcoded (no CSS variables) to prevent dark mode bleed on host websites.</p>
+
+  <h3>Colors</h3>
+  <div class="token-grid">
+    <div class="token-card"><div class="token-label">PRIMARY</div><div class="token-swatch"><div class="swatch" style="background:#000"></div><div class="token-value">#000000</div></div></div>
+    <div class="token-card"><div class="token-label">BACKGROUND</div><div class="token-swatch"><div class="swatch" style="background:#fff"></div><div class="token-value">#FFFFFF</div></div></div>
+    <div class="token-card"><div class="token-label">INPUT BACKGROUND</div><div class="token-swatch"><div class="swatch" style="background:#f0f0f0"></div><div class="token-value">#F0F0F0</div></div></div>
+    <div class="token-card"><div class="token-label">BORDER</div><div class="token-swatch"><div class="swatch" style="background:#e0e0e0"></div><div class="token-value">#E0E0E0</div></div></div>
+    <div class="token-card"><div class="token-label">PLACEHOLDER TEXT</div><div class="token-swatch"><div class="swatch" style="background:#bbb"></div><div class="token-value">#BBBBBB</div></div></div>
+    <div class="token-card"><div class="token-label">BODY TEXT</div><div class="token-swatch"><div class="swatch" style="background:#222"></div><div class="token-value">#222222</div></div></div>
+    <div class="token-card"><div class="token-label">MUTED TEXT</div><div class="token-swatch"><div class="swatch" style="background:#888"></div><div class="token-value">#888888</div></div></div>
+    <div class="token-card"><div class="token-label">VISITOR BUBBLE</div><div class="token-swatch"><div class="swatch" style="background:#111"></div><div class="token-value">#111111</div></div></div>
+    <div class="token-card"><div class="token-label">SEND BTN DISABLED</div><div class="token-swatch"><div class="swatch" style="background:#e0e0e0"></div><div class="token-value">#E0E0E0</div></div></div>
+    <div class="token-card"><div class="token-label">ERROR</div><div class="token-swatch"><div class="swatch" style="background:#fcebeb"></div><div class="token-value">#FCEBEB / #A32D2D</div></div></div>
+    <div class="token-card"><div class="token-label">BOUNDARY WARNING</div><div class="token-swatch"><div class="swatch" style="background:#faeeda"></div><div class="token-value">#FAEEDA / #854F0B</div></div></div>
+    <div class="token-card"><div class="token-label">SUCCESS / CONTACT</div><div class="token-swatch"><div class="swatch" style="background:#e1f5ee"></div><div class="token-value">#E1F5EE / #0F6E56</div></div></div>
+  </div>
+
+  <h3>Typography</h3>
+  <table class="spec-table">
+    <tr><th>ELEMENT</th><th>FONT</th><th>WEIGHT</th><th>SIZE</th></tr>
+    <tr><td>Input text</td><td>DM Sans</td><td>400</td><td>15px</td></tr>
+    <tr><td>Agent message</td><td>DM Sans</td><td>400</td><td>13px</td></tr>
+    <tr><td>Visitor bubble</td><td>DM Sans</td><td>400</td><td>13px</td></tr>
+    <tr><td>Header name</td><td>DM Sans</td><td>500</td><td>13px</td></tr>
+    <tr><td>Pill buttons</td><td>DM Sans</td><td>400</td><td>11px</td></tr>
+    <tr><td>"powered by" label</td><td>DM Mono</td><td>400</td><td>10px</td></tr>
+    <tr><td>Logo mark "C"</td><td>DM Sans</td><td>700</td><td>34px (in 64 viewBox)</td></tr>
+    <tr><td>Logo wordmark</td><td>DM Sans</td><td>500</td><td>Scales with mark</td></tr>
+  </table>
+
+  <h3>Border radii</h3>
+  <table class="spec-table">
+    <tr><th>ELEMENT</th><th>RADIUS</th></tr>
+    <tr><td>Widget container</td><td>12px</td></tr>
+    <tr><td>Input wrapper</td><td>16px</td></tr>
+    <tr><td>Send button</td><td>8px</td></tr>
+    <tr><td>Pill buttons</td><td>14px</td></tr>
+    <tr><td>Agent bubble</td><td>None (plain text)</td></tr>
+    <tr><td>Visitor bubble</td><td>12px (bottom-right: 3px)</td></tr>
+    <tr><td>Logo mark</td><td>12px (in 64 viewBox)</td></tr>
+    <tr><td>System messages (error, boundary)</td><td>8px</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- 02. WIDGET ANATOMY -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="anatomy">
+  <div class="section-label">02</div>
+  <h2>Widget anatomy</h2>
+  <p>The inline widget has four layers, top to bottom.</p>
+
+  <div class="widget-preview">
+    <div class="wp-inner">
+      <div class="wp-header">
+        <svg width="18" height="18" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg>
+        <span>contextus</span>
+        <span class="wp-powered">powered by contextus</span>
+      </div>
+      <div class="wp-body">
+        <div class="wp-msg"><div class="wp-av"><svg width="24" height="24" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg></div><div class="wp-bbl ab">Hi! How can I help you today?</div></div>
+        <div class="wp-msg v"><div class="wp-bbl vb">I need help with tax filing</div></div>
+        <div class="wp-input-bottom">
+          <div class="wp-input">
+            <input type="text" placeholder="Type a message...">
+            <div class="sbtn empty"><svg viewBox="0 0 24 24"><path d="M5.694 12 2.299 3.272c-.236-.607.356-1.188.942-.982l.093.04 18 9a.75.75 0 0 1 .097 1.283l-.097.058-18 9c-.619.31-1.263-.277-1.035-.916l.035-.084L5.694 12 2.3 3.272 5.694 12ZM4.402 4.54l2.61 6.71h6.627a.75.75 0 0 1 .102 1.493l-.102.007H7.01l-2.609 6.71L19.322 12 4.401 4.54Z"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <table class="spec-table">
+    <tr><th>LAYER</th><th>DESCRIPTION</th></tr>
+    <tr><td>Header</td><td>Logo mark (18px) + "contextus" + "powered by contextus" right-aligned. 0.5px bottom border. Customizable: business owner can replace "contextus" with their own name.</td></tr>
+    <tr><td>Message area</td><td>Agent messages: logo avatar (24px) + left-aligned plain text. Visitor messages: right-aligned dark bubbles. Auto-grows. Scrolls at max-height.</td></tr>
+    <tr><td>Input area</td><td>#f0f0f0 background, 16px radius, 15px font. Send button pinned right inside the input wrapper. Always visible — never scrolls out of view.</td></tr>
+    <tr><td>Pills (idle only)</td><td>Below input. 11px text, 14px radius, 0.5px border. Disappear after first message. Optional — omit if knowledge base is too thin.</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- 03. SEND BUTTON STATES -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="send-button">
+  <div class="section-label">03</div>
+  <h2>Send button states</h2>
+  <p>The send button has exactly three visual states. These are the only three appearances it ever takes.</p>
+
+  <div class="btn-states">
+    <div class="btn-state">
+      <div class="sbtn empty"><svg viewBox="0 0 24 24"><path d="M5.694 12 2.299 3.272c-.236-.607.356-1.188.942-.982l.093.04 18 9a.75.75 0 0 1 .097 1.283l-.097.058-18 9c-.619.31-1.263-.277-1.035-.916l.035-.084L5.694 12 2.3 3.272 5.694 12ZM4.402 4.54l2.61 6.71h6.627a.75.75 0 0 1 .102 1.493l-.102.007H7.01l-2.609 6.71L19.322 12 4.401 4.54Z"/></svg></div>
+      <div class="btn-state-label">EMPTY</div>
+    </div>
+    <div class="btn-state">
+      <div class="sbtn active"><svg viewBox="0 0 24 24"><path d="M5.694 12 2.299 3.272c-.236-.607.356-1.188.942-.982l.093.04 18 9a.75.75 0 0 1 .097 1.283l-.097.058-18 9c-.619.31-1.263-.277-1.035-.916l.035-.084L5.694 12 2.3 3.272 5.694 12ZM4.402 4.54l2.61 6.71h6.627a.75.75 0 0 1 .102 1.493l-.102.007H7.01l-2.609 6.71L19.322 12 4.401 4.54Z"/></svg></div>
+      <div class="btn-state-label">ACTIVE</div>
+    </div>
+    <div class="btn-state">
+      <div class="sbtn dis"><svg viewBox="0 0 24 24"><path d="M5.694 12 2.299 3.272c-.236-.607.356-1.188.942-.982l.093.04 18 9a.75.75 0 0 1 .097 1.283l-.097.058-18 9c-.619.31-1.263-.277-1.035-.916l.035-.084L5.694 12 2.3 3.272 5.694 12ZM4.402 4.54l2.61 6.71h6.627a.75.75 0 0 1 .102 1.493l-.102.007H7.01l-2.609 6.71L19.322 12 4.401 4.54Z"/></svg></div>
+      <div class="btn-state-label">DISABLED</div>
+    </div>
+  </div>
+
+  <table class="spec-table">
+    <tr><th>STATE</th><th>BACKGROUND</th><th>ICON FILL</th><th>CURSOR</th><th>WHEN</th></tr>
+    <tr><td>Empty</td><td>#E0E0E0</td><td>#999</td><td>default</td><td>Input has no text. Click is a no-op.</td></tr>
+    <tr><td>Active</td><td>#000000</td><td>#FFF</td><td>pointer</td><td>Input has at least 1 character. Click or Enter sends.</td></tr>
+    <tr><td>Disabled</td><td>#E0E0E0</td><td>#BBB</td><td>not-allowed</td><td>Agent is responding. Input also disabled. Prevents double-send.</td></tr>
+  </table>
+
+  <h3>Transition logic</h3>
+  <div class="code-block">idle:        EMPTY
+type char:   → ACTIVE
+clear input: → EMPTY
+click send:  → message sent → DISABLED
+agent done:  → EMPTY (input cleared)
+pill click:  → message sent → DISABLED (bypasses ACTIVE)</div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- 04. WIDGET STATES -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="states">
+  <div class="section-label">04</div>
+  <h2>Widget states</h2>
+  <p>The inline widget has 11 distinct states. Each state defines what the visitor sees, how the input behaves, and what the system does behind the scenes.</p>
+
+  <!-- STATE 1 -->
+  <div class="state-card">
+    <div class="state-id">STATE 1</div>
+    <div class="state-title">Idle</div>
+    <p class="state-desc">First load. Input empty, send button gray. Pills suggest starting points.</p>
+    <div class="widget-preview"><div class="wp-inner">
+      <div class="wp-header"><svg width="18" height="18" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg><span>contextus</span><span class="wp-powered">powered by contextus</span></div>
+      <div class="wp-body">
+        <div class="wp-input"><input type="text" placeholder="Ask us anything..." disabled><div class="sbtn empty"><svg viewBox="0 0 24 24"><path d="M5.694 12 2.299 3.272c-.236-.607.356-1.188.942-.982l.093.04 18 9a.75.75 0 0 1 .097 1.283l-.097.058-18 9c-.619.31-1.263-.277-1.035-.916l.035-.084L5.694 12 2.3 3.272 5.694 12ZM4.402 4.54l2.61 6.71h6.627a.75.75 0 0 1 .102 1.493l-.102.007H7.01l-2.609 6.71L19.322 12 4.401 4.54Z"/></svg></div></div>
+        <div class="wp-pills"><div class="wp-pill">How can you help?</div><div class="wp-pill">Services &amp; pricing</div><div class="wp-pill">Talk to a human</div></div>
+      </div>
+    </div></div>
+    <div class="behavior"><strong>Send button:</strong> EMPTY (gray). <strong>Pills:</strong> Auto-generated from knowledge base top topics, or defined by owner during onboarding. No pills if KB is too thin — no pills is better than bad pills. <strong>Header:</strong> Customizable name. <strong>Height:</strong> Compact.</div>
+  </div>
+
+  <!-- STATE 2 -->
+  <div class="state-card">
+    <div class="state-id">STATE 2</div>
+    <div class="state-title">Visitor typing</div>
+    <p class="state-desc">Text in input. Send button turns black.</p>
+    <div class="widget-preview"><div class="wp-inner">
+      <div class="wp-header"><svg width="18" height="18" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg><span>contextus</span><span class="wp-powered">powered by contextus</span></div>
+      <div class="wp-body">
+        <div class="wp-input"><input type="text" value="Saya perlu bantuan lapor SPT" disabled><div class="sbtn active"><svg viewBox="0 0 24 24"><path d="M5.694 12 2.299 3.272c-.236-.607.356-1.188.942-.982l.093.04 18 9a.75.75 0 0 1 .097 1.283l-.097.058-18 9c-.619.31-1.263-.277-1.035-.916l.035-.084L5.694 12 2.3 3.272 5.694 12ZM4.402 4.54l2.61 6.71h6.627a.75.75 0 0 1 .102 1.493l-.102.007H7.01l-2.609 6.71L19.322 12 4.401 4.54Z"/></svg></div></div>
+        <div class="wp-pills"><div class="wp-pill">How can you help?</div><div class="wp-pill">Services &amp; pricing</div><div class="wp-pill">Talk to a human</div></div>
+      </div>
+    </div></div>
+    <div class="behavior"><strong>Send button:</strong> ACTIVE (black). Click or Enter sends. <strong>On send:</strong> Visitor bubble appears, input clears, pills disappear, typing indicator shows, input disables. <strong>On clear:</strong> Button returns to EMPTY.</div>
+  </div>
+
+  <!-- STATE 3 -->
+  <div class="state-card">
+    <div class="state-id">STATE 3</div>
+    <div class="state-title">Agent thinking</div>
+    <p class="state-desc">Message sent. Agent processing. Input disabled, send button gray + not-allowed.</p>
+    <div class="widget-preview"><div class="wp-inner">
+      <div class="wp-header"><svg width="18" height="18" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg><span>contextus</span><span class="wp-powered">powered by contextus</span></div>
+      <div class="wp-body">
+        <div class="wp-msg v"><div class="wp-bbl vb">Saya perlu bantuan lapor SPT untuk PT baru</div></div>
+        <div class="wp-msg"><div class="wp-av"><svg width="24" height="24" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg></div><div class="wp-bbl ab"><div class="wp-dots"><span></span><span></span><span></span></div></div></div>
+        <div class="wp-input-bottom"><div class="wp-input"><input type="text" placeholder="Waiting for response..." disabled><div class="sbtn dis"><svg viewBox="0 0 24 24"><path d="M5.694 12 2.299 3.272c-.236-.607.356-1.188.942-.982l.093.04 18 9a.75.75 0 0 1 .097 1.283l-.097.058-18 9c-.619.31-1.263-.277-1.035-.916l.035-.084L5.694 12 2.3 3.272 5.694 12ZM4.402 4.54l2.61 6.71h6.627a.75.75 0 0 1 .102 1.493l-.102.007H7.01l-2.609 6.71L19.322 12 4.401 4.54Z"/></svg></div></div></div>
+      </div>
+    </div></div>
+    <div class="behavior"><strong>Send button:</strong> DISABLED (gray, not-allowed). Input disabled. Placeholder: "Waiting for response..." <strong>On response:</strong> Input re-enables, placeholder resets, button goes EMPTY. <strong>This is the ONLY state where send button is DISABLED.</strong></div>
+  </div>
+
+  <!-- STATE 4 -->
+  <div class="state-card">
+    <div class="state-id">STATE 4</div>
+    <div class="state-title">Active conversation</div>
+    <p class="state-desc">Multi-turn dialogue. Input ready, send button empty.</p>
+    <div class="widget-preview"><div class="wp-inner">
+      <div class="wp-header"><svg width="18" height="18" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg><span>contextus</span><span class="wp-powered">powered by contextus</span></div>
+      <div class="wp-body">
+        <div class="wp-msg"><div class="wp-av"><svg width="24" height="24" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg></div><div class="wp-bbl ab">Great, F&B has specific tax considerations. How many employees?</div></div>
+        <div class="wp-msg v"><div class="wp-bbl vb">About 15 orang</div></div>
+        <div class="wp-msg"><div class="wp-av"><svg width="24" height="24" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg></div><div class="wp-bbl ab">With 15 employees you'll need PPh 21 withholding. Would you like our specialist to reach out?</div></div>
+        <div class="wp-input-bottom"><div class="wp-input"><input type="text" placeholder="Type a message..." disabled><div class="sbtn empty"><svg viewBox="0 0 24 24"><path d="M5.694 12 2.299 3.272c-.236-.607.356-1.188.942-.982l.093.04 18 9a.75.75 0 0 1 .097 1.283l-.097.058-18 9c-.619.31-1.263-.277-1.035-.916l.035-.084L5.694 12 2.3 3.272 5.694 12ZM4.402 4.54l2.61 6.71h6.627a.75.75 0 0 1 .102 1.493l-.102.007H7.01l-2.609 6.71L19.322 12 4.401 4.54Z"/></svg></div></div></div>
+      </div>
+    </div></div>
+    <div class="behavior"><strong>Send button:</strong> EMPTY → ACTIVE on keystroke. <strong>Agent:</strong> Max one question per turn. Tags silently: industry, size, needs, urgency. <strong>Height:</strong> Grows with messages. Scroll at max-height.</div>
+  </div>
+
+  <!-- STATE 5 -->
+  <div class="state-card">
+    <div class="state-id">STATE 5</div>
+    <div class="state-title">Long conversation (scroll)</div>
+    <p class="state-desc">Content exceeds max-height. Scroll appears. Input pinned at bottom.</p>
+    <div class="behavior"><strong>Max-height:</strong> 400px desktop, 50vh mobile. <strong>Scroll:</strong> Auto-scrolls to latest. If visitor scrolled up, show "new message" indicator. <strong>Scrollbar:</strong> Thin 3px, minimal chrome. <strong>Input:</strong> Pinned at bottom, always visible. Same EMPTY/ACTIVE/DISABLED rules.</div>
+  </div>
+
+  <!-- STATE 6 -->
+  <div class="state-card">
+    <div class="state-id">STATE 6</div>
+    <div class="state-title">Knowledge boundary hit</div>
+    <p class="state-desc">Agent can't answer. Redirects to human. The conversion moment.</p>
+    <div class="widget-preview"><div class="wp-inner">
+      <div class="wp-header"><svg width="18" height="18" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg><span>contextus</span><span class="wp-powered">powered by contextus</span></div>
+      <div class="wp-body">
+        <div class="wp-msg v"><div class="wp-bbl vb">What is the PPh 21 rate for salary of 15 million?</div></div>
+        <div class="wp-msg"><div class="wp-av"><svg width="24" height="24" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg></div><div class="wp-bbl ab">That's a great question — the exact rate depends on factors specific to your situation. I want to make sure you get the accurate answer.</div></div>
+        <div class="wp-boundary"><strong>Redirect:</strong> "Would you like our tax specialist to walk you through this? WhatsApp or email?"</div>
+      </div>
+    </div></div>
+    <div class="behavior"><strong>Trigger:</strong> RAG low confidence, or guardrail topic match from onboarding. <strong>Agent:</strong> Does NOT hallucinate. Acknowledges, explains, pivots to contact capture. <strong>Lead brief:</strong> Flagged as "unanswered question" — the follow-up hook.</div>
+  </div>
+
+  <!-- STATE 7 -->
+  <div class="state-card">
+    <div class="state-id">STATE 7</div>
+    <div class="state-title">Contact captured</div>
+    <p class="state-desc">Visitor shared contact info voluntarily. Agent confirms. Conversation continues.</p>
+    <div class="behavior"><strong>Trigger:</strong> Contact pattern detected (phone, email, WhatsApp mention). <strong>Agent:</strong> Confirms naturally ("I've noted that"). Doesn't end conversation. <strong>System:</strong> Lead brief generation starts immediately. Business owner notified. <strong>Visual:</strong> No visible indicator to visitor. Debug tag "CONTACT CAPTURED" is internal only.</div>
+  </div>
+
+  <!-- STATE 8 -->
+  <div class="state-card">
+    <div class="state-id">STATE 8</div>
+    <div class="state-title">Visitor idle</div>
+    <p class="state-desc">60+ seconds silence mid-conversation. One gentle nudge.</p>
+    <div class="widget-preview"><div class="wp-inner">
+      <div class="wp-header"><svg width="18" height="18" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg><span>contextus</span><span class="wp-powered">powered by contextus</span></div>
+      <div class="wp-body">
+        <div class="wp-msg"><div class="wp-av"><svg width="24" height="24" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg></div><div class="wp-bbl ab">How many employees do you have?</div></div>
+        <div class="wp-nudge">Still there? No rush — I'm here whenever you're ready.</div>
+      </div>
+    </div></div>
+    <div class="behavior"><strong>Nudge:</strong> Muted italic text. NOT a chat bubble. Max ONE per conversation. <strong>After 5 min idle:</strong> Conversation ends silently. Lead brief generated.</div>
+  </div>
+
+  <!-- STATE 9 -->
+  <div class="state-card">
+    <div class="state-id">STATE 9</div>
+    <div class="state-title">Error</div>
+    <p class="state-desc">Network failure, LLM timeout, or rate limit.</p>
+    <div class="widget-preview"><div class="wp-inner">
+      <div class="wp-header"><svg width="18" height="18" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg><span>contextus</span><span class="wp-powered">powered by contextus</span></div>
+      <div class="wp-body">
+        <div class="wp-msg v"><div class="wp-bbl vb">Can you help with annual tax filing?</div></div>
+        <div class="wp-err">Something went wrong. Please try again in a moment.</div>
+        <div class="wp-input-bottom"><div class="wp-input"><input type="text" placeholder="Try again..." disabled><div class="sbtn empty"><svg viewBox="0 0 24 24"><path d="M5.694 12 2.299 3.272c-.236-.607.356-1.188.942-.982l.093.04 18 9a.75.75 0 0 1 .097 1.283l-.097.058-18 9c-.619.31-1.263-.277-1.035-.916l.035-.084L5.694 12 2.3 3.272 5.694 12ZM4.402 4.54l2.61 6.71h6.627a.75.75 0 0 1 .102 1.493l-.102.007H7.01l-2.609 6.71L19.322 12 4.401 4.54Z"/></svg></div></div></div>
+      </div>
+    </div></div>
+    <div class="behavior"><strong>Auto-retry:</strong> One silent retry after 2s before showing error. <strong>Display:</strong> Inline, muted red (#FCEBEB bg, #A32D2D text). Disappears on next successful send. <strong>Rate limit:</strong> "Please wait a moment" — never reveal it's a rate limit. <strong>Input:</strong> Active for retry.</div>
+  </div>
+
+  <!-- STATE 10 -->
+  <div class="state-card">
+    <div class="state-id">STATE 10</div>
+    <div class="state-title">Returning visitor</div>
+    <p class="state-desc">Previous conversation at reduced opacity. Can continue or start new.</p>
+    <div class="behavior"><strong>Trigger:</strong> Return within session (tab lifespan or 30 min). <strong>Previous messages:</strong> 55% opacity + "Previous conversation" label with clock icon. <strong>Input placeholder:</strong> "Continue or start new..." <strong>Session expiry:</strong> After 30 min or tab close, full reset to idle. <strong>No localStorage:</strong> Memory only. No cookies.</div>
+  </div>
+
+  <!-- STATE 11 -->
+  <div class="state-card">
+    <div class="state-id">STATE 11</div>
+    <div class="state-title">Conversation complete</div>
+    <p class="state-desc">Natural end. Lead brief generated and sent to business owner.</p>
+    <div class="widget-preview"><div class="wp-inner">
+      <div class="wp-header"><svg width="18" height="18" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg><span>contextus</span><span class="wp-powered">powered by contextus</span></div>
+      <div class="wp-body">
+        <div class="wp-msg"><div class="wp-av"><svg width="24" height="24" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg></div><div class="wp-bbl ab">You're welcome! Have a great day.</div></div>
+        <div class="wp-complete">Conversation ended — <span>lead brief sent</span></div>
+        <div class="wp-input-bottom"><div class="wp-input"><input type="text" placeholder="Start a new conversation..." disabled><div class="sbtn empty"><svg viewBox="0 0 24 24"><path d="M5.694 12 2.299 3.272c-.236-.607.356-1.188.942-.982l.093.04 18 9a.75.75 0 0 1 .097 1.283l-.097.058-18 9c-.619.31-1.263-.277-1.035-.916l.035-.084L5.694 12 2.3 3.272 5.694 12ZM4.402 4.54l2.61 6.71h6.627a.75.75 0 0 1 .102 1.493l-.102.007H7.01l-2.609 6.71L19.322 12 4.401 4.54Z"/></svg></div></div></div>
+      </div>
+    </div></div>
+    <div class="behavior"><strong>Trigger:</strong> Completion signal ("thanks", "that's all") or 5 min idle after contact captured. <strong>Agent:</strong> Warm sign-off. No rating/feedback request. <strong>System:</strong> Final lead brief generated. Full conversation + extracted data + score + suggested approach. <strong>Soft-reset:</strong> After 30s, placeholder changes to "Start a new conversation..."</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- 05. SIZING & RESPONSIVE -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="sizing">
+  <div class="section-label">05</div>
+  <h2>Sizing &amp; responsive</h2>
+
+  <table class="spec-table">
+    <tr><th>PROPERTY</th><th>DESKTOP</th><th>MOBILE (&lt;480px)</th></tr>
+    <tr><td>Widget width</td><td>100% of parent container</td><td>100% of parent container</td></tr>
+    <tr><td>Max-width</td><td>600px (recommended)</td><td>None (full width)</td></tr>
+    <tr><td>Message scroll max-height</td><td>400px</td><td>50vh</td></tr>
+    <tr><td>Input font size</td><td>15px</td><td>16px (prevents iOS zoom)</td></tr>
+    <tr><td>Scrollbar width</td><td>3px</td><td>3px</td></tr>
+    <tr><td>Widget border-radius</td><td>12px</td><td>12px (0 if full-bleed)</td></tr>
+  </table>
+
+  <p class="muted">The widget fills its parent container. The host website controls placement and max-width. The widget never sets its own position — it's a normal flow element.</p>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- 06. EMBED CODE -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="embed">
+  <div class="section-label">06</div>
+  <h2>Embed methods</h2>
+  <p>Two tiers, from easiest to most powerful. Both render the same widget. Offer both to customers — let them choose based on their technical comfort.</p>
+
+  <h3>Tier 1: iframe URL (easiest — MVP default)</h3>
+  <p>Works on every website builder. The business owner pastes a URL. That's it.</p>
+
+  <div class="code-block">&lt;iframe
+  src="https://contextus.ai/embed/YOUR_SITE_ID?transparent=1&amp;dynamicHeight=1"
+  width="100%" height="400" frameborder="0"
+  style="border: none; min-width: 320px;"
+&gt;&lt;/iframe&gt;</div>
+
+  <table class="spec-table">
+    <tr><th>PARAMETER</th><th>DEFAULT</th><th>DESCRIPTION</th></tr>
+    <tr><td>transparent</td><td>0</td><td>Transparent background (blends with host page)</td></tr>
+    <tr><td>dynamicHeight</td><td>0</td><td>Auto-resize iframe via postMessage to parent</td></tr>
+    <tr><td>lang</td><td>auto</td><td>"en", "id", or "auto" (detect from first message)</td></tr>
+    <tr><td>greeting</td><td>"Ask us anything..."</td><td>Custom input placeholder text</td></tr>
+    <tr><td>name</td><td>"contextus"</td><td>Custom header name</td></tr>
+  </table>
+
+  <p class="muted">The server renders the full widget at <code>/embed/:site_id</code> as a standalone HTML page. This is the same widget component used in Tier 2 — just wrapped in a minimal page shell.</p>
+
+  <h3>Tier 2: div + script (inline — beautiful)</h3>
+  <p>For customers who can paste HTML. The script injects the widget directly into the page — no iframe, fully native.</p>
+
+  <div class="code-block">&lt;div data-contextus="YOUR_SITE_ID"&gt;&lt;/div&gt;
+&lt;script src="https://cdn.contextus.ai/embed.js" async&gt;&lt;/script&gt;</div>
+
+  <table class="spec-table">
+    <tr><th>ATTRIBUTE</th><th>REQUIRED</th><th>DESCRIPTION</th></tr>
+    <tr><td>data-contextus</td><td>Yes</td><td>Site identifier. The script scans for all elements with this attribute.</td></tr>
+    <tr><td>data-name</td><td>No</td><td>Custom header name (default: "contextus")</td></tr>
+    <tr><td>data-greeting</td><td>No</td><td>Custom input placeholder</td></tr>
+    <tr><td>data-lang</td><td>No</td><td>"en", "id", or "auto" (default: auto-detect)</td></tr>
+  </table>
+
+  <h3>Tier 3: platform plugins (future — not MVP)</h3>
+  <p class="muted">WordPress plugin, Wix app, Shopify app — only build when paying customers demand them. For Webflow, Squarespace, and Framer, documentation guides are sufficient since they support raw HTML natively.</p>
+
+  <p class="muted">Implementation details are subject to change. This spec defines the design contract — visual appearance and behavior — not the final technical API.</p>
+</div>
+
+<div style="text-align:center;padding:2rem 0;border-top:0.5px solid #e0e0e0;margin-top:2rem;">
+  <p style="font-family:'DM Mono',monospace;font-size:11px;color:#bbb;letter-spacing:1px;">FROM CONTACT US TO CONTEXTUS</p>
+</div>
+
+</div>
+</body>
+</html>
