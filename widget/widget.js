@@ -303,7 +303,7 @@
 
     function notifyResize() {
       if (!cfg.dynamicHeight) return;
-      const height = widget.offsetHeight;
+      const height = Math.ceil(widget.getBoundingClientRect().height);
       window.parent.postMessage({ type: 'contextus:resize', height }, '*');
     }
 
