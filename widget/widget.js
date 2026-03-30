@@ -323,6 +323,11 @@
       state.pillsVisible = false;
       state.phase = 'active';
 
+      // Prepend greeting on first message
+      if (state.messages.length === 0) {
+        state.messages.push({ role: 'agent', text: 'Hi! How can I help you today?' });
+      }
+
       const visitorMsg = { role: 'visitor', text: text.trim() };
       state.messages.push(visitorMsg);
 
@@ -438,8 +443,6 @@
 
     // ── Initial render ───────────────────────────────────────────────────────
 
-    // Show greeting from agent on load
-    state.messages.push({ role: 'agent', text: 'Hi! How can I help you today?' });
     render();
   }
 
