@@ -5,7 +5,6 @@
 #contextus-widget *::before,
 #contextus-widget *::after {
   box-sizing: border-box;
-  margin: 0;
 }
 
 #contextus-widget {
