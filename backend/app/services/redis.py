@@ -1,6 +1,9 @@
 from upstash_redis import Redis
 import os
+from dotenv import load_dotenv
 from app.models import KnowledgeBase, Session
+
+load_dotenv()
 
 redis = Redis(
     url=os.getenv("UPSTASH_REDIS_REST_URL", ""),

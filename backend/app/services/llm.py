@@ -2,9 +2,12 @@ from openai import OpenAI
 import os
 import json
 import time
+from dotenv import load_dotenv
 from typing import AsyncIterator
 from app.models import CompanyProfile, Session, LeadBrief, Chunk
 from app.services.retrieval import retrieve_chunks
+
+load_dotenv()
 
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
