@@ -194,12 +194,9 @@
         msgArea.appendChild(nudge);
       }
 
-      // Scroll only within msgArea — never trigger parent page scroll.
-      // Show latest agent response at top of messages area so user reads down.
-      // Fall back to scroll-to-bottom when agent is still thinking.
-      if (lastAgentEl) {
-        msgArea.scrollTop = lastAgentEl.offsetTop;
-      } else {
+      // Only scroll internally if content exceeds the visible messages area.
+      // When content fits, leave scrollTop at 0 so everything is visible.
+      if (msgArea.scrollHeight > msgArea.clientHeight) {
         msgArea.scrollTop = msgArea.scrollHeight;
       }
 
