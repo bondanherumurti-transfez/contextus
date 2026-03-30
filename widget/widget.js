@@ -180,7 +180,12 @@
       }
 
       // Current messages
-      state.messages.forEach(m => msgArea.appendChild(renderMsg(m)));
+      let lastAgentEl = null;
+      state.messages.forEach(m => {
+        const el = renderMsg(m);
+        msgArea.appendChild(el);
+        if (m.role === 'agent' && !m.isThinking) lastAgentEl = el;
+      });
 
       // Nudge
       if (state.nudgeSent && state.phase === 'active') {
@@ -189,8 +194,13 @@
         msgArea.appendChild(nudge);
       }
 
-      // Scroll to bottom
-      msgArea.scrollTop = msgArea.scrollHeight;
+      // Scroll: bring latest agent response to top so user reads down naturally.
+      // Fall back to scroll-to-bottom for thinking state or visitor-only messages.
+      if (lastAgentEl && lastAgentEl.scrollIntoView) {
+        lastAgentEl.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      } else {
+        msgArea.scrollTop = msgArea.scrollHeight;
+      }
 
       notifyResize();
     }
@@ -255,6 +265,7 @@
     }
 
     function updateInput() {
+
       const isThinking = state.messages.some(m => m.isThinking);
       const isComplete = state.phase === 'complete';
       const isDisabled = isThinking || isComplete;
