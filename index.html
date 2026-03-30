@@ -289,7 +289,11 @@ function handleSignup(e){e.preventDefault();document.getElementById('se').value=
 window.addEventListener('message', function(e) {
   if (e.data && e.data.type === 'contextus:resize') {
     var iframe = document.getElementById('contextus-iframe');
-    if (iframe) iframe.style.height = e.data.height + 'px';
+    if (iframe) {
+      var scrollY = window.scrollY;
+      iframe.style.height = e.data.height + 'px';
+      window.scrollTo(0, scrollY);
+    }
   }
 });
 </script>

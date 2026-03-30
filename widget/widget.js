@@ -258,7 +258,9 @@
         msgArea.appendChild(completeBanner);
       }
 
-      msgArea.scrollTop = msgArea.scrollHeight;
+      if (msgArea.scrollHeight > msgArea.clientHeight) {
+        msgArea.scrollTop = msgArea.scrollHeight;
+      }
       notifyResize();
     }
 
@@ -317,6 +319,10 @@
     }
 
     if (cfg.dynamicHeight) {
+      // Remove max-height cap so msgArea grows freely and the iframe expands to fit.
+      // In fixed-height mode, max-height is needed for internal scroll; in dynamic mode it
+      // creates artificial overflow that forces scrollTop to bottom on every render.
+      msgArea.style.maxHeight = 'none';
       new ResizeObserver(() => notifyResize()).observe(widget);
     }
 
