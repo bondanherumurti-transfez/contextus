@@ -11,7 +11,10 @@ Live: [project-b0yme.vercel.app](https://project-b0yme.vercel.app)
 ## Status
 
 **Phase 1 — Widget frontend: complete.**
-The widget runs on the contextus landing page as a dogfood deployment. All 11 states are implemented against the design guideline. Responses are powered by a mock keyword engine. Real LLM integration (Phase 2) is not yet built.
+The widget runs on the contextus landing page as a dogfood deployment. All 11 states are implemented against the design guideline.
+
+**Phase 2 — Backend API: in progress.**
+FastAPI backend with OpenRouter LLM integration, web crawler, Redis storage, and SSE streaming. Core endpoints implemented, test plan ready.
 
 ---
 
@@ -30,8 +33,29 @@ contextus/
 │   ├── contextus-logo-light.svg
 │   └── contextus-logo-lockup.svg
 ├── docs/
+│   ├── backend-plan.md                 # Backend implementation plan
 │   ├── contextus-widget-design-guideline.html  # Pixel-level spec for all 11 states
-│   └── prd-contextus.docx                      # Full PRD
+│   └── prd-contextus.docx              # Full PRD
+├── backend/                            # FastAPI backend (new)
+│   ├── app/
+│   │   ├── main.py                     # FastAPI app, CORS, router mount
+│   │   ├── models.py                   # Pydantic models
+│   │   ├── routers/
+│   │   │   ├── crawl.py                # Crawl endpoints
+│   │   │   ├── session.py              # Session endpoints
+│   │   │   ├── chat.py                 # Chat endpoint (SSE)
+│   │   │   └── brief.py                # Lead brief endpoint
+│   │   └── services/
+│   │       ├── redis.py                # Upstash Redis client
+│   │       ├── crawler.py              # Web crawler (httpx + BeautifulSoup)
+│   │       ├── chunker.py              # Text chunking
+│   │       ├── retrieval.py            # Keyword-based retrieval
+│   │       └── llm.py                  # OpenRouter LLM wrapper
+│   ├── tests/
+│   │   └── test_plan.md                # Comprehensive test plan
+│   ├── requirements.txt
+│   ├── render.yaml                     # Render deployment config
+│   └── .env.example
 ├── CLAUDE-CODE-BRIEF.md                # Implementation brief for Claude Code
 └── vercel.json                         # Vercel headers config (iframe embedding)
 ```
@@ -112,6 +136,167 @@ When `dynamicHeight=0`:
 
 ---
 
+## Backend
+
+### Architecture
+
+```
+FRONTEND (Vercel — existing)
+  index.html + widget/ → https://project-b0yme.vercel.app
+
+BACKEND (Render — new)
+  Python + FastAPI → https://api.contextus.ai
+  ├── POST   /api/crawl              — Start crawl job
+  ├── GET    /api/crawl/{job_id}     — Poll crawl status + result
+  ├── POST   /api/crawl/{job_id}/enrich — Add guided interview answers
+  ├── POST   /api/session            — Create chat session
+  ├── POST   /api/chat/{session_id}  — Send message, get SSE stream
+  ├── GET    /api/session/{id}       — Get session state
+  ├── POST   /api/brief/{session_id} — Generate lead brief
+  └── GET    /api/health
+
+STORAGE (Upstash Redis)
+  Redis with TTL-based keys
+  kb:{job_id}       → knowledge base — 30min TTL
+  session:{id}      → chat session — 30min TTL
+  rate:{ip}:crawl   → rate limit counter — 1hr TTL
+```
+
+### Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Framework | FastAPI (Python 3.12) |
+| LLM | OpenRouter via OpenAI SDK (Claude, Gemini, GPT, etc.) |
+| Storage | Upstash Redis (TTL-based) |
+| Streaming | SSE (Server-Sent Events) |
+| Deployment | Render |
+
+### API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/crawl` | Start crawling a URL, returns `job_id` |
+| `GET` | `/api/crawl/{job_id}` | Get crawl status and results |
+| `POST` | `/api/crawl/{job_id}/enrich` | Enrich KB with interview answers |
+| `POST` | `/api/session` | Create chat session from KB |
+| `GET` | `/api/session/{id}` | Get session state |
+| `POST` | `/api/chat/{session_id}` | Send message, receive SSE stream |
+| `POST` | `/api/brief/{session_id}` | Generate lead brief from session |
+| `GET` | `/api/health` | Health check |
+
+### Quick Start
+
+```bash
+cd backend
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your API keys
+
+# Run development server
+uvicorn app.main:app --reload
+
+# Access API docs
+open http://localhost:8000/docs
+```
+
+### Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `OPENROUTER_API_KEY` | API key from openrouter.ai/keys | Yes |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis URL | Yes |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis token | Yes |
+| `MODEL_PROFILE` | Model for profile generation | No (default: `anthropic/claude-3-haiku`) |
+| `MODEL_CHAT` | Model for chat | No (default: `anthropic/claude-sonnet-4`) |
+| `MODEL_BRIEF` | Model for brief generation | No (default: `anthropic/claude-sonnet-4`) |
+| `SITE_URL` | Site URL for OpenRouter attribution | No |
+| `ALLOWED_ORIGINS` | CORS allowed origins | No |
+
+### Models
+
+**CompanyProfile** — Extracted business information:
+```json
+{
+  "name": "Company Name",
+  "industry": "Technology",
+  "services": ["Web Development", "Consulting"],
+  "location": "Jakarta, Indonesia",
+  "contact": "hello@company.com",
+  "summary": "Description of the business",
+  "gaps": ["Missing pricing info"]
+}
+```
+
+**KnowledgeBase** — Crawl result with profile and chunks:
+```json
+{
+  "job_id": "abc123",
+  "status": "complete",
+  "quality_tier": "rich",
+  "company_profile": { ... },
+  "chunks": [{ "id": "...", "source": "...", "text": "...", "word_count": 42 }]
+}
+```
+
+**LeadBrief** — Structured lead summary:
+```json
+{
+  "who": "Potential customer description",
+  "need": "What they're looking for",
+  "signals": "Buying signals detected",
+  "open_questions": "Unanswered questions",
+  "suggested_approach": "Recommended follow-up",
+  "quality_score": "high"
+}
+```
+
+### Quality Tiers
+
+| Tier | Criteria | Behavior |
+|------|----------|----------|
+| `rich` | 2000+ words, 3+ pages | Ready for demo |
+| `thin` | 500-1999 words | Show guided interview |
+| `empty` | < 500 words | Require interview |
+
+### Deployment
+
+The backend is configured for Render deployment via `render.yaml`:
+
+```bash
+# Push to GitHub, then connect to Render
+# Set environment variables in Render dashboard
+# Deploy automatically on push to main branch
+```
+
+### Testing
+
+```bash
+cd backend
+
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=app --cov-report=html
+
+# Run specific test category
+pytest tests/unit/
+pytest tests/integration/
+```
+
+See `backend/tests/test_plan.md` for the complete test strategy.
+
+---
+
 ## Design tokens
 
 All colors are hardcoded hex. No CSS variables. This prevents dark mode bleed from host sites.
@@ -182,10 +367,17 @@ Fixed by: saving/restoring `scrollY` in the resize listener, guarding `scrollTop
 | Phase | Status | Description |
 |---|---|---|
 | 1 — Widget frontend | **Done** | Vanilla JS widget, 11 states, iframe embed, mock responses |
-| 2 — Backend API | Not started | FastAPI (Python), WebSocket streaming, Claude API, pgvector RAG |
-| 3 — Lead brief engine | Not started | Conversation summarization, WhatsApp/email delivery |
+| 2 — Backend API | **In Progress** | FastAPI, OpenRouter LLM, Redis storage, SSE streaming |
+| 3 — Lead brief engine | Not started | WhatsApp/email delivery integration |
 | 4 — Landing page (real LLM) | Not started | Swap mock engine for real backend |
 | 5 — Platform plugins | Not started | WordPress, Wix (build at traction, not before) |
+
+### Branch Strategy
+
+| Branch | Purpose |
+|--------|---------|
+| `main` | Production-ready code |
+| `backend-development` | Backend API development |
 
 ---
 
