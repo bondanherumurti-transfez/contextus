@@ -194,10 +194,11 @@
         msgArea.appendChild(nudge);
       }
 
-      // Scroll: bring latest agent response to top so user reads down naturally.
-      // Fall back to scroll-to-bottom for thinking state or visitor-only messages.
-      if (lastAgentEl && lastAgentEl.scrollIntoView) {
-        lastAgentEl.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      // Scroll only within msgArea — never trigger parent page scroll.
+      // Show latest agent response at top of messages area so user reads down.
+      // Fall back to scroll-to-bottom when agent is still thinking.
+      if (lastAgentEl) {
+        msgArea.scrollTop = lastAgentEl.offsetTop;
       } else {
         msgArea.scrollTop = msgArea.scrollHeight;
       }
