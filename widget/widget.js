@@ -23,73 +23,6 @@
     <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
   </svg>`;
 
-  // ── Mock response engine ─────────────────────────────────────────────────────
-
-  const MOCK_RULES = [
-    {
-      keywords: ['what is contextus', 'how does contextus', 'what do you do', 'tell me about'],
-      response: 'contextus replaces your "Contact Us" form with an AI conversation. Instead of getting a name and email, you get a full brief: who the visitor is, what they need, their urgency signals, and a suggested follow-up approach — delivered straight to your WhatsApp or email.',
-    },
-    {
-      keywords: ['price', 'cost', 'how much', 'pricing', 'plan'],
-      response: "We're finalizing pricing — it'll be based on the number of leads captured per month. Early adopters get locked-in rates. Want to be notified when we launch? Drop your WhatsApp or email and I'll make sure you're first to know.",
-      contact_prompt: true,
-    },
-    {
-      keywords: ['embed', 'install', 'integrate', 'add to', 'put on', 'website'],
-      response: 'Installation is one paste. You get an iframe URL or a two-line HTML snippet. Paste it where your contact form used to be — done. Works on Webflow, WordPress, Wix, Squarespace, and any custom site.',
-    },
-    {
-      keywords: ['whatsapp', 'email', 'notify', 'notification', 'alert', 'deliver'],
-      response: 'When a conversation ends, contextus generates a structured lead brief and sends it to you via WhatsApp (primary) or email. You get: who they are, what they asked, what the AI could and couldn\'t answer, and a suggested opening line for your follow-up.',
-    },
-    {
-      keywords: ['lead brief', 'lead', 'summary', 'report'],
-      response: 'Every conversation produces a lead brief with: visitor identity (name, company, role, industry), what they need, qualification signals (urgency, budget hints, intent), open questions the AI redirected, and a suggested follow-up approach. Plus a quality score so you know which leads to call first.',
-    },
-    {
-      keywords: ['language', 'bahasa', 'indonesian', 'bilingual', 'english'],
-      response: 'contextus supports English and Bahasa Indonesia. Set it to auto-detect and it responds in whatever language the visitor uses — no configuration needed.',
-    },
-    {
-      keywords: ['knowledge base', 'knowledge', 'training', 'train', 'data'],
-      response: 'You give contextus your business content — service pages, FAQs, case studies, pricing info. It learns from that and only answers questions it can answer accurately. When it hits the boundary of what it knows, it redirects to you rather than guessing.',
-    },
-    {
-      keywords: ['demo', 'try', 'test', 'see it', 'example'],
-      response: "You're already seeing it — this is the contextus widget, running on the contextus website. Ask me anything about contextus and I'll answer from the knowledge base. If I can't answer, I'll tell you honestly and connect you to the team.",
-    },
-    {
-      keywords: ['human', 'person', 'team', 'contact', 'talk to someone', 'speak'],
-      response: "Happy to connect you with the contextus team. What's the best way to reach you — WhatsApp or email?",
-      contact_prompt: true,
-    },
-    // Boundary triggers — things we don't answer
-    {
-      keywords: ['competitor', ' vs ', 'versus', 'compare', 'alternative', 'better than', 'drift', 'intercom', 'hubspot', 'tidio'],
-      boundary: true,
-      response: "That's a fair question to ask a human. I want to give you an honest comparison, not a sales pitch — so let me connect you with the team. What's your WhatsApp or email?",
-    },
-    {
-      keywords: ['api', 'webhook', 'zapier', 'integration', 'crm', 'salesforce'],
-      boundary: true,
-      response: "Integrations are on the roadmap and the specifics are still being finalized. Rather than guess, I'd rather connect you with someone who can give you the real answer. WhatsApp or email?",
-    },
-  ];
-
-  function mockRespond(message) {
-    const lower = message.toLowerCase();
-    for (const rule of MOCK_RULES) {
-      if (rule.keywords.some(k => lower.includes(k))) {
-        return { response: rule.response, boundary: !!rule.boundary, contact_prompt: !!rule.contact_prompt };
-      }
-    }
-    return {
-      response: "Good question — I want to make sure I give you an accurate answer rather than guess. Let me connect you with the contextus team. What's the best way to reach you?",
-      boundary: true,
-    };
-  }
-
   function detectContact(message) {
     const emailRe = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
     const phoneRe = /(\+?62|0)[0-9\s\-]{8,14}/;
@@ -108,6 +41,8 @@
       transparent: false,
       dynamicHeight: false,
       pills: ['How can you help?', 'Pricing & plans', 'How do I embed this?'],
+      apiUrl: '',           // e.g. 'https://api.contextus.ai'
+      knowledgeBaseId: '',  // job_id from POST /api/crawl
     }, config);
 
     // ── State ────────────────────────────────────────────────────────────────
@@ -120,6 +55,7 @@
       pillsVisible: true,
       errorMessage: null,
       returningHistory: null, // messages from previous session (in-memory only)
+      sessionId: null,        // assigned after POST /api/session
 
       // Timers
       idleTimer: null,
@@ -356,47 +292,104 @@
       input.value = '';
       render();
 
-      // Simulate network delay then respond
-      const delay = 800 + Math.random() * 600;
-
-      let retried = false;
-
-      function attempt() {
-        setTimeout(() => {
-          // Remove thinking bubble
-          const idx = state.messages.indexOf(thinkingMsg);
-          if (idx > -1) state.messages.splice(idx, 1);
-
-          // Simulate occasional error on first try (5% chance, only once)
-          if (!retried && Math.random() < 0.05) {
-            retried = true;
-            // Silent auto-retry after 2s
-            state.messages.push(thinkingMsg);
+      // Real backend call with SSE streaming
+      (async function callBackend() {
+        // Lazily create a chat session on first message
+        if (!state.sessionId) {
+          try {
+            const sr = await fetch(`${cfg.apiUrl}/api/session`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ knowledge_base_id: cfg.knowledgeBaseId }),
+            });
+            if (!sr.ok) throw new Error(`${sr.status}`);
+            state.sessionId = (await sr.json()).session_id;
+          } catch (err) {
+            const tidx = state.messages.indexOf(thinkingMsg);
+            if (tidx > -1) state.messages.splice(tidx, 1);
+            state.errorMessage = 'Could not start session. Please try again.';
             render();
-            setTimeout(attempt, 2000);
             return;
           }
+        }
 
-          const result = mockRespond(text);
-          const agentMsg = {
-            role: 'agent',
-            text: result.response,
-            isBoundary: result.boundary,
-          };
-          state.messages.push(agentMsg);
-          state.errorMessage = null;
+        // Replace thinking bubble with a streaming agent message
+        const tidx = state.messages.indexOf(thinkingMsg);
+        if (tidx > -1) state.messages.splice(tidx, 1);
 
-          if (state.contactCaptured) {
-            startCompleteTimer();
-          } else {
-            startIdleTimer();
+        const agentMsg = { role: 'agent', text: '' };
+        state.messages.push(agentMsg);
+        render();
+
+        // Grab the bubble element for live token updates (avoids full re-render per token)
+        const allBubbles = msgArea.querySelectorAll('.ctx-bubble-agent');
+        const streamBubble = allBubbles[allBubbles.length - 1] || null;
+
+        let succeeded = false;
+
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const res = await fetch(`${cfg.apiUrl}/api/chat/${state.sessionId}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ message: text }),
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split('\n');
+              buffer = lines.pop(); // hold incomplete line
+              for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                let payload;
+                try { payload = JSON.parse(line.slice(6)); } catch { continue; }
+                if (payload.token) {
+                  agentMsg.text += payload.token;
+                  if (streamBubble) {
+                    streamBubble.textContent = agentMsg.text;
+                    if (msgArea.scrollHeight > msgArea.clientHeight) {
+                      msgArea.scrollTop = msgArea.scrollHeight;
+                    }
+                    notifyResize();
+                  }
+                }
+              }
+            }
+
+            succeeded = true;
+            state.errorMessage = null;
+            break;
+          } catch (err) {
+            if (attempt === 0) {
+              // Silent auto-retry after 2s
+              agentMsg.text = '';
+              if (streamBubble) streamBubble.textContent = '';
+              await new Promise(r => setTimeout(r, 2000));
+            }
           }
+        }
 
-          render();
-        }, delay);
-      }
+        if (!succeeded) {
+          const aidx = state.messages.indexOf(agentMsg);
+          if (aidx > -1) state.messages.splice(aidx, 1);
+          state.errorMessage = 'Something went wrong. Please try again.';
+        }
 
-      attempt();
+        if (state.contactCaptured) {
+          startCompleteTimer();
+        } else {
+          startIdleTimer();
+        }
+
+        render();
+      })();
     }
 
     // ── Timers ───────────────────────────────────────────────────────────────

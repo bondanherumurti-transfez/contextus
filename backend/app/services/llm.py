@@ -1,6 +1,7 @@
 from openai import OpenAI
 import os
 import json
+import re
 import time
 from dotenv import load_dotenv
 from typing import AsyncIterator
@@ -8,6 +9,22 @@ from app.models import CompanyProfile, Session, LeadBrief, Chunk
 from app.services.retrieval import retrieve_chunks
 
 load_dotenv()
+
+
+def extract_json(text: str) -> dict:
+    """
+    Parse JSON from an LLM response that may include prose before/after the object.
+    Tries direct parse first, then extracts the outermost {...} block.
+    """
+    text = text.strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if match:
+            return json.loads(match.group())
+        raise
+
 
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
@@ -94,7 +111,7 @@ def generate_company_profile(chunks: list[Chunk], site_url: str) -> CompanyProfi
     )
 
     content = response.choices[0].message.content
-    data = json.loads(content)
+    data = extract_json(content)
     return CompanyProfile(**data)
 
 
@@ -140,7 +157,7 @@ def generate_lead_brief(session: Session) -> LeadBrief:
     )
 
     content = response.choices[0].message.content
-    data = json.loads(content)
+    data = extract_json(content)
 
     return LeadBrief(
         session_id=session.session_id,

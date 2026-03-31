@@ -65,15 +65,16 @@ async def start_crawl(
 ):
     client_ip = request.client.host if request.client else "unknown"
 
-    if not await check_rate_limit(client_ip, "crawl", 3, 3600):
-        raise HTTPException(
-            status_code=429, detail="Rate limit exceeded. Max 3 crawls per hour."
-        )
-
+    # Validate URL first — don't count invalid/malicious requests against the rate limit
     if not validate_url(body.url):
         raise HTTPException(
             status_code=400,
             detail="Invalid URL. Must be http/https and not a private IP.",
+        )
+
+    if not await check_rate_limit(client_ip, "crawl", 3, 3600):
+        raise HTTPException(
+            status_code=429, detail="Rate limit exceeded. Max 3 crawls per hour."
         )
 
     job_id = generate(size=10)
