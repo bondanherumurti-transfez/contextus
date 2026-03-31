@@ -5,7 +5,7 @@ import re
 import time
 from dotenv import load_dotenv
 from typing import AsyncIterator
-from app.models import CompanyProfile, Session, LeadBrief, Chunk
+from app.models import CompanyProfile, PillSuggestions, Session, LeadBrief, Chunk
 from app.services.retrieval import retrieve_chunks
 
 load_dotenv()
@@ -48,8 +48,20 @@ PROFILE_SYSTEM_PROMPT = """You are a business analyst. Extract company informati
   "location": "Location if found, or null",
   "contact": "Contact info (email, phone, WhatsApp) if found, or null",
   "summary": "2-3 sentence description of what the business does",
-  "gaps": ["List of important information missing from the website"]
+  "gaps": ["List of important information missing from the website"],
+  "pill_suggestions": {
+    "service_questions": ["2 natural questions a visitor would ask about their main services (max 6 words each)"],
+    "gap_questions": ["1 question addressing the most important missing info (max 6 words)"],
+    "industry_questions": ["1 niche-specific question a real visitor would ask (max 6 words)"]
+  }
 }
+
+Rules for pill_suggestions:
+- Max 6 words per question
+- Conversational tone — sound like something a real person types
+- service_questions based on services[]
+- gap_questions based on gaps[]
+- If services are thin, generate plausible questions from the summary
 
 Be concise and factual. Only include information explicitly mentioned in the content."""
 
@@ -171,6 +183,39 @@ def generate_lead_brief(session: Session) -> LeadBrief:
         contact=data.get("contact"),
         metadata={"model": MODEL_BRIEF},
     )
+
+
+def generate_fallback_pills() -> list[str]:
+    return [
+        "What services do you offer?",
+        "How can you help me?",
+        "How do I contact you?",
+    ]
+
+
+def select_pills(pill_suggestions: PillSuggestions | None) -> list[str]:
+    """Priority: gap → service → industry → fallback."""
+    if not pill_suggestions:
+        return generate_fallback_pills()
+
+    pills = []
+
+    if pill_suggestions.gap_questions:
+        pills.append(pill_suggestions.gap_questions[0])
+
+    remaining = 3 - len(pills)
+    pills.extend(pill_suggestions.service_questions[:remaining])
+
+    if len(pills) < 3 and pill_suggestions.industry_questions:
+        pills.append(pill_suggestions.industry_questions[0])
+
+    for fallback in generate_fallback_pills():
+        if len(pills) >= 3:
+            break
+        if fallback not in pills:
+            pills.append(fallback)
+
+    return pills[:3]
 
 
 def assess_quality_tier(chunks: list[Chunk]) -> str:

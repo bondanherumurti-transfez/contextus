@@ -12,7 +12,7 @@ from app.models import (
 from app.services.redis import save_knowledge_base, get_knowledge_base, check_rate_limit
 from app.services.crawler import crawl_site, validate_url
 from app.services.chunker import chunk_pages
-from app.services.llm import generate_company_profile, assess_quality_tier
+from app.services.llm import generate_company_profile, assess_quality_tier, select_pills
 
 router = APIRouter(tags=["crawl"])
 
@@ -50,6 +50,7 @@ async def run_crawl_job(job_id: str, url: str, ttl: int | None = 1800):
             kb.company_profile = company_profile
             kb.chunks = chunks
             kb.quality_tier = assess_quality_tier(chunks)
+            kb.suggested_pills = select_pills(company_profile.pill_suggestions)
 
         kb.status = "complete"
         kb.progress = ""
@@ -64,10 +65,10 @@ async def run_crawl_job(job_id: str, url: str, ttl: int | None = 1800):
 
 
 @router.post("/crawl/demo")
-async def seed_demo_kb(background_tasks: BackgroundTasks):
+async def seed_demo_kb(background_tasks: BackgroundTasks, force: bool = False):
     """Seed or refresh the permanent demo knowledge base (no TTL)."""
     existing = await get_knowledge_base(DEMO_JOB_ID)
-    if existing and existing.status == "complete":
+    if existing and existing.status == "complete" and not force:
         return {"job_id": DEMO_JOB_ID, "status": "complete", "cached": True}
 
     kb = KnowledgeBase(

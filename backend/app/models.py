@@ -2,6 +2,12 @@ from pydantic import BaseModel
 from typing import Literal
 
 
+class PillSuggestions(BaseModel):
+    service_questions: list[str] = []
+    gap_questions: list[str] = []
+    industry_questions: list[str] = []
+
+
 class CompanyProfile(BaseModel):
     name: str
     industry: str
@@ -10,6 +16,7 @@ class CompanyProfile(BaseModel):
     contact: str | None = None
     summary: str
     gaps: list[str]
+    pill_suggestions: PillSuggestions | None = None
 
 
 class Chunk(BaseModel):
@@ -27,6 +34,7 @@ class KnowledgeBase(BaseModel):
     quality_tier: Literal["rich", "thin", "empty"] | None = None
     company_profile: CompanyProfile | None = None
     chunks: list[Chunk] = []
+    suggested_pills: list[str] = []
     created_at: int
 
 
@@ -77,6 +85,7 @@ class SessionRequest(BaseModel):
 
 class SessionResponse(BaseModel):
     session_id: str
+    pills: list[str] = []
 
 
 class ChatRequest(BaseModel):

@@ -19,11 +19,30 @@
 
   <script src="widget.js"></script>
   <script>
-    (function () {
+    (async function () {
       var params = new URLSearchParams(location.search);
 
       var transparent = params.get('transparent') === '1';
       if (transparent) document.body.classList.add('transparent');
+
+      var apiUrl = params.get('apiUrl') || '';
+      var knowledgeBaseId = params.get('knowledgeBaseId') || '';
+      var pills = null;
+
+      if (apiUrl && knowledgeBaseId) {
+        try {
+          var sr = await fetch(apiUrl + '/api/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ knowledge_base_id: knowledgeBaseId }),
+          });
+          if (sr.ok) {
+            var data = await sr.json();
+            window.__ctxSessionId = data.session_id;
+            if (data.pills && data.pills.length) pills = data.pills;
+          }
+        } catch (e) { /* fall through to defaults */ }
+      }
 
       ContextusWidget.init({
         root: document.getElementById('contextus-root'),
@@ -32,8 +51,9 @@
         lang: params.get('lang') || 'auto',
         transparent: transparent,
         dynamicHeight: params.get('dynamicHeight') === '1',
-        apiUrl: params.get('apiUrl') || '',
-        knowledgeBaseId: params.get('knowledgeBaseId') || '',
+        apiUrl: apiUrl,
+        knowledgeBaseId: knowledgeBaseId,
+        pills: pills || ['What services do you offer?', 'How can you help me?', 'How do I contact you?'],
       });
     })();
   </script>

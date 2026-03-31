@@ -29,7 +29,8 @@ async def create_session(body: SessionRequest):
 
     await save_session(session_id, session)
 
-    return SessionResponse(session_id=session_id)
+    pills = kb.suggested_pills if kb.suggested_pills else []
+    return SessionResponse(session_id=session_id, pills=pills)
 
 
 @router.get("/session/{session_id}")

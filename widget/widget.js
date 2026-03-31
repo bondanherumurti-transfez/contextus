@@ -296,20 +296,25 @@
       (async function callBackend() {
         // Lazily create a chat session on first message
         if (!state.sessionId) {
-          try {
-            const sr = await fetch(`${cfg.apiUrl}/api/session`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ knowledge_base_id: cfg.knowledgeBaseId }),
-            });
-            if (!sr.ok) throw new Error(`${sr.status}`);
-            state.sessionId = (await sr.json()).session_id;
-          } catch (err) {
-            const tidx = state.messages.indexOf(thinkingMsg);
-            if (tidx > -1) state.messages.splice(tidx, 1);
-            state.errorMessage = 'Could not start session. Please try again.';
-            render();
-            return;
+          if (window.__ctxSessionId) {
+            state.sessionId = window.__ctxSessionId;
+            window.__ctxSessionId = null;
+          } else {
+            try {
+              const sr = await fetch(`${cfg.apiUrl}/api/session`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ knowledge_base_id: cfg.knowledgeBaseId }),
+              });
+              if (!sr.ok) throw new Error(`${sr.status}`);
+              state.sessionId = (await sr.json()).session_id;
+            } catch (err) {
+              const tidx = state.messages.indexOf(thinkingMsg);
+              if (tidx > -1) state.messages.splice(tidx, 1);
+              state.errorMessage = 'Could not start session. Please try again.';
+              render();
+              return;
+            }
           }
         }
 
