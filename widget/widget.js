@@ -313,18 +313,10 @@
           }
         }
 
-        // Replace thinking bubble with a streaming agent message
-        const tidx = state.messages.indexOf(thinkingMsg);
-        if (tidx > -1) state.messages.splice(tidx, 1);
-
+        // agentMsg is prepared but NOT added to state yet — thinkingMsg stays visible
+        // until the first token arrives, keeping the dots throughout the entire wait.
         const agentMsg = { role: 'agent', text: '' };
-        state.messages.push(agentMsg);
-        render();
-
-        // Grab the bubble element for live token updates (avoids full re-render per token)
-        const allBubbles = msgArea.querySelectorAll('.ctx-bubble-agent');
-        const streamBubble = allBubbles[allBubbles.length - 1] || null;
-
+        let streamBubble = null;
         let succeeded = false;
 
         for (let attempt = 0; attempt < 2; attempt++) {
@@ -351,6 +343,15 @@
                 let payload;
                 try { payload = JSON.parse(line.slice(6)); } catch { continue; }
                 if (payload.token) {
+                  // First token: swap thinking dots → agent bubble
+                  if (!streamBubble) {
+                    const tidx = state.messages.indexOf(thinkingMsg);
+                    if (tidx > -1) state.messages.splice(tidx, 1);
+                    state.messages.push(agentMsg);
+                    render();
+                    const allBubbles = msgArea.querySelectorAll('.ctx-bubble-agent');
+                    streamBubble = allBubbles[allBubbles.length - 1] || null;
+                  }
                   agentMsg.text += payload.token;
                   if (streamBubble) {
                     streamBubble.textContent = agentMsg.text;
@@ -368,17 +369,27 @@
             break;
           } catch (err) {
             if (attempt === 0) {
-              // Silent auto-retry after 2s
+              // Silent auto-retry after 2s — keep dots visible, reset partial text
               agentMsg.text = '';
-              if (streamBubble) streamBubble.textContent = '';
+              if (streamBubble) {
+                // Re-show thinking dots if we already transitioned
+                const aidx = state.messages.indexOf(agentMsg);
+                if (aidx > -1) state.messages.splice(aidx, 1);
+                state.messages.push(thinkingMsg);
+                streamBubble = null;
+                render();
+              }
               await new Promise(r => setTimeout(r, 2000));
             }
           }
         }
 
         if (!succeeded) {
+          // Clean up any partial state
           const aidx = state.messages.indexOf(agentMsg);
           if (aidx > -1) state.messages.splice(aidx, 1);
+          const tidx = state.messages.indexOf(thinkingMsg);
+          if (tidx > -1) state.messages.splice(tidx, 1);
           state.errorMessage = 'Something went wrong. Please try again.';
         }
 
