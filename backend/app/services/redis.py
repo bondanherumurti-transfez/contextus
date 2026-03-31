@@ -24,7 +24,7 @@ def rate_key(ip: str, action: str) -> str:
 
 
 async def save_knowledge_base(
-    job_id: str, data: KnowledgeBase, ttl: int = 1800
+    job_id: str, data: KnowledgeBase, ttl: int | None = 1800
 ) -> None:
     redis.set(kb_key(job_id), data.model_dump_json(), ex=ttl)
 

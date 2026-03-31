@@ -17,7 +17,11 @@ from app.services.llm import generate_company_profile, assess_quality_tier
 router = APIRouter(tags=["crawl"])
 
 
-async def run_crawl_job(job_id: str, url: str):
+DEMO_URL = "https://project-b0yme.vercel.app"
+DEMO_JOB_ID = "demo"
+
+
+async def run_crawl_job(job_id: str, url: str, ttl: int | None = 1800):
     try:
         kb = await get_knowledge_base(job_id)
         if not kb:
@@ -25,7 +29,7 @@ async def run_crawl_job(job_id: str, url: str):
 
         kb.status = "analyzing"
         kb.progress = "Analyzing website content..."
-        await save_knowledge_base(job_id, kb)
+        await save_knowledge_base(job_id, kb, ttl=ttl)
 
         def on_progress(msg: str):
             kb.progress = msg
@@ -34,13 +38,13 @@ async def run_crawl_job(job_id: str, url: str):
 
         kb.pages_found = result.total_pages
         kb.progress = "Extracting content..."
-        await save_knowledge_base(job_id, kb)
+        await save_knowledge_base(job_id, kb, ttl=ttl)
 
         chunks = chunk_pages(result.pages)
 
         if chunks:
             kb.progress = "Generating company profile..."
-            await save_knowledge_base(job_id, kb)
+            await save_knowledge_base(job_id, kb, ttl=ttl)
 
             company_profile = generate_company_profile(chunks, url)
             kb.company_profile = company_profile
@@ -49,14 +53,32 @@ async def run_crawl_job(job_id: str, url: str):
 
         kb.status = "complete"
         kb.progress = ""
-        await save_knowledge_base(job_id, kb)
+        await save_knowledge_base(job_id, kb, ttl=ttl)
 
     except Exception as e:
         kb = await get_knowledge_base(job_id)
         if kb:
             kb.status = "failed"
             kb.progress = str(e)
-            await save_knowledge_base(job_id, kb)
+            await save_knowledge_base(job_id, kb, ttl=ttl)
+
+
+@router.post("/crawl/demo")
+async def seed_demo_kb(background_tasks: BackgroundTasks):
+    """Seed or refresh the permanent demo knowledge base (no TTL)."""
+    existing = await get_knowledge_base(DEMO_JOB_ID)
+    if existing and existing.status == "complete":
+        return {"job_id": DEMO_JOB_ID, "status": "complete", "cached": True}
+
+    kb = KnowledgeBase(
+        job_id=DEMO_JOB_ID,
+        status="crawling",
+        progress="Starting demo crawl...",
+        created_at=int(time.time()),
+    )
+    await save_knowledge_base(DEMO_JOB_ID, kb, ttl=None)
+    background_tasks.add_task(run_crawl_job, DEMO_JOB_ID, DEMO_URL, None)
+    return {"job_id": DEMO_JOB_ID, "status": "crawling"}
 
 
 @router.post("/crawl", response_model=CrawlResponse)
