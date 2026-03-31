@@ -20,9 +20,12 @@ allowed_origins = os.getenv(
     "ALLOWED_ORIGINS", "http://localhost:8000,http://localhost:3000"
 ).split(",")
 
+allowed_origin_regex = os.getenv("ALLOWED_ORIGIN_REGEX", "")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=allowed_origin_regex or None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
