@@ -23,8 +23,6 @@ nav .container{max-width:960px;display:flex;align-items:center;justify-content:s
 .logo{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--black)}
 .logo svg{display:block;flex-shrink:0}
 .logo-text{font-weight:500;font-size:15px;letter-spacing:-.3px;line-height:26px;display:block}
-.nav-try{font-size:13px;color:var(--g600);text-decoration:none;margin-right:.75rem;transition:color .15s}
-.nav-try:hover{color:var(--black)}
 .nav-cta{font-size:13px;font-weight:500;color:var(--white);background:var(--black);padding:6px 16px;border-radius:5px;text-decoration:none;transition:opacity .15s}
 .nav-cta:hover{opacity:.8}
 .try-nudge{font-size:.85rem;color:var(--g500);text-align:center;margin-top:1rem}
@@ -155,8 +153,7 @@ footer .fr{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spaci
 
 <nav><div class="container">
   <a href="#" class="logo"><svg width="26" height="26" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg><span class="logo-text">contextus</span></a>
-  <a href="/try" class="nav-try">Try it free →</a>
-  <a href="#ea" class="nav-cta">Get early access</a>
+  <a href="/try" class="nav-cta">Try it free →</a>
 </div></nav>
 
 <section class="hero"><div class="container">
@@ -274,15 +271,10 @@ footer .fr{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spaci
 </div></section>
 
 <section class="cta" id="ea"><div class="container">
-  <h2>Get early access</h2>
-  <p class="desc" style="max-width:480px;margin:0 auto .25rem">Replace your contact form with something that actually works.</p>
-  <p class="desc-id">Ganti form kontak Anda dengan yang benar-benar berfungsi.</p>
-  <form class="sf" onsubmit="handleSignup(event)">
-    <input type="email" placeholder="you@company.com" required id="se">
-    <button type="submit" class="btn">Join waitlist</button>
-  </form>
-  <p class="sn2">Free during early access. No credit card.</p>
-  <p class="sn2" id="ss" style="display:none;color:var(--black);font-weight:500">Thanks! We'll be in touch.</p>
+  <h2>See it work on your website.</h2>
+  <p class="desc" style="max-width:440px;margin:0 auto 2rem">Paste your URL — contextus crawls your site and builds a live AI assistant in ~30 seconds. No signup.</p>
+  <a href="/try" class="btn" style="font-size:15px;padding:12px 28px">Try with your URL →</a>
+  <p class="sn2" style="margin-top:1rem">Works on any website &middot; ~30 seconds</p>
 </div></section>
 
 <footer><div class="container">
@@ -291,7 +283,6 @@ footer .fr{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spaci
 </div></footer>
 
 <script>
-function handleSignup(e){e.preventDefault();document.getElementById('se').value='';document.getElementById('ss').style.display='block';setTimeout(()=>{document.getElementById('ss').style.display='none'},4000)}
 // Resize iframe when widget reports its height via postMessage
 window.addEventListener('message', function(e) {
   if (e.data && e.data.type === 'contextus:resize') {
