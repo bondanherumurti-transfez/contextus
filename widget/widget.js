@@ -30,6 +30,45 @@
     return emailRe.test(message) || phoneRe.test(message) || waRe.test(message);
   }
 
+  function markdownToHtml(text) {
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    const paragraphs = escaped.split(/\n{2,}/);
+    const rendered = paragraphs.map(para => {
+      const lines = para.split('\n');
+
+      // Numbered list
+      if (lines.every(l => /^\d+\.\s/.test(l.trim()) || l.trim() === '')) {
+        const items = lines.filter(l => l.trim()).map(l =>
+          `<li>${inlineFormat(l.replace(/^\d+\.\s+/, ''))}</li>`
+        ).join('');
+        return `<ol>${items}</ol>`;
+      }
+
+      // Bullet list
+      if (lines.every(l => /^[-*]\s/.test(l.trim()) || l.trim() === '')) {
+        const items = lines.filter(l => l.trim()).map(l =>
+          `<li>${inlineFormat(l.replace(/^[-*]\s+/, ''))}</li>`
+        ).join('');
+        return `<ul>${items}</ul>`;
+      }
+
+      // Regular paragraph — preserve single line breaks
+      return `<p>${lines.map(inlineFormat).join('<br>')}</p>`;
+    });
+
+    return rendered.join('');
+  }
+
+  function inlineFormat(text) {
+    return text
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>');
+  }
+
   // ── Widget ───────────────────────────────────────────────────────────────────
 
   function createWidget(config) {
@@ -163,7 +202,7 @@
         msgArea.appendChild(errBanner);
         return document.createDocumentFragment(); // error shown as banner not bubble
       } else {
-        bubble.textContent = m.text;
+        bubble.innerHTML = markdownToHtml(m.text);
       }
 
       row.appendChild(bubble);
@@ -360,7 +399,7 @@
                   }
                   agentMsg.text += payload.token;
                   if (streamBubble) {
-                    streamBubble.textContent = agentMsg.text;
+                    streamBubble.innerHTML = markdownToHtml(agentMsg.text);
                     if (msgArea.scrollHeight > msgArea.clientHeight) {
                       msgArea.scrollTop = msgArea.scrollHeight;
                     }
