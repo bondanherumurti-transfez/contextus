@@ -545,12 +545,14 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     const urlInput = document.getElementById('url-input');
     const urlWrap  = document.getElementById('url-wrap');
     const urlErr   = document.getElementById('url-err');
-    const val = urlInput.value.trim();
+    let val = urlInput.value.trim();
     if (!val || val.length < 4) {
       urlWrap.classList.add('err');
       urlErr.classList.add('show');
       return;
     }
+    // Prepend https:// if no scheme given (e.g. user typed "stripe.com")
+    if (!/^https?:\/\//i.test(val)) val = 'https://' + val;
     removeIdleInputs();
     fetch(API_URL + '/api/crawl', {
       method: 'POST',
