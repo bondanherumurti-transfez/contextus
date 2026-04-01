@@ -217,7 +217,8 @@ async def crawl_site(
     url: str, on_progress: Callable[[str], None] | None = None
 ) -> CrawlResult:
     result = await _crawl_site_httpx(url, on_progress)
-    if result.total_pages == 0:
+    total_words = sum(len(p.text.split()) for p in result.pages)
+    if total_words < 100:
         result = await _crawl_site_firecrawl(url, on_progress)
     return result
 
