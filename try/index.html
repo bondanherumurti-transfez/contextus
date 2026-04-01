@@ -68,6 +68,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
 .send-btn{width:34px;height:34px;background:var(--black);border:none;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .15s;flex-shrink:0;-webkit-appearance:none;appearance:none;box-shadow:none}
 .send-btn:hover{opacity:.8}
 .send-btn svg{width:16px;height:16px;fill:#fff}
+.send-btn.loading{opacity:.6;cursor:default;pointer-events:none}
+.send-btn.loading svg{display:none}
+.send-btn.loading::after{content:'';width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;display:block;animation:spin .7s linear infinite}
 .url-err-msg{font-size:12px;color:#a32d2d;margin-bottom:.5rem;display:none}
 .url-err-msg.show{display:block}
 .idle-note{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spacing:.3px;text-align:center}
@@ -556,7 +559,11 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     }
     // Prepend https:// if no scheme given (e.g. user typed "stripe.com")
     if (!/^https?:\/\//i.test(val)) val = 'https://' + val;
-    removeIdleInputs();
+
+    const submitBtn = document.getElementById('url-submit');
+    submitBtn.classList.add('loading');
+    urlInput.disabled = true;
+
     fetch(API_URL + '/api/crawl', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -569,10 +576,12 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     })
     .then(data => {
       jobId = data.job_id;
+      removeIdleInputs();
       startCrawl(val);
     })
     .catch(err => {
-      restoreIdleInputs();
+      submitBtn.classList.remove('loading');
+      urlInput.disabled = false;
       const msg = err.message === 'rate_limit'
         ? 'Too many requests — please wait an hour before trying again.'
         : 'Could not start crawl. Please check the URL and try again.';
