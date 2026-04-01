@@ -193,17 +193,17 @@ async def _crawl_site_firecrawl(
     )
 
     pages = []
-    for doc in result.get("data") or []:
-        text = doc.get("markdown") or ""
+    for doc in getattr(result, "data", None) or []:
+        text = getattr(doc, "markdown", None) or ""
         if text.strip():
-            metadata = doc.get("metadata") or {}
-            pages.append(
-                PageContent(
-                    url=metadata.get("source_url", url),
-                    title=metadata.get("og_title") or metadata.get("title") or url,
-                    text=text,
-                )
-            )
+            metadata = getattr(doc, "metadata", None) or {}
+            if isinstance(metadata, dict):
+                src = metadata.get("source_url") or metadata.get("sourceURL") or url
+                title = metadata.get("og_title") or metadata.get("title") or url
+            else:
+                src = getattr(metadata, "source_url", None) or getattr(metadata, "sourceURL", url)
+                title = getattr(metadata, "og_title", None) or getattr(metadata, "title", url)
+            pages.append(PageContent(url=src, title=title, text=text))
 
     return CrawlResult(
         pages=pages,
