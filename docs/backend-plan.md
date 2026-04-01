@@ -285,6 +285,42 @@ Rules:
 - Ask at most one follow-up question per turn
 ```
 
+### Step 9b — Lead qualification in chat system prompt
+
+The chat agent must not only answer questions but actively qualify the visitor so the lead brief has enough signal to be actionable. This is a prompt-only change in `build_chat_system_prompt()` in `llm.py`.
+
+**Qualification framework — priority order:**
+
+| Priority | Signal | Why first |
+|----------|--------|-----------|
+| 1 | **Specific problem / use case** | Determines brief `need` — most important field |
+| 2 | **Role + company type** | Determines fit and `who` — affects `quality_score` |
+| 3 | **Current solution / why switching** | Strongest buying signal — feeds `signals` |
+| 4 | **Timeline / urgency** | Sales prioritization |
+| 5 | **Contact (name + email/WA)** | Required for follow-up — ask only when there's clear intent |
+
+**Rules for the agent:**
+- Answer the visitor's question first, qualify second — never lead with a question
+- Ask at most one qualifying question per turn, pick the highest-priority unknown
+- Don't repeat questions already answered in the conversation
+- Make questions feel natural, not like a form — tie them to what the visitor just said
+- Only ask for contact info when buying intent is clear (not on the first message)
+
+**Updated system prompt additions:**
+
+```
+Lead qualification (weave naturally into responses):
+- After answering, ask the next unknown from this list (highest priority first):
+  1. What specific problem are you trying to solve with this?
+  2. What kind of business are you / what's your role?
+  3. What are you currently using, and what's not working?
+  4. When are you looking to get this in place?
+  5. [Only when intent is clear] What's the best way to reach you — email or WhatsApp?
+- Never ask more than one question per message
+- Never ask a question that was already answered earlier in the conversation
+- Tie qualifying questions naturally to what the visitor just said
+```
+
 ### Step 10 — Brief route (`app/routers/brief.py`)
 
 **POST /api/brief/{session_id}**
