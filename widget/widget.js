@@ -273,6 +273,7 @@
       state.errorMessage = null;
       state.pillsVisible = false;
       state.phase = 'active';
+      state.nudgeSent = false;
 
       // Prepend greeting on first message
       if (state.messages.length === 0) {
