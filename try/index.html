@@ -703,8 +703,8 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
 
     document.getElementById('ch-company').textContent = p.name;
     document.getElementById('brief-hint').classList.remove('show');
-    document.getElementById('brief-hint-btn').textContent = 'See lead brief';
-    document.getElementById('brief-hint-btn').disabled = false;
+    document.getElementById('see-brief-btn').textContent = 'See lead brief';
+    document.getElementById('see-brief-btn').disabled = false;
 
     const name = encodeURIComponent(p.name);
     const greeting = encodeURIComponent('Ask anything about ' + p.name + '...');
@@ -757,7 +757,7 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
       document.getElementById('brief-hint').style.display = 'none';
       return;
     }
-    const btn = document.getElementById('brief-hint-btn');
+    const btn = document.getElementById('see-brief-btn');
     btn.textContent = 'Generating...';
     btn.disabled = true;
     try {
