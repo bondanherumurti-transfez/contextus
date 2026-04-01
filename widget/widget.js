@@ -358,6 +358,9 @@
           }
         }
 
+        // Notify parent page (e.g. /try) that a message was sent
+        window.parent.postMessage({ type: 'contextus:message_sent' }, '*');
+
         // agentMsg is prepared but NOT added to state yet — thinkingMsg stays visible
         // until the first token arrives, keeping the dots throughout the entire wait.
         const agentMsg = { role: 'agent', text: '' };

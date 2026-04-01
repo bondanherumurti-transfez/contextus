@@ -40,6 +40,7 @@
             var data = await sr.json();
             window.__ctxSessionId = data.session_id;
             if (data.pills && data.pills.length) pills = data.pills;
+            window.parent.postMessage({ type: 'contextus:session_ready', session_id: data.session_id }, '*');
           }
         } catch (e) { /* fall through to defaults */ }
       }

@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
+<title>Try contextus — See it work on your website</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+button{outline:none;-webkit-tap-highlight-color:transparent}
+:root{
+  --black:#000;--white:#fff;
+  --g50:#fafafa;--g100:#f5f5f5;--g200:#ebebeb;--g300:#e0e0e0;
+  --g400:#bbb;--g500:#888;--g600:#666;--g700:#444;--g800:#222;--g900:#111;
+  --sans:'DM Sans',-apple-system,sans-serif;
+  --mono:'DM Mono',monospace;
+  --max:580px;--px:1.5rem;
+}
+html{scroll-behavior:smooth;color-scheme:light}
+body{font-family:var(--sans);color:#000;background:#fff;font-size:16px;line-height:1.7;-webkit-font-smoothing:antialiased}
+::selection{background:#000;color:#fff}
+
+/* ── Nav ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-bottom:.5px solid var(--g300)}
+.nav-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:.875rem var(--px)}
+.logo{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--black)}
+.logo-text{font-weight:500;font-size:15px;letter-spacing:-.3px}
+.nav-back{font-size:13px;color:var(--g500);text-decoration:none;transition:color .15s}
+.nav-back:hover{color:var(--black)}
+
+/* ── Page ── */
+.page{min-height:100vh;padding:7rem var(--px) 5rem;display:flex;flex-direction:column;align-items:center}
+.content{width:100%;max-width:var(--max)}
+
+/* ── Animations ── */
+@keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+@keyframes shimmer{0%,100%{opacity:.45}50%{opacity:1}}
+@keyframes collapse{from{opacity:1;max-height:600px;margin-bottom:1.5rem}to{opacity:0;max-height:0;margin-bottom:0;overflow:hidden}}
+.fu{animation:fu .35s ease forwards}
+.fd1{animation-delay:.06s;opacity:0}
+.fd2{animation-delay:.13s;opacity:0}
+.fd3{animation-delay:.2s;opacity:0}
+.fd4{animation-delay:.27s;opacity:0}
+.fd5{animation-delay:.34s;opacity:0}
+.collapsing{animation:collapse .4s ease forwards;pointer-events:none}
+
+/* ── State visibility ── */
+.state{display:none}.state.active{display:block}
+
+/* ── Shared typography ── */
+.eyebrow{font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:.875rem}
+.page-h1{font-size:clamp(1.75rem,5vw,2.5rem);font-weight:500;letter-spacing:-.75px;line-height:1.15;margin-bottom:.75rem}
+.page-sub{font-size:1rem;color:var(--g600);line-height:1.6;margin-bottom:.3rem;max-width:440px}
+.page-sub-id{font-size:.825rem;color:var(--g500);font-style:italic;margin-bottom:2.25rem}
+
+/* ══════════════════
+   STATE 1 — IDLE
+══════════════════ */
+.url-wrap{background:var(--g100);border:.5px solid var(--g300);border-radius:16px;padding:14px 18px;transition:border-color .2s,box-shadow .2s;margin-bottom:.625rem}
+.url-wrap:focus-within{border-color:var(--g500);box-shadow:0 0 0 3px rgba(0,0,0,.04)}
+.url-wrap.err{border-color:#a32d2d;box-shadow:0 0 0 3px rgba(163,45,45,.06)}
+.url-row{display:flex;align-items:center;gap:10px}
+.url-row input{flex:1;border:none;background:transparent;font-size:16px;font-family:var(--sans);color:var(--black);outline:none;padding:4px 0;min-width:0;-webkit-appearance:none;appearance:none;box-shadow:none}
+.url-row input::placeholder{color:var(--g400)}
+.send-btn{width:34px;height:34px;background:var(--black);border:none;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .15s;flex-shrink:0;-webkit-appearance:none;appearance:none;box-shadow:none}
+.send-btn:hover{opacity:.8}
+.send-btn svg{width:16px;height:16px;fill:#fff}
+.url-err-msg{font-size:12px;color:#a32d2d;margin-bottom:.5rem;display:none}
+.url-err-msg.show{display:block}
+.idle-note{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spacing:.3px;text-align:center}
+
+/* ════════════════════════
+   STATE 2 — CRAWLING
+════════════════════════ */
+.crawl-site{font-family:var(--mono);font-size:12px;color:var(--g600);display:flex;align-items:center;gap:8px;margin-bottom:1.75rem}
+.pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--g400);animation:pls 1.4s infinite;flex-shrink:0}
+@keyframes pls{0%,100%{opacity:.25}50%{opacity:1}}
+.crawl-h{font-size:1.35rem;font-weight:500;letter-spacing:-.4px;margin-bottom:.3rem}
+.crawl-note{font-size:.875rem;color:var(--g500);margin-bottom:1.75rem}
+.prog-track{height:2px;background:var(--g200);border-radius:2px;overflow:hidden;margin-bottom:2rem}
+.prog-fill{height:100%;background:var(--black);border-radius:2px;width:0;transition:width .7s ease}
+.crawl-steps{display:flex;flex-direction:column;gap:.75rem}
+.cstep{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--g400);transition:color .3s}
+.cstep.active{color:var(--black)}
+.cstep.done{color:var(--g600)}
+.cstep-icon{width:18px;height:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.cstep.pending .cstep-icon::after{content:'';width:10px;height:10px;border-radius:50%;border:1.5px solid var(--g300);display:block}
+.cstep.active .cstep-icon::after{content:'';width:12px;height:12px;border-radius:50%;border:2px solid var(--g300);border-top-color:var(--black);display:block;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cstep.done .cstep-icon svg{display:block}
+.cstep.pending .cstep-icon svg,.cstep.active .cstep-icon svg{display:none}
+.cstep-icon svg{width:14px;height:14px;fill:var(--g600)}
+.pages-tag{font-family:var(--mono);font-size:11px;color:var(--g500);margin-left:4px;transition:opacity .3s}
+
+/* ═══════════════════════════════════════
+   STATE 3a — SUMMARY (rich + thin)
+═══════════════════════════════════════ */
+.summary-eyebrow{font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:.5rem}
+.summary-h{font-size:1.35rem;font-weight:500;letter-spacing:-.4px;margin-bottom:1.5rem;line-height:1.3}
+
+/* Summary card */
+.summ-card{border:.5px solid var(--g300);border-radius:10px;overflow:hidden;margin-bottom:1.5rem}
+.summ-head{padding:.875rem 1.25rem;border-bottom:.5px solid var(--g300);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+.summ-co{font-weight:500;font-size:.95rem}
+.summ-meta{font-family:var(--mono);font-size:11px;color:var(--g500)}
+.summ-body{padding:1rem 1.25rem;display:flex;flex-direction:column;gap:.875rem}
+.summ-row{display:grid;grid-template-columns:80px 1fr;gap:.5rem;font-size:.875rem}
+.summ-lbl{font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:.3px;padding-top:2px}
+.summ-val{color:var(--g700);line-height:1.6}
+.summ-val strong{color:var(--black);font-weight:500}
+.summ-tags{display:flex;gap:.375rem;flex-wrap:wrap}
+.stag{font-family:var(--mono);font-size:10px;color:var(--g600);padding:4px 10px;border:.5px solid var(--g300);border-radius:20px;background:var(--white);text-transform:uppercase;letter-spacing:.3px}
+
+/* Thin content warning */
+.thin-warn{display:none;background:#faeeda;border:.5px solid #f0d5a0;border-radius:8px;padding:.75rem 1rem;font-size:.825rem;color:#6b3d0f;line-height:1.5;margin-bottom:1.25rem}
+.thin-warn.show{display:block}
+.thin-warn strong{font-weight:500;color:#4a2800}
+
+/* Gaps list */
+.gaps-list{display:flex;flex-direction:column;gap:.25rem}
+.gap-item{font-size:.875rem;color:var(--g600);display:flex;align-items:baseline;gap:.5rem}
+.gap-item::before{content:'·';color:var(--g400);flex-shrink:0}
+
+/* CTA to open widget */
+.chat-cta{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+.chat-cta-text{font-size:.875rem;color:var(--g600);line-height:1.5}
+.btn-p{display:inline-flex;align-items:center;gap:6px;background:var(--black);color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:500;font-family:var(--sans);border:none;cursor:pointer;transition:opacity .15s;white-space:nowrap;-webkit-appearance:none;appearance:none;box-shadow:none}
+.btn-p:hover{opacity:.8}
+.btn-p svg{width:14px;height:14px;fill:#fff}
+.btn-s{display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--g600);padding:10px 16px;border-radius:8px;font-size:14px;font-family:var(--sans);border:.5px solid var(--g300);cursor:pointer;transition:border-color .15s,color .15s;white-space:nowrap;-webkit-appearance:none;appearance:none;box-shadow:none}
+.btn-s:hover{border-color:var(--g500);color:var(--black)}
+
+/* ═══════════════════════════
+   STATE 3b — CHAT (widget)
+═══════════════════════════ */
+.chat-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem}
+.chat-co{font-weight:500;font-size:.95rem}
+.back-to-summary{font-size:12px;color:var(--g500);background:none;border:none;cursor:pointer;font-family:var(--sans);transition:color .15s;padding:0}
+.back-to-summary:hover{color:var(--black)}
+
+/* Widget mock — identical visual tokens to real widget */
+.widget-shell{border:.5px solid var(--g300);border-radius:12px;overflow:hidden;background:#fff;margin-bottom:1rem}
+.w-header{padding:10px 14px;border-bottom:.5px solid var(--g300);display:flex;align-items:center;gap:6px}
+.w-header-name{font-size:13px;font-weight:500}
+.w-powered{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--g400)}
+.w-body{padding:14px}
+.w-messages{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;max-height:280px;overflow-y:auto}
+.w-messages::-webkit-scrollbar{width:3px}
+.w-messages::-webkit-scrollbar-thumb{background:var(--g300);border-radius:3px}
+.w-msg{display:flex;gap:8px;align-items:flex-start}
+.w-msg.v{justify-content:flex-end}
+.w-av{width:24px;height:24px;flex-shrink:0}
+.w-bubble{font-size:13px;line-height:1.55;color:var(--g800);max-width:84%}
+.w-bubble.vb{background:var(--g900);color:#fff;padding:8px 13px;border-radius:12px;border-bottom-right-radius:3px}
+.w-bubble p{margin-bottom:.35em}.w-bubble p:last-child{margin-bottom:0}
+.w-bubble ol,.w-bubble ul{margin:.2em 0 .2em 1.15em}
+.w-bubble li{margin-bottom:.1em}
+.w-bubble strong{font-weight:600}
+.w-dots{display:flex;gap:3px;padding:6px 0}
+.w-dots span{width:5px;height:5px;background:var(--g400);border-radius:50%;animation:dp 1.2s infinite}
+.w-dots span:nth-child(2){animation-delay:.2s}
+.w-dots span:nth-child(3){animation-delay:.4s}
+@keyframes dp{0%,60%,100%{opacity:.3;transform:scale(.85)}30%{opacity:1;transform:scale(1)}}
+.w-input-area{background:var(--g100);border:.5px solid var(--g300);border-radius:16px;padding:12px 12px 12px 16px;display:flex;align-items:center;gap:10px}
+.w-input-area input{flex:1;border:none;background:transparent;font-size:14px;font-family:var(--sans);color:var(--black);outline:none;min-width:0;-webkit-appearance:none;appearance:none;box-shadow:none}
+.w-input-area input::placeholder{color:var(--g400)}
+.w-sbtn{width:30px;height:30px;background:var(--black);border:none;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:opacity .15s;-webkit-appearance:none;appearance:none;box-shadow:none}
+.w-sbtn:hover{opacity:.8}
+.w-sbtn svg{width:14px;height:14px;fill:#fff}
+.w-pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.w-pill{font-size:11px;color:var(--g600);padding:5px 11px;border:.5px solid var(--g300);border-radius:14px;background:var(--white);cursor:pointer;transition:background .15s,border-color .15s;font-family:var(--sans);-webkit-appearance:none;appearance:none;box-shadow:none}
+.w-pill:hover{background:var(--g100);border-color:var(--g500)}
+.widget-caption{font-size:12px;color:var(--g500);text-align:center;margin-bottom:1.5rem}
+
+/* Brief hint */
+.brief-hint{display:none;border:.5px solid var(--g300);border-radius:10px;padding:1rem 1.25rem;background:var(--g50);margin-bottom:1.5rem}
+.brief-hint.show{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;animation:fu .35s ease forwards}
+.hint-text{font-size:.875rem;color:var(--g600);line-height:1.5}
+.hint-text strong{color:var(--black);font-weight:500;display:block;margin-bottom:.1rem}
+
+/* ══════════════════════════
+   STATE 4 — EMPTY / BLOCKED
+══════════════════════════ */
+.empty-icon{width:48px;height:48px;border:.5px solid var(--g300);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem}
+.empty-icon svg{width:22px;height:22px;fill:var(--g400)}
+.empty-actions{display:flex;flex-direction:column;gap:.75rem;margin-top:2rem}
+.empty-or{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spacing:.5px;text-align:center;padding:.25rem 0}
+
+/* Manual form */
+.manual-form{border:.5px solid var(--g300);border-radius:10px;overflow:hidden;display:none;margin-top:1.5rem}
+.manual-form.show{display:block;animation:fu .35s ease forwards}
+.mf-head{padding:.875rem 1.25rem;border-bottom:.5px solid var(--g300);font-size:.875rem;font-weight:500}
+.mf-body{padding:1.25rem;display:flex;flex-direction:column;gap:1rem}
+.mf-field label{display:block;font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:.3px;margin-bottom:.4rem}
+.mf-field input,.mf-field textarea{width:100%;border:.5px solid var(--g300);border-radius:8px;padding:9px 12px;font-size:14px;font-family:var(--sans);color:var(--black);outline:none;background:var(--white);transition:border-color .15s;resize:none;-webkit-appearance:none;appearance:none;box-shadow:none}
+.mf-field input:focus,.mf-field textarea:focus{border-color:var(--g500)}
+.mf-field input::placeholder,.mf-field textarea::placeholder{color:var(--g400)}
+.mf-submit{width:100%;padding:10px;background:var(--black);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;font-family:var(--sans);cursor:pointer;transition:opacity .15s}
+.mf-submit:hover{opacity:.8}
+
+/* ════════════════
+   STATE 5 — BRIEF
+════════════════ */
+.brief-card{border:.5px solid var(--g300);border-radius:10px;overflow:hidden;margin-bottom:1.5rem}
+.bc-head{padding:1rem 1.25rem;border-bottom:.5px solid var(--g300);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.bc-title{font-weight:500;font-size:.95rem}
+.bc-meta{font-family:var(--mono);font-size:11px;color:var(--g500)}
+.bc-row{display:grid;grid-template-columns:88px 1fr;gap:.5rem;padding:.625rem 1.25rem;border-bottom:.5px solid var(--g200);font-size:.875rem}
+.bc-row:last-child{border-bottom:none}
+.bc-lbl{font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:.3px;padding-top:2px}
+.bc-val{color:var(--g700);line-height:1.6}
+.bc-val strong{color:var(--black);font-weight:500}
+.bc-val em{font-style:italic;color:var(--g500)}
+.qbadge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px}
+.qbadge.high{background:#e1f5ee;color:#0f6e56}
+.qbadge.medium{background:#faeeda;color:#854f0b}
+.qbadge .qdot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.brief-cta-block{text-align:center;padding:1.25rem 0 .5rem}
+.brief-cta-block p{font-size:.9rem;color:var(--g600);margin-bottom:1.25rem}
+.cta-row{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap}
+
+/* ── Footer ── */
+footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
+.foot-inner{max-width:960px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem}
+.foot-l{font-size:13px;color:var(--g500)}
+.foot-r{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spacing:.5px}
+
+/* ── Responsive ── */
+@media(max-width:480px){
+  .bc-row{grid-template-columns:70px 1fr}
+  .cta-row,.empty-actions{flex-direction:column;align-items:stretch}
+  .btn-p,.btn-s{justify-content:center}
+  .brief-hint{flex-direction:column}
+  .chat-cta{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+
+<nav><div class="nav-inner">
+  <a href="/" class="logo">
+    <svg width="26" height="26" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg>
+    <span class="logo-text">contextus</span>
+  </a>
+  <a href="/" class="nav-back">← Back to home</a>
+</div></nav>
+
+<div class="page"><div class="content">
+
+  <!-- ══════════════════════════════
+       STATE 1 — IDLE
+  ══════════════════════════════ -->
+  <div class="state active" id="s-idle">
+    <p class="eyebrow fu">Live demo</p>
+    <h1 class="page-h1 fu fd1">See it work on<br>your website.</h1>
+    <p class="page-sub fu fd2">Paste your URL — contextus crawls your site, builds a knowledge base, and shows you a live AI assistant in ~30 seconds.</p>
+    <p class="page-sub-id fu fd3">Tempel URL Anda — contextus membangun asisten AI untuk bisnis Anda dalam ~30 detik.</p>
+    <div class="fu fd4">
+      <div class="url-wrap" id="url-wrap">
+        <div class="url-row">
+          <input type="url" id="url-input" placeholder="https://your-site.com" autocomplete="off" spellcheck="false">
+          <button class="send-btn" id="url-submit" type="button">
+            <svg viewBox="0 0 24 24"><path d="M5.694 12 2.299 3.272c-.236-.607.356-1.188.942-.982l.093.04 18 9a.75.75 0 0 1 .097 1.283l-.097.058-18 9c-.619.31-1.263-.277-1.035-.916l.035-.084L5.694 12 2.3 3.272 5.694 12ZM4.402 4.54l2.61 6.71h6.627a.75.75 0 0 1 .102 1.493l-.102.007H7.01l-2.609 6.71L19.322 12 4.401 4.54Z"/></svg>
+          </button>
+        </div>
+      </div>
+      <p class="url-err-msg" id="url-err">Please enter a valid URL — e.g. https://yoursite.com</p>
+      <p class="idle-note fu fd5">No signup required &middot; Works on any website &middot; ~30 seconds</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       STATE 2 — CRAWLING
+  ══════════════════════════════ -->
+  <div class="state" id="s-crawling">
+    <div class="crawl-site fu">
+      <div class="pulse-dot"></div>
+      <span id="crawl-domain">yoursite.com</span>
+    </div>
+    <h2 class="crawl-h fu fd1">Analyzing your website...</h2>
+    <p class="crawl-note fu fd2">This takes about 30 seconds.</p>
+    <div class="prog-track fu fd2"><div class="prog-fill" id="prog"></div></div>
+    <div class="crawl-steps fu fd3">
+      <div class="cstep pending" id="cs-find">
+        <div class="cstep-icon"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+        <span>Finding pages on your site</span>
+        <span class="pages-tag" id="pages-tag" style="opacity:0"></span>
+      </div>
+      <div class="cstep pending" id="cs-read">
+        <div class="cstep-icon"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+        <span>Reading your content</span>
+      </div>
+      <div class="cstep pending" id="cs-profile">
+        <div class="cstep-icon"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+        <span>Building your business profile</span>
+      </div>
+      <div class="cstep pending" id="cs-pills">
+        <div class="cstep-icon"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+        <span>Generating conversation starters</span>
+      </div>
+    </div>
+    <div id="crawl-error" style="display:none;margin-top:1.5rem;text-align:center">
+      <p class="page-sub" id="crawl-error-msg" style="margin-bottom:1rem"></p>
+      <button class="btn-s" onclick="reset()">Try a different URL</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       STATE 3a — SUMMARY (rich or thin)
+  ══════════════════════════════════════ -->
+  <div class="state" id="s-summary">
+    <p class="summary-eyebrow fu">Analysis complete</p>
+    <h2 class="summary-h fu fd1">Here's what contextus learned about <strong id="sm-company">your business</strong>.</h2>
+
+    <!-- Thin content warning (shown for thin tier only) -->
+    <div class="thin-warn fu fd2" id="thin-warn">
+      <strong>Limited content found.</strong> Your site has fewer pages than we'd normally need for a full profile. The assistant will use what it found, but may ask visitors more questions to fill the gaps.
+    </div>
+
+    <!-- Summary card -->
+    <div class="summ-card fu fd2" id="summ-card">
+      <div class="summ-head">
+        <span class="summ-co" id="sm-co-name">Acme Web Agency</span>
+        <span class="summ-meta" id="sm-pages-meta">5 pages · Web Agency</span>
+      </div>
+      <div class="summ-body">
+        <div class="summ-row">
+          <div class="summ-lbl">ABOUT</div>
+          <div class="summ-val" id="sm-about">A Jakarta-based web design agency helping SMBs and startups build fast, modern websites. Specialises in custom design with no templates.</div>
+        </div>
+        <div class="summ-row">
+          <div class="summ-lbl">SERVICES</div>
+          <div class="summ-val">
+            <div class="summ-tags" id="sm-services">
+              <span class="stag">Web Design</span>
+              <span class="stag">SEO</span>
+              <span class="stag">Hosting</span>
+            </div>
+          </div>
+        </div>
+        <div class="summ-row" id="sm-gaps-row">
+          <div class="summ-lbl">GAPS FOUND</div>
+          <div class="summ-val">
+            <div class="gaps-list" id="sm-gaps">
+              <div class="gap-item">Pricing not mentioned anywhere on the site</div>
+              <div class="gap-item">No portfolio or case studies</div>
+              <div class="gap-item">No clear contact method listed</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-cta fu fd3">
+      <div class="chat-cta-text">
+        The assistant is ready. Chat with it to see how it handles your visitors.
+      </div>
+      <button class="btn-p" id="open-chat-btn" type="button">
+        Chat with your assistant
+        <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       STATE 3b — CHAT
+  ══════════════════════════════════════ -->
+  <div class="state" id="s-chat">
+    <div class="chat-header fu">
+      <span class="chat-co" id="ch-company">Acme Web Agency</span>
+      <button class="back-to-summary" id="back-summary-btn" type="button">← What we learned</button>
+    </div>
+
+    <div id="widget-iframe-container" class="fu fd1"></div>
+
+    <p class="widget-caption fu fd2">This is how it would look on your site.</p>
+
+    <div class="brief-hint" id="brief-hint">
+      <div class="hint-text">
+        <strong>Conversation captured.</strong>
+        contextus would generate a lead brief from this chat. Want to see what it looks like?
+      </div>
+      <button class="btn-p" id="see-brief-btn" type="button" style="font-size:13px;padding:9px 16px">
+        See lead brief
+        <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       STATE 4 — EMPTY / BLOCKED
+  ══════════════════════════════════════ -->
+  <div class="state" id="s-empty">
+    <div class="empty-icon fu">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+    </div>
+    <p class="eyebrow fu fd1">Limited access</p>
+    <h2 class="page-h1 fu fd2" style="font-size:clamp(1.5rem,4vw,2rem);margin-bottom:.5rem">We couldn't read<br>this site.</h2>
+    <p class="page-sub fu fd3" style="margin-bottom:.3rem">This happens when a site blocks automated access, requires a login, or has very little public content.</p>
+    <p class="page-sub-id fu fd3">Situs ini mungkin memblokir akses otomatis atau kontennya sangat terbatas.</p>
+
+    <div class="empty-actions fu fd4">
+      <button class="btn-s" id="try-another-btn" type="button">Try a different URL</button>
+      <div class="empty-or">OR</div>
+      <button class="btn-p" id="manual-entry-btn" type="button">Tell us about your business instead</button>
+    </div>
+
+    <!-- Manual entry form -->
+    <div class="manual-form" id="manual-form">
+      <div class="mf-head">Tell us about your business — we'll build your assistant from this.</div>
+      <div class="mf-body">
+        <div class="mf-field">
+          <label>WHAT DOES YOUR BUSINESS DO?</label>
+          <input type="text" id="mf-biz" placeholder="e.g. We help F&B businesses with tax filing and accounting">
+        </div>
+        <div class="mf-field">
+          <label>WHO ARE YOUR CUSTOMERS?</label>
+          <input type="text" id="mf-cust" placeholder="e.g. Restaurant owners and food business founders in Jakarta">
+        </div>
+        <div class="mf-field">
+          <label>WHAT SHOULD VISITORS DO AFTER CHATTING?</label>
+          <textarea rows="2" id="mf-cta" placeholder="e.g. Book a free consultation, or reach us on WhatsApp"></textarea>
+        </div>
+        <button class="mf-submit" id="manual-submit" type="button">Build my assistant →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       STATE 5 — BRIEF
+  ══════════════════════════════════════ -->
+  <div class="state" id="s-brief">
+    <p class="eyebrow fu">Lead brief</p>
+    <h2 class="page-h1 fu fd1" style="font-size:clamp(1.5rem,4vw,2rem);margin-bottom:.5rem">This is what you'd get<br>for every visitor.</h2>
+    <p class="page-sub fu fd2" style="font-size:.9rem;margin-bottom:1.75rem">Not a chat transcript. An actionable intelligence card.</p>
+
+    <div class="brief-card fu fd3">
+      <div class="bc-head">
+        <span class="bc-title">New lead — <span id="b-company">Visitor</span></span>
+        <span class="bc-meta">via your site &middot; just now</span>
+      </div>
+      <div class="bc-row">
+        <div class="bc-lbl">WHO</div>
+        <div class="bc-val" id="b-who">Marketing Manager at a D2C skincare brand. Team of 12, using a basic contact form generating ~3 qualified leads per week with almost no context.</div>
+      </div>
+      <div class="bc-row">
+        <div class="bc-lbl">NEED</div>
+        <div class="bc-val" id="b-need">Replace their contact form with something that qualifies leads before they reach the sales team. Interested in the inline embed option for their /contact page.</div>
+      </div>
+      <div class="bc-row">
+        <div class="bc-lbl">SIGNALS</div>
+        <div class="bc-val" id="b-signals">High intent — asked about pricing and setup time. Urgency — Q2 campaign starting next month.</div>
+      </div>
+      <div class="bc-row">
+        <div class="bc-lbl">OPEN Qs</div>
+        <div class="bc-val" id="b-openqs">Asked about Shopify compatibility — not answered yet.</div>
+      </div>
+      <div class="bc-row">
+        <div class="bc-lbl">APPROACH</div>
+        <div class="bc-val" id="b-approach">Lead with the inline embed for /contact. Mention Shopify support upfront. Offer a 15-min demo call before their Q2 push.</div>
+      </div>
+      <div class="bc-row">
+        <div class="bc-lbl">QUALITY</div>
+        <div class="bc-val" id="b-quality"><span class="qbadge high"><span class="qdot"></span>High</span></div>
+      </div>
+      <div class="bc-row" id="b-contact-row">
+        <div class="bc-lbl">CONTACT</div>
+        <div class="bc-val" id="b-contact">sarah@brand.co</div>
+      </div>
+    </div>
+
+    <div class="brief-cta-block fu fd4">
+      <p>Every visitor who chats with your assistant gets you a brief like this — automatically.</p>
+      <div class="cta-row">
+        <a href="/#ea" class="btn-p">Add this to my site →</a>
+        <button class="btn-s" id="start-over-btn" type="button">Try another URL</button>
+      </div>
+    </div>
+  </div>
+
+</div></div>
+
+<footer><div class="foot-inner">
+  <span class="foot-l">&copy; 2026 contextus</span>
+  <span class="foot-r">FROM CONTACT US TO CONTEXTUS</span>
+</div></footer>
+
+<script>
+(function () {
+  'use strict';
+
+  const API_URL = 'https://contextus-2d16.onrender.com';
+
+  let jobId = null;
+  let sessionId = null;
+  let msgCount = 0;
+  let pollTimer = null;
+  let currentKb = null;
+
+  // ── State machine ──────────────────────────────────────────────────────────
+
+  const allStates = ['idle', 'crawling', 'summary', 'chat', 'empty', 'brief'];
+
+  function show(id) {
+    allStates.forEach(s => {
+      const el = document.getElementById('s-' + s);
+      if (el) el.classList.toggle('active', s === id);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── State 1: Idle ──────────────────────────────────────────────────────────
+
+  const idleInputContainer = document.getElementById('s-idle').querySelector('.fu.fd4');
+  const idleInputHTML = idleInputContainer.innerHTML;
+
+  function bindIdleInputs() {
+    const urlInput = document.getElementById('url-input');
+    const urlWrap  = document.getElementById('url-wrap');
+    const urlErr   = document.getElementById('url-err');
+    document.getElementById('url-submit').addEventListener('click', submitUrl);
+    urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitUrl(); });
+    urlInput.addEventListener('input', () => {
+      urlWrap.classList.remove('err');
+      urlErr.classList.remove('show');
+    });
+  }
+
+  function removeIdleInputs() {
+    const c = document.getElementById('s-idle').querySelector('.fu.fd4');
+    if (c) c.innerHTML = '';
+  }
+
+  function restoreIdleInputs() {
+    const c = document.getElementById('s-idle').querySelector('.fu.fd4');
+    if (c) { c.innerHTML = idleInputHTML; bindIdleInputs(); }
+  }
+
+  bindIdleInputs();
+
+  function submitUrl() {
+    const urlInput = document.getElementById('url-input');
+    const urlWrap  = document.getElementById('url-wrap');
+    const urlErr   = document.getElementById('url-err');
+    let val = urlInput.value.trim();
+    if (!val || val.length < 4) {
+      urlWrap.classList.add('err');
+      urlErr.classList.add('show');
+      return;
+    }
+    // Prepend https:// if no scheme given (e.g. user typed "stripe.com")
+    if (!/^https?:\/\//i.test(val)) val = 'https://' + val;
+    removeIdleInputs();
+    fetch(API_URL + '/api/crawl', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: val }),
+    })
+    .then(r => {
+      if (r.status === 429) { const e = new Error('rate_limit'); throw e; }
+      if (!r.ok) throw new Error('crawl_failed');
+      return r.json();
+    })
+    .then(data => {
+      jobId = data.job_id;
+      startCrawl(val);
+    })
+    .catch(err => {
+      restoreIdleInputs();
+      const msg = err.message === 'rate_limit'
+        ? 'Too many requests — please wait an hour before trying again.'
+        : 'Could not start crawl. Please check the URL and try again.';
+      const urlErr = document.getElementById('url-err');
+      urlErr.textContent = msg;
+      urlErr.classList.add('show');
+    });
+  }
+
+  // ── State 2: Crawling ──────────────────────────────────────────────────────
+
+  function resetSteps() {
+    ['cs-find','cs-read','cs-profile','cs-pills'].forEach(id => setStep(id,'pending'));
+    document.getElementById('pages-tag').style.opacity = '0';
+    setProgress(0);
+  }
+
+  function setStep(id, s) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('pending','active','done');
+    el.classList.add(s);
+  }
+
+  function setProgress(pct) {
+    document.getElementById('prog').style.width = pct + '%';
+  }
+
+  function startCrawl(url) {
+    const domain = url.replace(/^https?:\/\//, '').replace(/\/.*$/, '') || url;
+    document.getElementById('crawl-domain').textContent = domain;
+    document.getElementById('crawl-error').style.display = 'none';
+    resetSteps();
+    setStep('cs-find', 'active');
+    setProgress(8);
+    show('crawling');
+
+    let elapsed = 0;
+    pollTimer = setInterval(async () => {
+      elapsed += 2;
+      if (elapsed > 90) {
+        clearInterval(pollTimer);
+        showCrawlError('Crawl timed out — the site may be too slow to read. Try a different URL.');
+        return;
+      }
+      try {
+        const r = await fetch(API_URL + '/api/crawl/' + jobId);
+        if (!r.ok) return;
+        const kb = await r.json();
+        updateCrawlProgress(kb);
+        if (kb.status === 'complete') {
+          clearInterval(pollTimer);
+          onCrawlComplete(kb);
+        } else if (kb.status === 'failed') {
+          clearInterval(pollTimer);
+          showCrawlError("We couldn't read this site. It may block automated access.");
+        }
+      } catch (e) { /* keep polling */ }
+    }, 2000);
+  }
+
+  function updateCrawlProgress(kb) {
+    const pagesTag = document.getElementById('pages-tag');
+    if (kb.pages_found > 0) {
+      pagesTag.textContent = `— ${kb.pages_found} page${kb.pages_found > 1 ? 's' : ''} found`;
+      pagesTag.style.opacity = '1';
+    }
+    if (kb.status === 'crawling') {
+      setStep('cs-find', 'active'); setProgress(25);
+    } else if (kb.status === 'analyzing') {
+      setStep('cs-find', 'done'); setStep('cs-read', 'active'); setProgress(55);
+      setStep('cs-profile', 'active');
+    }
+  }
+
+  function showCrawlError(msg) {
+    document.getElementById('crawl-error-msg').textContent = msg;
+    document.getElementById('crawl-error').style.display = 'block';
+  }
+
+  // ── State 3a: Summary ──────────────────────────────────────────────────────
+
+  function onCrawlComplete(kb) {
+    currentKb = kb;
+    const p = kb.company_profile;
+
+    if (!p || kb.quality_tier === 'empty') {
+      show('empty');
+      return;
+    }
+
+    // Mark all steps done and fill progress
+    ['cs-find','cs-read','cs-profile','cs-pills'].forEach(id => setStep(id, 'done'));
+    setProgress(100);
+
+    document.getElementById('sm-company').textContent = p.name;
+    document.getElementById('sm-co-name').textContent = p.name;
+    document.getElementById('sm-pages-meta').textContent =
+      [kb.pages_found + ' pages', p.industry, p.location].filter(Boolean).join(' · ');
+    document.getElementById('sm-about').textContent = p.summary;
+
+    const svcEl = document.getElementById('sm-services');
+    svcEl.innerHTML = (p.services || []).map(s => `<span class="stag">${esc(s)}</span>`).join('');
+
+    const gapsEl = document.getElementById('sm-gaps');
+    if (p.gaps && p.gaps.length) {
+      gapsEl.innerHTML = p.gaps.map(g => `<div class="gap-item">${esc(g)}</div>`).join('');
+      document.getElementById('sm-gaps-row').style.display = '';
+    } else {
+      document.getElementById('sm-gaps-row').style.display = 'none';
+    }
+
+    document.getElementById('thin-warn').classList.toggle('show', kb.quality_tier === 'thin');
+
+    setTimeout(() => show('summary'), 400);
+  }
+
+  document.getElementById('open-chat-btn').addEventListener('click', () => {
+    const card = document.getElementById('summ-card');
+    card.classList.add('collapsing');
+    setTimeout(() => openChat(), 380);
+  });
+
+  // ── State 3b: Chat ─────────────────────────────────────────────────────────
+
+  function openChat() {
+    if (!currentKb) return;
+    const p = currentKb.company_profile;
+    msgCount = 0;
+    sessionId = null;
+
+    document.getElementById('ch-company').textContent = p.name;
+    document.getElementById('brief-hint').classList.remove('show');
+    document.getElementById('see-brief-btn').textContent = 'See lead brief';
+    document.getElementById('see-brief-btn').disabled = false;
+
+    const name = encodeURIComponent(p.name);
+    const greeting = encodeURIComponent('Ask anything about ' + p.name + '...');
+    const src = '/widget/widget.html'
+      + '?apiUrl=' + encodeURIComponent(API_URL)
+      + '&knowledgeBaseId=' + encodeURIComponent(jobId)
+      + '&name=' + name
+      + '&greeting=' + greeting
+      + '&transparent=0&dynamicHeight=1';
+
+    const container = document.getElementById('widget-iframe-container');
+    container.innerHTML = '<iframe src="' + src + '" width="100%" height="500" frameborder="0" scrolling="no" style="border:none;display:block;border-radius:12px" title="' + esc(p.name) + ' assistant"></iframe>';
+
+    show('chat');
+  }
+
+  document.getElementById('back-summary-btn').addEventListener('click', () => {
+    const card = document.getElementById('summ-card');
+    card.classList.remove('collapsing');
+    card.style.animation = 'none';
+    card.style.opacity = '1';
+    card.style.maxHeight = '';
+    card.style.marginBottom = '';
+    show('summary');
+  });
+
+  // ── postMessage listener (widget → try page) ───────────────────────────────
+
+  window.addEventListener('message', function(e) {
+    if (!e.data) return;
+    if (e.data.type === 'contextus:session_ready') {
+      sessionId = e.data.session_id;
+    }
+    if (e.data.type === 'contextus:message_sent') {
+      msgCount++;
+      if (msgCount >= 3) {
+        document.getElementById('brief-hint').classList.add('show');
+      }
+    }
+    if (e.data.type === 'contextus:resize') {
+      const iframe = document.querySelector('#widget-iframe-container iframe');
+      if (iframe) iframe.style.height = e.data.height + 'px';
+    }
+  });
+
+  document.getElementById('see-brief-btn').addEventListener('click', generateBrief);
+
+  async function generateBrief() {
+    if (!sessionId) {
+      document.getElementById('brief-hint').style.display = 'none';
+      return;
+    }
+    const btn = document.getElementById('see-brief-btn');
+    btn.textContent = 'Generating...';
+    btn.disabled = true;
+    try {
+      const r = await fetch(API_URL + '/api/brief/' + sessionId, { method: 'POST' });
+      if (!r.ok) throw new Error();
+      const brief = await r.json();
+      renderBrief(brief);
+      show('brief');
+    } catch {
+      document.getElementById('brief-hint').style.display = 'none';
+    }
+  }
+
+  function renderBrief(b) {
+    const p = currentKb && currentKb.company_profile;
+    document.getElementById('b-company').textContent = p ? p.name : 'Visitor';
+    document.getElementById('b-who').textContent = b.who;
+    document.getElementById('b-need').textContent = b.need;
+    document.getElementById('b-signals').textContent = b.signals;
+    document.getElementById('b-openqs').textContent = b.open_questions;
+    document.getElementById('b-approach').textContent = b.suggested_approach;
+    const badge = document.getElementById('b-quality');
+    const score = b.quality_score || 'medium';
+    badge.innerHTML = '<span class="qbadge ' + score + '"><span class="qdot"></span>' + score.charAt(0).toUpperCase() + score.slice(1) + '</span>';
+    const contact = b.contact;
+    const contactRow = document.getElementById('b-contact-row');
+    if (contact && (contact.email || contact.phone || contact.whatsapp)) {
+      document.getElementById('b-contact').textContent = contact.email || contact.phone || contact.whatsapp;
+      contactRow.style.display = '';
+    } else {
+      contactRow.style.display = 'none';
+    }
+  }
+
+  // ── State 4: Empty ─────────────────────────────────────────────────────────
+
+  document.getElementById('try-another-btn').addEventListener('click', function() { this.blur(); reset(); });
+
+  document.getElementById('manual-entry-btn').addEventListener('click', () => {
+    document.getElementById('manual-form').classList.add('show');
+    document.getElementById('manual-entry-btn').style.display = 'none';
+  });
+
+  document.getElementById('manual-submit').addEventListener('click', async () => {
+    const biz  = document.getElementById('mf-biz').value.trim();
+    const cust = document.getElementById('mf-cust').value.trim();
+    const cta  = document.getElementById('mf-cta').value.trim();
+    if (!biz) return;
+    const btn = document.getElementById('manual-submit');
+    btn.textContent = 'Building...';
+    btn.disabled = true;
+    try {
+      const r = await fetch(API_URL + '/api/crawl/' + jobId + '/enrich', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers: {
+          'What does your business do?': biz,
+          'Who are your customers?': cust,
+          'What do you want visitors to do?': cta,
+        }}),
+      });
+      if (!r.ok) throw new Error();
+      const profile = await r.json();
+      onCrawlComplete({ company_profile: profile, quality_tier: 'thin', pages_found: 0 });
+    } catch {
+      btn.textContent = 'Build my assistant →';
+      btn.disabled = false;
+    }
+  });
+
+  // ── State 5: Brief ─────────────────────────────────────────────────────────
+
+  document.getElementById('start-over-btn').addEventListener('click', reset);
+
+  // ── Reset ──────────────────────────────────────────────────────────────────
+
+  function reset() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    jobId = null;
+    sessionId = null;
+    msgCount = 0;
+    currentKb = null;
+    document.getElementById('widget-iframe-container').innerHTML = '';
+    document.getElementById('brief-hint').classList.remove('show');
+    document.getElementById('manual-form').classList.remove('show');
+    document.getElementById('manual-entry-btn').style.display = '';
+    document.getElementById('crawl-error').style.display = 'none';
+    resetSteps();
+    restoreIdleInputs();
+    show('idle');
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  function esc(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+})();
+</script>
+</body>
+</html>
