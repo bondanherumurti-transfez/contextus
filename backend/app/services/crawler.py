@@ -191,17 +191,19 @@ async def _crawl_site_firecrawl(
     result = await asyncio.to_thread(
         app.crawl,
         url,
-        {"limit": MAX_PAGES, "scrapeOptions": {"formats": ["markdown"]}},
+        limit=MAX_PAGES,
+        scrape_options={"formats": ["markdown"]},
     )
 
     pages = []
-    for doc in result.data or []:
-        text = doc.markdown or ""
+    for doc in result.get("data") or []:
+        text = doc.get("markdown") or ""
         if text.strip():
+            metadata = doc.get("metadata") or {}
             pages.append(
                 PageContent(
-                    url=doc.metadata.get("sourceURL", url),
-                    title=doc.metadata.get("title", url),
+                    url=metadata.get("source_url", url),
+                    title=metadata.get("og_title") or metadata.get("title") or url,
                     text=text,
                 )
             )
