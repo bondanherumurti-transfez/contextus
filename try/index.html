@@ -5,234 +5,269 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light only">
 <title>Try contextus — See it work on your website</title>
-<meta name="description" content="Paste your website URL and see contextus build a live AI assistant for your business in 30 seconds.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-@media(prefers-color-scheme:dark){:root{color-scheme:light!important}body{background:#fff!important;color:#000!important}}
+button{outline:none;-webkit-tap-highlight-color:transparent}
 :root{
   --black:#000;--white:#fff;
   --g50:#fafafa;--g100:#f5f5f5;--g200:#ebebeb;--g300:#e0e0e0;
   --g400:#bbb;--g500:#888;--g600:#666;--g700:#444;--g800:#222;--g900:#111;
   --sans:'DM Sans',-apple-system,sans-serif;
   --mono:'DM Mono',monospace;
-  --max:600px;--px:1.5rem;
+  --max:580px;--px:1.5rem;
 }
 html{scroll-behavior:smooth;color-scheme:light}
 body{font-family:var(--sans);color:#000;background:#fff;font-size:16px;line-height:1.7;-webkit-font-smoothing:antialiased}
 ::selection{background:#000;color:#fff}
 
 /* ── Nav ── */
-nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:.5px solid var(--g300)}
-nav .inner{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:.875rem var(--px)}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-bottom:.5px solid var(--g300)}
+.nav-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:.875rem var(--px)}
 .logo{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--black)}
 .logo-text{font-weight:500;font-size:15px;letter-spacing:-.3px}
-.nav-back{font-size:13px;color:var(--g500);text-decoration:none;display:flex;align-items:center;gap:5px;transition:color .15s}
+.nav-back{font-size:13px;color:var(--g500);text-decoration:none;transition:color .15s}
 .nav-back:hover{color:var(--black)}
-.nav-back svg{width:14px;height:14px;fill:currentColor}
 
-/* ── Page shell ── */
-.page{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:6rem var(--px) 4rem}
+/* ── Page ── */
+.page{min-height:100vh;padding:7rem var(--px) 5rem;display:flex;flex-direction:column;align-items:center}
 .content{width:100%;max-width:var(--max)}
 
 /* ── Animations ── */
-@keyframes fu{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fi{from{opacity:0}to{opacity:1}}
-.fu{opacity:0;animation:fu .4s ease forwards}
-.fd1{animation-delay:.05s}.fd2{animation-delay:.1s}.fd3{animation-delay:.18s}.fd4{animation-delay:.26s}.fd5{animation-delay:.34s}
+@keyframes shimmer{0%,100%{opacity:.45}50%{opacity:1}}
+@keyframes collapse{from{opacity:1;max-height:600px;margin-bottom:1.5rem}to{opacity:0;max-height:0;margin-bottom:0;overflow:hidden}}
+.fu{animation:fu .35s ease forwards}
+.fd1{animation-delay:.06s;opacity:0}
+.fd2{animation-delay:.13s;opacity:0}
+.fd3{animation-delay:.2s;opacity:0}
+.fd4{animation-delay:.27s;opacity:0}
+.fd5{animation-delay:.34s;opacity:0}
+.collapsing{animation:collapse .4s ease forwards;pointer-events:none}
 
 /* ── State visibility ── */
-.state{display:none}
-.state.active{display:block}
+.state{display:none}.state.active{display:block}
 
-/* ══════════════════════════════════
+/* ── Shared typography ── */
+.eyebrow{font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:.875rem}
+.page-h1{font-size:clamp(1.75rem,5vw,2.5rem);font-weight:500;letter-spacing:-.75px;line-height:1.15;margin-bottom:.75rem}
+.page-sub{font-size:1rem;color:var(--g600);line-height:1.6;margin-bottom:.3rem;max-width:440px}
+.page-sub-id{font-size:.825rem;color:var(--g500);font-style:italic;margin-bottom:2.25rem}
+
+/* ══════════════════
    STATE 1 — IDLE
-══════════════════════════════════ */
-.idle-eyebrow{font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:1rem}
-.idle-h1{font-size:clamp(1.6rem,4vw,2.25rem);font-weight:500;letter-spacing:-.75px;line-height:1.2;margin-bottom:.75rem}
-.idle-sub{font-size:1rem;color:var(--g600);margin-bottom:.35rem;line-height:1.6;max-width:460px}
-.idle-sub-id{font-size:.825rem;color:var(--g500);font-style:italic;margin-bottom:2rem}
-
-/* URL input — matches landing page .ci-wrap */
-.url-wrap{background:var(--g100);border:.5px solid var(--g300);border-radius:16px;padding:14px 18px;transition:border-color .2s,box-shadow .2s;cursor:text;margin-bottom:.75rem}
+══════════════════ */
+.url-wrap{background:var(--g100);border:.5px solid var(--g300);border-radius:16px;padding:14px 18px;transition:border-color .2s,box-shadow .2s;margin-bottom:.625rem}
 .url-wrap:focus-within{border-color:var(--g500);box-shadow:0 0 0 3px rgba(0,0,0,.04)}
-.url-wrap.error{border-color:#a32d2d;box-shadow:0 0 0 3px rgba(163,45,45,.06)}
-.url-row{display:flex;align-items:center;gap:12px}
-.url-row input{flex:1;border:none;background:transparent;font-size:15px;font-family:var(--sans);color:var(--black);outline:none;padding:4px 0;min-width:0}
+.url-wrap.err{border-color:#a32d2d;box-shadow:0 0 0 3px rgba(163,45,45,.06)}
+.url-row{display:flex;align-items:center;gap:10px}
+.url-row input{flex:1;border:none;background:transparent;font-size:15px;font-family:var(--sans);color:var(--black);outline:none;padding:4px 0;min-width:0;-webkit-appearance:none;appearance:none;box-shadow:none}
 .url-row input::placeholder{color:var(--g400)}
-.send-btn{width:34px;height:34px;background:var(--black);border:none;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .15s;flex-shrink:0}
+.send-btn{width:34px;height:34px;background:var(--black);border:none;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .15s;flex-shrink:0;-webkit-appearance:none;appearance:none;box-shadow:none}
 .send-btn:hover{opacity:.8}
-.send-btn:disabled{background:var(--g300);cursor:not-allowed}
-.send-btn svg{width:16px;height:16px;fill:var(--white)}
-.send-btn:disabled svg{fill:var(--g500)}
-.url-error{font-size:12px;color:#a32d2d;margin-top:.5rem;display:none}
-.url-error.show{display:block}
-.idle-note{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spacing:.5px;text-align:center}
+.send-btn svg{width:16px;height:16px;fill:#fff}
+.url-err-msg{font-size:12px;color:#a32d2d;margin-bottom:.5rem;display:none}
+.url-err-msg.show{display:block}
+.idle-note{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spacing:.3px;text-align:center}
 
-/* ══════════════════════════════════
+/* ════════════════════════
    STATE 2 — CRAWLING
-══════════════════════════════════ */
-.crawl-url-display{font-family:var(--mono);font-size:13px;color:var(--g500);margin-bottom:2rem;display:flex;align-items:center;gap:8px}
-.crawl-url-display .dot{width:6px;height:6px;border-radius:50%;background:var(--g400);animation:pulse 1.5s infinite}
-@keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
-.crawl-url-display .url-text{color:var(--g700)}
+════════════════════════ */
+.crawl-site{font-family:var(--mono);font-size:12px;color:var(--g600);display:flex;align-items:center;gap:8px;margin-bottom:1.75rem}
+.pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--g400);animation:pls 1.4s infinite;flex-shrink:0}
+@keyframes pls{0%,100%{opacity:.25}50%{opacity:1}}
+.crawl-h{font-size:1.35rem;font-weight:500;letter-spacing:-.4px;margin-bottom:.3rem}
+.crawl-note{font-size:.875rem;color:var(--g500);margin-bottom:1.75rem}
+.prog-track{height:2px;background:var(--g200);border-radius:2px;overflow:hidden;margin-bottom:2rem}
+.prog-fill{height:100%;background:var(--black);border-radius:2px;width:0;transition:width .7s ease}
+.crawl-steps{display:flex;flex-direction:column;gap:.75rem}
+.cstep{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--g400);transition:color .3s}
+.cstep.active{color:var(--black)}
+.cstep.done{color:var(--g600)}
+.cstep-icon{width:18px;height:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.cstep.pending .cstep-icon::after{content:'';width:10px;height:10px;border-radius:50%;border:1.5px solid var(--g300);display:block}
+.cstep.active .cstep-icon::after{content:'';width:12px;height:12px;border-radius:50%;border:2px solid var(--g300);border-top-color:var(--black);display:block;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cstep.done .cstep-icon svg{display:block}
+.cstep.pending .cstep-icon svg,.cstep.active .cstep-icon svg{display:none}
+.cstep-icon svg{width:14px;height:14px;fill:var(--g600)}
+.pages-tag{font-family:var(--mono);font-size:11px;color:var(--g500);margin-left:4px;transition:opacity .3s}
 
-.crawl-heading{font-size:1.35rem;font-weight:500;letter-spacing:-.4px;margin-bottom:.35rem}
-.crawl-sub{font-size:.9rem;color:var(--g500);margin-bottom:2rem}
+/* ═══════════════════════════════════════
+   STATE 3a — SUMMARY (rich + thin)
+═══════════════════════════════════════ */
+.summary-eyebrow{font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:.5rem}
+.summary-h{font-size:1.35rem;font-weight:500;letter-spacing:-.4px;margin-bottom:1.5rem;line-height:1.3}
 
-.progress-bar-wrap{height:3px;background:var(--g200);border-radius:2px;margin-bottom:2rem;overflow:hidden}
-.progress-bar{height:100%;background:var(--black);border-radius:2px;width:0%;transition:width .6s ease}
+/* Summary card */
+.summ-card{border:.5px solid var(--g300);border-radius:10px;overflow:hidden;margin-bottom:1.5rem}
+.summ-head{padding:.875rem 1.25rem;border-bottom:.5px solid var(--g300);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+.summ-co{font-weight:500;font-size:.95rem}
+.summ-meta{font-family:var(--mono);font-size:11px;color:var(--g500)}
+.summ-body{padding:1rem 1.25rem;display:flex;flex-direction:column;gap:.875rem}
+.summ-row{display:grid;grid-template-columns:80px 1fr;gap:.5rem;font-size:.875rem}
+.summ-lbl{font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:.3px;padding-top:2px}
+.summ-val{color:var(--g700);line-height:1.6}
+.summ-val strong{color:var(--black);font-weight:500}
+.summ-tags{display:flex;gap:.375rem;flex-wrap:wrap}
+.stag{font-family:var(--mono);font-size:10px;color:var(--g600);padding:4px 10px;border:.5px solid var(--g300);border-radius:20px;background:var(--white);text-transform:uppercase;letter-spacing:.3px}
 
-.crawl-steps{display:flex;flex-direction:column;gap:.625rem;margin-bottom:2rem}
-.crawl-step{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--g400);transition:color .3s}
-.crawl-step.done{color:var(--g700)}
-.crawl-step.active{color:var(--black)}
-.crawl-step .step-icon{width:16px;height:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.crawl-step .step-icon svg{width:14px;height:14px}
-.crawl-step.done .step-icon svg{fill:var(--black)}
-.crawl-step.active .step-icon svg{fill:var(--black)}
-.crawl-step.pending .step-icon svg{fill:var(--g300)}
+/* Thin content warning */
+.thin-warn{display:none;background:#faeeda;border:.5px solid #f0d5a0;border-radius:8px;padding:.75rem 1rem;font-size:.825rem;color:#6b3d0f;line-height:1.5;margin-bottom:1.25rem}
+.thin-warn.show{display:block}
+.thin-warn strong{font-weight:500;color:#4a2800}
 
-.pages-found{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spacing:.5px;margin-top:.25rem}
-.pages-found span{color:var(--g700);font-weight:500}
+/* Gaps list */
+.gaps-list{display:flex;flex-direction:column;gap:.25rem}
+.gap-item{font-size:.875rem;color:var(--g600);display:flex;align-items:baseline;gap:.5rem}
+.gap-item::before{content:'·';color:var(--g400);flex-shrink:0}
 
-/* ══════════════════════════════════
-   STATE 3 — READY + CHATTING
-══════════════════════════════════ */
-.ready-eyebrow{font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:.5rem}
-.ready-heading{font-size:1.4rem;font-weight:500;letter-spacing:-.4px;margin-bottom:1.25rem}
-.ready-heading .co-name{color:var(--black)}
+/* CTA to open widget */
+.chat-cta{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+.chat-cta-text{font-size:.875rem;color:var(--g600);line-height:1.5}
+.btn-p{display:inline-flex;align-items:center;gap:6px;background:var(--black);color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:500;font-family:var(--sans);border:none;cursor:pointer;transition:opacity .15s;white-space:nowrap;-webkit-appearance:none;appearance:none;box-shadow:none}
+.btn-p:hover{opacity:.8}
+.btn-p svg{width:14px;height:14px;fill:#fff}
+.btn-s{display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--g600);padding:10px 16px;border-radius:8px;font-size:14px;font-family:var(--sans);border:.5px solid var(--g300);cursor:pointer;transition:border-color .15s,color .15s;white-space:nowrap;-webkit-appearance:none;appearance:none;box-shadow:none}
+.btn-s:hover{border-color:var(--g500);color:var(--black)}
 
-/* Company summary strip */
-.profile-strip{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.5rem}
-.profile-tag{font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:.5px;padding:5px 12px;border:.5px solid var(--g300);border-radius:20px;background:var(--white);white-space:nowrap}
+/* ═══════════════════════════
+   STATE 3b — CHAT (widget)
+═══════════════════════════ */
+.chat-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem}
+.chat-co{font-weight:500;font-size:.95rem}
+.back-to-summary{font-size:12px;color:var(--g500);background:none;border:none;cursor:pointer;font-family:var(--sans);transition:color .15s;padding:0}
+.back-to-summary:hover{color:var(--black)}
 
-/* Widget frame */
-.widget-frame-wrap{background:var(--g100);border:.5px solid var(--g300);border-radius:16px;padding:14px 18px;margin-bottom:1.25rem}
-.widget-frame-wrap iframe{display:block;width:100%;border:none}
+/* Widget mock — identical visual tokens to real widget */
+.widget-shell{border:.5px solid var(--g300);border-radius:12px;overflow:hidden;background:#fff;margin-bottom:1rem}
+.w-header{padding:10px 14px;border-bottom:.5px solid var(--g300);display:flex;align-items:center;gap:6px}
+.w-header-name{font-size:13px;font-weight:500}
+.w-powered{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--g400)}
+.w-body{padding:14px}
+.w-messages{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;max-height:280px;overflow-y:auto}
+.w-messages::-webkit-scrollbar{width:3px}
+.w-messages::-webkit-scrollbar-thumb{background:var(--g300);border-radius:3px}
+.w-msg{display:flex;gap:8px;align-items:flex-start}
+.w-msg.v{justify-content:flex-end}
+.w-av{width:24px;height:24px;flex-shrink:0}
+.w-bubble{font-size:13px;line-height:1.55;color:var(--g800);max-width:84%}
+.w-bubble.vb{background:var(--g900);color:#fff;padding:8px 13px;border-radius:12px;border-bottom-right-radius:3px}
+.w-bubble p{margin-bottom:.35em}.w-bubble p:last-child{margin-bottom:0}
+.w-bubble ol,.w-bubble ul{margin:.2em 0 .2em 1.15em}
+.w-bubble li{margin-bottom:.1em}
+.w-bubble strong{font-weight:600}
+.w-dots{display:flex;gap:3px;padding:6px 0}
+.w-dots span{width:5px;height:5px;background:var(--g400);border-radius:50%;animation:dp 1.2s infinite}
+.w-dots span:nth-child(2){animation-delay:.2s}
+.w-dots span:nth-child(3){animation-delay:.4s}
+@keyframes dp{0%,60%,100%{opacity:.3;transform:scale(.85)}30%{opacity:1;transform:scale(1)}}
+.w-input-area{background:var(--g100);border:.5px solid var(--g300);border-radius:16px;padding:12px 12px 12px 16px;display:flex;align-items:center;gap:10px}
+.w-input-area input{flex:1;border:none;background:transparent;font-size:14px;font-family:var(--sans);color:var(--black);outline:none;min-width:0;-webkit-appearance:none;appearance:none;box-shadow:none}
+.w-input-area input::placeholder{color:var(--g400)}
+.w-sbtn{width:30px;height:30px;background:var(--black);border:none;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:opacity .15s;-webkit-appearance:none;appearance:none;box-shadow:none}
+.w-sbtn:hover{opacity:.8}
+.w-sbtn svg{width:14px;height:14px;fill:#fff}
+.w-pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.w-pill{font-size:11px;color:var(--g600);padding:5px 11px;border:.5px solid var(--g300);border-radius:14px;background:var(--white);cursor:pointer;transition:background .15s,border-color .15s;font-family:var(--sans);-webkit-appearance:none;appearance:none;box-shadow:none}
+.w-pill:hover{background:var(--g100);border-color:var(--g500)}
+.widget-caption{font-size:12px;color:var(--g500);text-align:center;margin-bottom:1.5rem}
 
-.widget-note{font-size:12px;color:var(--g500);text-align:center;margin-bottom:2rem}
-.widget-note a{color:var(--g500);text-decoration:underline;text-underline-offset:3px}
+/* Brief hint */
+.brief-hint{display:none;border:.5px solid var(--g300);border-radius:10px;padding:1rem 1.25rem;background:var(--g50);margin-bottom:1.5rem}
+.brief-hint.show{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;animation:fu .35s ease forwards}
+.hint-text{font-size:.875rem;color:var(--g600);line-height:1.5}
+.hint-text strong{color:var(--black);font-weight:500;display:block;margin-bottom:.1rem}
 
-/* Brief hint — appears after 3 messages */
-.brief-hint{display:none;border:.5px solid var(--g300);border-radius:10px;padding:1rem 1.25rem;background:var(--g50);margin-bottom:1.5rem;animation:fu .4s ease forwards}
-.brief-hint.show{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
-.brief-hint-text{font-size:.875rem;color:var(--g600);line-height:1.5}
-.brief-hint-text strong{color:var(--black);font-weight:500;display:block;margin-bottom:.15rem}
-.brief-btn{display:inline-flex;align-items:center;gap:6px;background:var(--black);color:var(--white);padding:9px 18px;border-radius:8px;font-size:13px;font-weight:500;font-family:var(--sans);border:none;cursor:pointer;white-space:nowrap;transition:opacity .15s;flex-shrink:0}
-.brief-btn:hover{opacity:.8}
-.brief-btn svg{width:14px;height:14px;fill:var(--white)}
+/* ══════════════════════════
+   STATE 4 — EMPTY / BLOCKED
+══════════════════════════ */
+.empty-icon{width:48px;height:48px;border:.5px solid var(--g300);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem}
+.empty-icon svg{width:22px;height:22px;fill:var(--g400)}
+.empty-actions{display:flex;flex-direction:column;gap:.75rem;margin-top:2rem}
+.empty-or{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spacing:.5px;text-align:center;padding:.25rem 0}
 
-/* ══════════════════════════════════
-   STATE 4 — BRIEF
-══════════════════════════════════ */
-.brief-eyebrow{font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:.5rem}
-.brief-heading{font-size:1.4rem;font-weight:500;letter-spacing:-.4px;margin-bottom:.5rem}
-.brief-sub{font-size:.9rem;color:var(--g600);margin-bottom:1.5rem}
+/* Manual form */
+.manual-form{border:.5px solid var(--g300);border-radius:10px;overflow:hidden;display:none;margin-top:1.5rem}
+.manual-form.show{display:block;animation:fu .35s ease forwards}
+.mf-head{padding:.875rem 1.25rem;border-bottom:.5px solid var(--g300);font-size:.875rem;font-weight:500}
+.mf-body{padding:1.25rem;display:flex;flex-direction:column;gap:1rem}
+.mf-field label{display:block;font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:.3px;margin-bottom:.4rem}
+.mf-field input,.mf-field textarea{width:100%;border:.5px solid var(--g300);border-radius:8px;padding:9px 12px;font-size:14px;font-family:var(--sans);color:var(--black);outline:none;background:var(--white);transition:border-color .15s;resize:none;-webkit-appearance:none;appearance:none;box-shadow:none}
+.mf-field input:focus,.mf-field textarea:focus{border-color:var(--g500)}
+.mf-field input::placeholder,.mf-field textarea::placeholder{color:var(--g400)}
+.mf-submit{width:100%;padding:10px;background:var(--black);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;font-family:var(--sans);cursor:pointer;transition:opacity .15s}
+.mf-submit:hover{opacity:.8}
 
-/* Brief card — matches landing page .be pattern */
+/* ════════════════
+   STATE 5 — BRIEF
+════════════════ */
 .brief-card{border:.5px solid var(--g300);border-radius:10px;overflow:hidden;margin-bottom:1.5rem}
-.brief-card-head{padding:1rem 1.25rem;border-bottom:.5px solid var(--g300);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:var(--white)}
-.brief-card-title{font-weight:500;font-size:.95rem}
-.brief-card-meta{font-family:var(--mono);font-size:11px;color:var(--g500)}
-.brief-card-body{background:var(--white)}
-.brief-row{display:grid;grid-template-columns:90px 1fr;gap:.5rem;padding:.625rem 1.25rem;border-bottom:.5px solid var(--g200);font-size:.875rem}
-.brief-row:last-child{border-bottom:none}
-.brief-label{font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:.3px;padding-top:2px}
-.brief-value{color:var(--g700);line-height:1.6}
-.brief-value strong{color:var(--black);font-weight:500}
-
-/* Quality badge */
-.quality-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px}
-.quality-badge.high{background:#e1f5ee;color:#0f6e56}
-.quality-badge.medium{background:#faeeda;color:#854f0b}
-.quality-badge.low{background:var(--g100);color:var(--g500)}
-.quality-badge .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
-
-/* Brief loading skeleton */
-.brief-skeleton{padding:1.25rem}
-.skel-row{display:flex;gap:.75rem;margin-bottom:.875rem;align-items:flex-start}
-.skel-label{width:70px;height:12px;background:var(--g200);border-radius:3px;flex-shrink:0;margin-top:2px}
-.skel-lines{flex:1;display:flex;flex-direction:column;gap:6px}
-.skel-line{height:12px;background:var(--g200);border-radius:3px}
-.skel-line.short{width:55%}
-.skel-line.med{width:80%}
-@keyframes shimmer{0%{opacity:.5}50%{opacity:1}100%{opacity:.5}}
-.skel-label,.skel-line{animation:shimmer 1.4s ease infinite}
-
-/* CTA block */
-.brief-cta{text-align:center;padding:1.5rem 0 .5rem}
-.brief-cta p{font-size:.9rem;color:var(--g600);margin-bottom:1rem}
-.cta-actions{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap}
-.btn-primary{display:inline-flex;align-items:center;gap:6px;background:var(--black);color:var(--white);padding:10px 22px;border-radius:8px;font-size:14px;font-weight:500;font-family:var(--sans);text-decoration:none;border:none;cursor:pointer;transition:opacity .15s}
-.btn-primary:hover{opacity:.8}
-.btn-secondary{display:inline-flex;align-items:center;gap:6px;background:transparent;color:var(--g600);padding:10px 18px;border-radius:8px;font-size:14px;font-family:var(--sans);text-decoration:none;border:.5px solid var(--g300);cursor:pointer;transition:border-color .15s,color .15s}
-.btn-secondary:hover{border-color:var(--g500);color:var(--black)}
-
-/* ══════════════════════════════════
-   ERROR STATE
-══════════════════════════════════ */
-.error-banner{background:#fcebeb;border:.5px solid #f5c6c6;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.5rem;display:none}
-.error-banner.show{display:block}
-.error-banner p{font-size:.875rem;color:#a32d2d;margin-bottom:.75rem}
-.error-retry{font-size:13px;font-weight:500;color:#a32d2d;background:transparent;border:.5px solid #f5c6c6;border-radius:7px;padding:7px 16px;cursor:pointer;font-family:var(--sans);transition:background .15s}
-.error-retry:hover{background:rgba(163,45,45,.06)}
-
-/* ── Divider ── */
-hr.dvd{border:none;border-top:.5px solid var(--g200);margin:2rem 0}
+.bc-head{padding:1rem 1.25rem;border-bottom:.5px solid var(--g300);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.bc-title{font-weight:500;font-size:.95rem}
+.bc-meta{font-family:var(--mono);font-size:11px;color:var(--g500)}
+.bc-row{display:grid;grid-template-columns:88px 1fr;gap:.5rem;padding:.625rem 1.25rem;border-bottom:.5px solid var(--g200);font-size:.875rem}
+.bc-row:last-child{border-bottom:none}
+.bc-lbl{font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:.3px;padding-top:2px}
+.bc-val{color:var(--g700);line-height:1.6}
+.bc-val strong{color:var(--black);font-weight:500}
+.bc-val em{font-style:italic;color:var(--g500)}
+.qbadge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px}
+.qbadge.high{background:#e1f5ee;color:#0f6e56}
+.qbadge.medium{background:#faeeda;color:#854f0b}
+.qbadge .qdot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.brief-cta-block{text-align:center;padding:1.25rem 0 .5rem}
+.brief-cta-block p{font-size:.9rem;color:var(--g600);margin-bottom:1.25rem}
+.cta-row{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap}
 
 /* ── Footer ── */
-footer{padding:2rem var(--px);border-top:.5px solid var(--g300);background:#fff;width:100%}
-footer .inner{max-width:960px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem}
-footer .fl{font-size:13px;color:var(--g500)}
-footer .fr{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spacing:.5px}
+footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
+.foot-inner{max-width:960px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem}
+.foot-l{font-size:13px;color:var(--g500)}
+.foot-r{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spacing:.5px}
 
 /* ── Responsive ── */
 @media(max-width:480px){
-  .brief-row{grid-template-columns:70px 1fr}
-  .cta-actions{flex-direction:column;align-items:center}
-  .btn-primary,.btn-secondary{width:100%;justify-content:center}
+  .bc-row{grid-template-columns:70px 1fr}
+  .cta-row,.empty-actions{flex-direction:column;align-items:stretch}
+  .btn-p,.btn-s{justify-content:center}
+  .brief-hint{flex-direction:column}
+  .chat-cta{flex-direction:column;align-items:flex-start}
 }
 </style>
 </head>
 <body>
 
-<!-- ── Nav ── -->
-<nav><div class="inner">
+<nav><div class="nav-inner">
   <a href="/" class="logo">
     <svg width="26" height="26" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg>
     <span class="logo-text">contextus</span>
   </a>
-  <a href="/" class="nav-back">
-    <svg viewBox="0 0 24 24"><path d="M19 11H7.83l4.88-4.88c.39-.39.39-1.03 0-1.42-.39-.39-1.02-.39-1.41 0l-6.59 6.59c-.39.39-.39 1.02 0 1.41l6.59 6.59c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41L7.83 13H19c.55 0 1-.45 1-1s-.45-1-1-1z"/></svg>
-    Back to home
-  </a>
+  <a href="/" class="nav-back">← Back to home</a>
 </div></nav>
 
-<!-- ── Page ── -->
-<div class="page">
-<div class="content">
+<div class="page"><div class="content">
 
   <!-- ══════════════════════════════
        STATE 1 — IDLE
   ══════════════════════════════ -->
-  <div class="state active" id="state-idle">
-    <div class="idle-eyebrow fu">Live demo</div>
-    <h1 class="idle-h1 fu fd1">See it work on<br>your website.</h1>
-    <p class="idle-sub fu fd2">Paste your URL — contextus crawls your site, builds a knowledge base, and shows you a live AI assistant in ~30 seconds.</p>
-    <p class="idle-sub-id fu fd3">Tempel URL Anda — contextus membangun asisten AI untuk bisnis Anda dalam ~30 detik.</p>
-
+  <div class="state active" id="s-idle">
+    <p class="eyebrow fu">Live demo</p>
+    <h1 class="page-h1 fu fd1">See it work on<br>your website.</h1>
+    <p class="page-sub fu fd2">Paste your URL — contextus crawls your site, builds a knowledge base, and shows you a live AI assistant in ~30 seconds.</p>
+    <p class="page-sub-id fu fd3">Tempel URL Anda — contextus membangun asisten AI untuk bisnis Anda dalam ~30 detik.</p>
     <div class="fu fd4">
       <div class="url-wrap" id="url-wrap">
         <div class="url-row">
-          <input type="url" id="url-input" placeholder="https://your-site.com" autocomplete="off" autocorrect="off" spellcheck="false">
-          <button class="send-btn" id="url-submit" type="button" aria-label="Analyze site">
+          <input type="url" id="url-input" placeholder="https://your-site.com" autocomplete="off" spellcheck="false">
+          <button class="send-btn" id="url-submit" type="button">
             <svg viewBox="0 0 24 24"><path d="M5.694 12 2.299 3.272c-.236-.607.356-1.188.942-.982l.093.04 18 9a.75.75 0 0 1 .097 1.283l-.097.058-18 9c-.619.31-1.263-.277-1.035-.916l.035-.084L5.694 12 2.3 3.272 5.694 12ZM4.402 4.54l2.61 6.71h6.627a.75.75 0 0 1 .102 1.493l-.102.007H7.01l-2.609 6.71L19.322 12 4.401 4.54Z"/></svg>
           </button>
         </div>
       </div>
-      <div class="url-error" id="url-error">Please enter a valid website URL (e.g. https://yoursite.com)</div>
+      <p class="url-err-msg" id="url-err">Please enter a valid URL — e.g. https://yoursite.com</p>
       <p class="idle-note fu fd5">No signup required &middot; Works on any website &middot; ~30 seconds</p>
     </div>
   </div>
@@ -240,528 +275,576 @@ footer .fr{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spaci
   <!-- ══════════════════════════════
        STATE 2 — CRAWLING
   ══════════════════════════════ -->
-  <div class="state" id="state-crawling">
-    <div class="crawl-url-display fu">
-      <div class="dot"></div>
-      <span class="url-text" id="crawl-url-label"></span>
+  <div class="state" id="s-crawling">
+    <div class="crawl-site fu">
+      <div class="pulse-dot"></div>
+      <span id="crawl-domain">yoursite.com</span>
     </div>
-
-    <h2 class="crawl-heading fu fd1">Analyzing your website...</h2>
-    <p class="crawl-sub fu fd2">This takes about 30 seconds.</p>
-
-    <div class="progress-bar-wrap fu fd2"><div class="progress-bar" id="progress-bar"></div></div>
-
-    <div class="crawl-steps fu fd3" id="crawl-steps">
-      <div class="crawl-step pending" id="step-finding">
-        <div class="step-icon">
-          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
-        </div>
+    <h2 class="crawl-h fu fd1">Analyzing your website...</h2>
+    <p class="crawl-note fu fd2">This takes about 30 seconds.</p>
+    <div class="prog-track fu fd2"><div class="prog-fill" id="prog"></div></div>
+    <div class="crawl-steps fu fd3">
+      <div class="cstep pending" id="cs-find">
+        <div class="cstep-icon"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
         <span>Finding pages on your site</span>
-        <span class="pages-found" id="pages-label" style="display:none">&mdash; <span id="pages-count">0</span> pages found</span>
+        <span class="pages-tag" id="pages-tag" style="opacity:0"></span>
       </div>
-      <div class="crawl-step pending" id="step-reading">
-        <div class="step-icon">
-          <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-        </div>
+      <div class="cstep pending" id="cs-read">
+        <div class="cstep-icon"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
         <span>Reading your content</span>
       </div>
-      <div class="crawl-step pending" id="step-profiling">
-        <div class="step-icon">
-          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-        </div>
+      <div class="cstep pending" id="cs-profile">
+        <div class="cstep-icon"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
         <span>Building your business profile</span>
       </div>
-      <div class="crawl-step pending" id="step-pills">
-        <div class="step-icon">
-          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-        </div>
+      <div class="cstep pending" id="cs-pills">
+        <div class="cstep-icon"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
         <span>Generating conversation starters</span>
       </div>
     </div>
+  </div>
 
-    <div class="error-banner" id="crawl-error">
-      <p id="crawl-error-msg">Something went wrong while analyzing your site. Please try again.</p>
-      <button class="error-retry" id="crawl-retry">Try again</button>
+  <!-- ══════════════════════════════════════
+       STATE 3a — SUMMARY (rich or thin)
+  ══════════════════════════════════════ -->
+  <div class="state" id="s-summary">
+    <p class="summary-eyebrow fu">Analysis complete</p>
+    <h2 class="summary-h fu fd1">Here's what contextus learned about <strong id="sm-company">your business</strong>.</h2>
+
+    <!-- Thin content warning (shown for thin tier only) -->
+    <div class="thin-warn fu fd2" id="thin-warn">
+      <strong>Limited content found.</strong> Your site has fewer pages than we'd normally need for a full profile. The assistant will use what it found, but may ask visitors more questions to fill the gaps.
+    </div>
+
+    <!-- Summary card -->
+    <div class="summ-card fu fd2" id="summ-card">
+      <div class="summ-head">
+        <span class="summ-co" id="sm-co-name">Acme Web Agency</span>
+        <span class="summ-meta" id="sm-pages-meta">5 pages · Web Agency</span>
+      </div>
+      <div class="summ-body">
+        <div class="summ-row">
+          <div class="summ-lbl">ABOUT</div>
+          <div class="summ-val" id="sm-about">A Jakarta-based web design agency helping SMBs and startups build fast, modern websites. Specialises in custom design with no templates.</div>
+        </div>
+        <div class="summ-row">
+          <div class="summ-lbl">SERVICES</div>
+          <div class="summ-val">
+            <div class="summ-tags" id="sm-services">
+              <span class="stag">Web Design</span>
+              <span class="stag">SEO</span>
+              <span class="stag">Hosting</span>
+            </div>
+          </div>
+        </div>
+        <div class="summ-row" id="sm-gaps-row">
+          <div class="summ-lbl">GAPS FOUND</div>
+          <div class="summ-val">
+            <div class="gaps-list" id="sm-gaps">
+              <div class="gap-item">Pricing not mentioned anywhere on the site</div>
+              <div class="gap-item">No portfolio or case studies</div>
+              <div class="gap-item">No clear contact method listed</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-cta fu fd3">
+      <div class="chat-cta-text">
+        The assistant is ready. Chat with it to see how it handles your visitors.
+      </div>
+      <button class="btn-p" id="open-chat-btn" type="button">
+        Chat with your assistant
+        <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+      </button>
     </div>
   </div>
 
-  <!-- ══════════════════════════════
-       STATE 3 — READY + CHATTING
-  ══════════════════════════════ -->
-  <div class="state" id="state-ready">
-    <div class="ready-eyebrow fu">Your assistant is ready</div>
-    <h2 class="ready-heading fu fd1">Here's what contextus learned about <span class="co-name" id="ready-company-name">your business</span>.</h2>
-
-    <div class="profile-strip fu fd2" id="profile-strip">
-      <!-- Tags injected by JS: industry, location, pages crawled -->
+  <!-- ══════════════════════════════════════
+       STATE 3b — CHAT
+  ══════════════════════════════════════ -->
+  <div class="state" id="s-chat">
+    <div class="chat-header fu">
+      <span class="chat-co" id="ch-company">Acme Web Agency</span>
+      <button class="back-to-summary" id="back-summary-btn" type="button">← What we learned</button>
     </div>
 
-    <div class="widget-frame-wrap fu fd3">
-      <iframe id="widget-iframe" src="" height="420" scrolling="no" title="contextus chat"></iframe>
-    </div>
-
-    <p class="widget-note fu fd4">This is how it would look on your site. &nbsp;<a href="/" id="learn-more-link">Learn how to embed →</a></p>
-
-    <!-- Brief hint — shown after 3 messages -->
-    <div class="brief-hint" id="brief-hint">
-      <div class="brief-hint-text">
-        <strong>Conversation captured.</strong>
-        Based on this chat, contextus would generate a lead brief for you. Want to see what it looks like?
+    <div class="widget-shell fu fd1">
+      <div class="w-header">
+        <svg width="18" height="18" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg>
+        <span class="w-header-name" id="w-name">Acme Web Agency</span>
+        <span class="w-powered">powered by contextus</span>
       </div>
-      <button class="brief-btn" id="see-brief-btn" type="button">
+      <div class="w-body">
+        <div class="w-messages" id="w-messages"></div>
+        <div class="w-input-area">
+          <input type="text" id="w-input" placeholder="Ask anything...">
+          <button class="w-sbtn" id="w-send" type="button">
+            <svg viewBox="0 0 24 24"><path d="M5.694 12 2.299 3.272c-.236-.607.356-1.188.942-.982l.093.04 18 9a.75.75 0 0 1 .097 1.283l-.097.058-18 9c-.619.31-1.263-.277-1.035-.916l.035-.084L5.694 12 2.3 3.272 5.694 12ZM4.402 4.54l2.61 6.71h6.627a.75.75 0 0 1 .102 1.493l-.102.007H7.01l-2.609 6.71L19.322 12 4.401 4.54Z"/></svg>
+          </button>
+        </div>
+        <div class="w-pills" id="w-pills"></div>
+      </div>
+    </div>
+
+    <p class="widget-caption fu fd2">This is how it would look on your site.</p>
+
+    <div class="brief-hint" id="brief-hint">
+      <div class="hint-text">
+        <strong>Conversation captured.</strong>
+        contextus would generate a lead brief from this chat. Want to see what it looks like?
+      </div>
+      <button class="btn-p" id="see-brief-btn" type="button" style="font-size:13px;padding:9px 16px">
         See lead brief
         <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
       </button>
     </div>
   </div>
 
-  <!-- ══════════════════════════════
-       STATE 4 — BRIEF
-  ══════════════════════════════ -->
-  <div class="state" id="state-brief">
-    <div class="brief-eyebrow fu">Lead brief</div>
-    <h2 class="brief-heading fu fd1">This is what you'd get<br>for every visitor.</h2>
-    <p class="brief-sub fu fd2">Not a chat transcript. An actionable intelligence card.</p>
+  <!-- ══════════════════════════════════════
+       STATE 4 — EMPTY / BLOCKED
+  ══════════════════════════════════════ -->
+  <div class="state" id="s-empty">
+    <div class="empty-icon fu">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+    </div>
+    <p class="eyebrow fu fd1">Limited access</p>
+    <h2 class="page-h1 fu fd2" style="font-size:clamp(1.5rem,4vw,2rem);margin-bottom:.5rem">We couldn't read<br>this site.</h2>
+    <p class="page-sub fu fd3" style="margin-bottom:.3rem">This happens when a site blocks automated access, requires a login, or has very little public content.</p>
+    <p class="page-sub-id fu fd3">Situs ini mungkin memblokir akses otomatis atau kontennya sangat terbatas.</p>
 
-    <!-- Skeleton shown while loading -->
-    <div class="brief-card fu fd3" id="brief-skeleton" style="display:none">
-      <div class="brief-card-head">
-        <div style="width:160px;height:14px;background:var(--g200);border-radius:3px;animation:shimmer 1.4s ease infinite"></div>
-        <div style="width:100px;height:11px;background:var(--g200);border-radius:3px;animation:shimmer 1.4s ease infinite"></div>
-      </div>
-      <div class="brief-skeleton">
-        <div class="skel-row"><div class="skel-label"></div><div class="skel-lines"><div class="skel-line"></div><div class="skel-line med"></div></div></div>
-        <div class="skel-row"><div class="skel-label"></div><div class="skel-lines"><div class="skel-line short"></div><div class="skel-line"></div><div class="skel-line med"></div></div></div>
-        <div class="skel-row"><div class="skel-label"></div><div class="skel-lines"><div class="skel-line med"></div></div></div>
-        <div class="skel-row"><div class="skel-label"></div><div class="skel-lines"><div class="skel-line"></div><div class="skel-line short"></div></div></div>
-        <div class="skel-row"><div class="skel-label"></div><div class="skel-lines"><div class="skel-line med"></div></div></div>
-      </div>
+    <div class="empty-actions fu fd4">
+      <button class="btn-s" id="try-another-btn" type="button">Try a different URL</button>
+      <div class="empty-or">OR</div>
+      <button class="btn-p" id="manual-entry-btn" type="button">Tell us about your business instead</button>
     </div>
 
-    <!-- Real brief card injected by JS -->
-    <div id="brief-card-real" class="fu fd3"></div>
-
-    <div class="brief-cta fu fd4">
-      <p>Every visitor who chats with your assistant gets you a brief like this — automatically.</p>
-      <div class="cta-actions">
-        <a href="/#ea" class="btn-primary">Add this to my site →</a>
-        <button class="btn-secondary" id="start-over-btn" type="button">Try another URL</button>
+    <!-- Manual entry form -->
+    <div class="manual-form" id="manual-form">
+      <div class="mf-head">Tell us about your business — we'll build your assistant from this.</div>
+      <div class="mf-body">
+        <div class="mf-field">
+          <label>WHAT DOES YOUR BUSINESS DO?</label>
+          <input type="text" placeholder="e.g. We help F&B businesses with tax filing and accounting">
+        </div>
+        <div class="mf-field">
+          <label>WHO ARE YOUR CUSTOMERS?</label>
+          <input type="text" placeholder="e.g. Restaurant owners and food business founders in Jakarta">
+        </div>
+        <div class="mf-field">
+          <label>WHAT SHOULD VISITORS DO AFTER CHATTING?</label>
+          <textarea rows="2" placeholder="e.g. Book a free consultation, or reach us on WhatsApp"></textarea>
+        </div>
+        <button class="mf-submit" id="manual-submit" type="button">Build my assistant →</button>
       </div>
     </div>
   </div>
 
-</div><!-- /content -->
-</div><!-- /page -->
+  <!-- ══════════════════════════════════════
+       STATE 5 — BRIEF
+  ══════════════════════════════════════ -->
+  <div class="state" id="s-brief">
+    <p class="eyebrow fu">Lead brief</p>
+    <h2 class="page-h1 fu fd1" style="font-size:clamp(1.5rem,4vw,2rem);margin-bottom:.5rem">This is what you'd get<br>for every visitor.</h2>
+    <p class="page-sub fu fd2" style="font-size:.9rem;margin-bottom:1.75rem">Not a chat transcript. An actionable intelligence card.</p>
 
-<footer><div class="inner">
-  <div class="fl">&copy; 2026 contextus</div>
-  <div class="fr">FROM CONTACT US TO CONTEXTUS</div>
+    <div class="brief-card fu fd3">
+      <div class="bc-head">
+        <span class="bc-title">New lead — <span id="b-company">Visitor</span></span>
+        <span class="bc-meta">via your site &middot; just now</span>
+      </div>
+      <div class="bc-row">
+        <div class="bc-lbl">WHO</div>
+        <div class="bc-val"><strong>Marketing Manager at a D2C skincare brand.</strong> Team of 12, using a basic contact form generating ~3 qualified leads per week with almost no context.</div>
+      </div>
+      <div class="bc-row">
+        <div class="bc-lbl">NEED</div>
+        <div class="bc-val">Replace their contact form with something that qualifies leads before they reach the sales team. Interested in the inline embed option for their /contact page.</div>
+      </div>
+      <div class="bc-row">
+        <div class="bc-lbl">SIGNALS</div>
+        <div class="bc-val"><strong>High intent</strong> — asked about pricing and setup time. <strong>Urgency</strong> — Q2 campaign starting next month. <strong>Decision maker</strong> — mentioned "I'll run this by my CTO."</div>
+      </div>
+      <div class="bc-row">
+        <div class="bc-lbl">OPEN Qs</div>
+        <div class="bc-val">Asked about Shopify compatibility — not answered yet. <em>This is your follow-up hook.</em></div>
+      </div>
+      <div class="bc-row">
+        <div class="bc-lbl">APPROACH</div>
+        <div class="bc-val">Lead with the inline embed for /contact. Mention Shopify support upfront. Offer a 15-min demo call before their Q2 push.</div>
+      </div>
+      <div class="bc-row">
+        <div class="bc-lbl">QUALITY</div>
+        <div class="bc-val" id="b-quality"><span class="qbadge high"><span class="qdot"></span>High</span></div>
+      </div>
+      <div class="bc-row">
+        <div class="bc-lbl">CONTACT</div>
+        <div class="bc-val">sarah@brand.co &middot; via WhatsApp</div>
+      </div>
+    </div>
+
+    <div class="brief-cta-block fu fd4">
+      <p>Every visitor who chats with your assistant gets you a brief like this — automatically.</p>
+      <div class="cta-row">
+        <a href="/#ea" class="btn-p">Add this to my site →</a>
+        <button class="btn-s" id="start-over-btn" type="button">Try another URL</button>
+      </div>
+    </div>
+  </div>
+
+</div></div>
+
+<footer><div class="foot-inner">
+  <span class="foot-l">&copy; 2026 contextus</span>
+  <span class="foot-r">FROM CONTACT US TO CONTEXTUS</span>
 </div></footer>
 
 <script>
 (function () {
   'use strict';
 
-  const API_URL = 'https://contextus-2d16.onrender.com';
+  // ── Mock scenarios ─────────────────────────────────────────────────────────
+  // Switch SCENARIO to test different crawl tiers.
+  // In production this is driven by the real KB quality_tier field.
 
-  // ── State ──────────────────────────────────────────────────────────────────
-
-  const state = {
-    phase: 'idle',
-    jobId: null,
-    sessionId: null,
-    companyProfile: null,
-    messageCount: 0,
-    pollTimer: null,
-    pollStart: null,
+  const SCENARIOS = {
+    rich: {
+      tier: 'rich',
+      company: 'Acme Web Agency',
+      industry: 'Web Agency',
+      location: 'Jakarta',
+      pages: 5,
+      about: 'A Jakarta-based web design agency helping SMBs and startups build fast, modern websites. Specialises in custom design with no templates.',
+      services: ['Web Design', 'SEO', 'Hosting', 'Maintenance'],
+      gaps: ['Pricing not mentioned anywhere on the site', 'No portfolio or case studies shown', 'No clear contact method listed'],
+      pills: ['What\'s included in web design?', 'What are your pricing plans?', 'Do you work with startups?'],
+      responses: [
+        { trigger: /pric|harg|cost|biaya/i, text: 'Our pricing starts from <strong>Rp 15 million</strong> for a standard 5-page website. We\'d love to give you a proper quote based on your specific needs — what kind of site are you looking to build?' },
+        { trigger: /startup|small|kecil|smb/i, text: 'Absolutely — about 60% of our clients are startups and SMBs. We have a dedicated <strong>Starter Package</strong> designed to get you live quickly. What stage is your business at right now?' },
+        { trigger: /design|web|include|include/i, text: 'Our web design service includes:<ol><li><strong>Custom design</strong> — no templates, built to your brand</li><li><strong>Mobile-first development</strong></li><li><strong>CMS integration</strong> — update content yourself</li><li><strong>30-day post-launch support</strong></li></ol>What kind of website are you building?' },
+        { trigger: /.*/,  text: 'Great question. Could you tell me a bit more about your business so I can point you in the right direction?' },
+      ],
+    },
+    thin: {
+      tier: 'thin',
+      company: 'Toko Roti Manis',
+      industry: 'Food & Bakery',
+      location: null,
+      pages: 1,
+      about: 'A home bakery selling custom cakes and pastries. Based on a single landing page with limited detail.',
+      services: ['Custom Cakes', 'Pastries'],
+      gaps: ['Pricing completely missing', 'No ordering process explained', 'No location or delivery info', 'No contact details found'],
+      pills: ['How do I order a cake?', 'Do you deliver?', 'What are your prices?'],
+      responses: [
+        { trigger: /order|pesan/i, text: 'I found limited details about the ordering process on the site. The best way is probably to reach out directly — do you have a WhatsApp number I can help you get in touch with the team?' },
+        { trigger: /deliv|antar|kirim/i, text: 'Delivery details weren\'t mentioned on the site. That\'s a great question to ask the team directly — what area are you in?' },
+        { trigger: /.*/,  text: 'That\'s a good question! The site has limited information on this. What I can tell you is they specialise in custom cakes and pastries. Is there something specific you\'d like to know?' },
+      ],
+    },
+    empty: {
+      tier: 'empty',
+    },
   };
 
-  // ── Elements ───────────────────────────────────────────────────────────────
+  // ── Change this to test scenarios: 'rich' | 'thin' | 'empty' ──────────────
+  // In the real product, the URL entered determines which scenario plays out.
+  // For the mockup, we cycle through scenarios based on what the user types.
 
-  const $ = id => document.getElementById(id);
+  let currentScenario = null;
+  let msgCount = 0;
 
-  const states = {
-    idle:     $('state-idle'),
-    crawling: $('state-crawling'),
-    ready:    $('state-ready'),
-    brief:    $('state-brief'),
-  };
+  // ── State machine ──────────────────────────────────────────────────────────
 
-  // ── Transitions ────────────────────────────────────────────────────────────
+  const allStates = ['idle', 'crawling', 'summary', 'chat', 'empty', 'brief'];
 
-  function show(phase) {
-    Object.values(states).forEach(el => el.classList.remove('active'));
-    states[phase].classList.add('active');
-    state.phase = phase;
+  function show(id) {
+    allStates.forEach(s => {
+      const el = document.getElementById('s-' + s);
+      if (el) el.classList.toggle('active', s === id);
+    });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   // ── State 1: Idle ──────────────────────────────────────────────────────────
 
-  const urlInput  = $('url-input');
-  const urlSubmit = $('url-submit');
-  const urlWrap   = $('url-wrap');
-  const urlError  = $('url-error');
+  const urlInput = document.getElementById('url-input');
+  const urlWrap  = document.getElementById('url-wrap');
+  const urlErr   = document.getElementById('url-err');
 
-  function validateUrl(val) {
-    try {
-      const u = new URL(val.trim().startsWith('http') ? val.trim() : 'https://' + val.trim());
-      return u.protocol === 'http:' || u.protocol === 'https:';
-    } catch { return false; }
-  }
-
-  function normalizeUrl(val) {
-    val = val.trim();
-    return val.startsWith('http') ? val : 'https://' + val;
-  }
-
+  document.getElementById('url-submit').addEventListener('click', submitUrl);
+  urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitUrl(); });
   urlInput.addEventListener('input', () => {
-    urlWrap.classList.remove('error');
-    urlError.classList.remove('show');
+    urlWrap.classList.remove('err');
+    urlErr.classList.remove('show');
   });
 
-  urlInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') submitUrl();
-  });
-
-  urlSubmit.addEventListener('click', submitUrl);
-
-  async function submitUrl() {
-    const raw = urlInput.value;
-    if (!validateUrl(raw)) {
-      urlWrap.classList.add('error');
-      urlError.classList.add('show');
-      urlInput.focus();
+  function submitUrl() {
+    const val = urlInput.value.trim();
+    if (!val || val.length < 4) {
+      urlWrap.classList.add('err');
+      urlErr.classList.add('show');
       return;
     }
-    const url = normalizeUrl(raw);
-    startCrawl(url);
+    // Pick scenario based on URL hint (mock logic):
+    // Contains "toko" / "roti" / "thin" → thin
+    // Contains "empty" / "blocked" / "login" → empty
+    // Anything else → rich
+    const lower = val.toLowerCase();
+    if (/empty|blocked|login|nopage/.test(lower)) {
+      currentScenario = SCENARIOS.empty;
+    } else if (/thin|toko|roti|blog|under.construction/.test(lower)) {
+      currentScenario = SCENARIOS.thin;
+    } else {
+      currentScenario = SCENARIOS.rich;
+    }
+    const domain = val.replace(/^https?:\/\//, '').replace(/\/.*$/, '') || val;
+    startCrawl(domain);
   }
 
   // ── State 2: Crawling ──────────────────────────────────────────────────────
 
-  const stepEls = {
-    finding:   $('step-finding'),
-    reading:   $('step-reading'),
-    profiling: $('step-profiling'),
-    pills:     $('step-pills'),
-  };
+  function resetSteps() {
+    ['cs-find','cs-read','cs-profile','cs-pills'].forEach(id => setStep(id,'pending'));
+    document.getElementById('pages-tag').style.opacity = '0';
+    setProgress(0);
+  }
 
-  function setStep(key, status) {
-    // status: 'pending' | 'active' | 'done'
-    const el = stepEls[key];
+  function setStep(id, s) {
+    const el = document.getElementById(id);
     if (!el) return;
-    el.classList.remove('pending', 'active', 'done');
-    el.classList.add(status);
+    el.classList.remove('pending','active','done');
+    el.classList.add(s);
   }
 
   function setProgress(pct) {
-    $('progress-bar').style.width = Math.min(pct, 100) + '%';
+    document.getElementById('prog').style.width = pct + '%';
   }
 
-  async function startCrawl(url) {
-    // Show crawling state
-    $('crawl-url-label').textContent = url.replace(/^https?:\/\//, '');
-    $('crawl-error').classList.remove('show');
-    setStep('finding', 'active');
-    setStep('reading', 'pending');
-    setStep('profiling', 'pending');
-    setStep('pills', 'pending');
-    setProgress(5);
-    $('pages-label').style.display = 'none';
-    $('pages-count').textContent = '0';
+  function startCrawl(domain) {
+    document.getElementById('crawl-domain').textContent = domain;
+    resetSteps();
+    setStep('cs-find', 'active');
+    setProgress(8);
     show('crawling');
 
-    // POST /api/crawl
-    let jobId;
-    try {
-      const res = await fetch(API_URL + '/api/crawl', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      });
-      if (res.status === 429) {
-        showCrawlError('Too many requests. You can try 3 URLs per hour — please try again shortly.');
-        return;
-      }
-      if (!res.ok) throw new Error(res.status);
-      const data = await res.json();
-      jobId = data.job_id;
-      state.jobId = jobId;
-    } catch (err) {
-      showCrawlError('Could not reach the server. Please try again.');
+    // For empty scenario skip the full animation
+    if (currentScenario.tier === 'empty') {
+      setTimeout(() => { setProgress(18); }, 800);
+      setTimeout(() => {
+        document.getElementById('pages-tag').textContent = '— 0 pages found';
+        document.getElementById('pages-tag').style.opacity = '1';
+        setProgress(30);
+      }, 1600);
+      setTimeout(() => { show('empty'); }, 3000);
       return;
     }
 
-    // Poll status
-    state.pollStart = Date.now();
-    pollCrawl(jobId, url);
+    const pageCount = currentScenario.pages;
+    setTimeout(() => {
+      document.getElementById('pages-tag').textContent = `— ${pageCount} page${pageCount > 1 ? 's' : ''} found`;
+      document.getElementById('pages-tag').style.opacity = '1';
+      setProgress(25);
+    }, 1200);
+    setTimeout(() => { setStep('cs-find','done'); setStep('cs-read','active'); setProgress(42); }, 2400);
+    setTimeout(() => { setStep('cs-read','done'); setStep('cs-profile','active'); setProgress(65); }, 4200);
+    setTimeout(() => { setStep('cs-profile','done'); setStep('cs-pills','active'); setProgress(85); }, 6000);
+    setTimeout(() => { setStep('cs-pills','done'); setProgress(100); }, 7200);
+    setTimeout(() => { showSummary(); }, 7800);
   }
 
-  function pollCrawl(jobId, url) {
-    state.pollTimer = setTimeout(async () => {
-      // 90s timeout
-      if (Date.now() - state.pollStart > 90000) {
-        showCrawlError('This is taking longer than expected. Please try again.');
-        return;
-      }
+  // ── State 3a: Summary ──────────────────────────────────────────────────────
 
-      let kb;
-      try {
-        const res = await fetch(API_URL + '/api/crawl/' + jobId);
-        if (!res.ok) throw new Error(res.status);
-        kb = await res.json();
-      } catch {
-        showCrawlError('Lost connection. Please try again.');
-        return;
-      }
+  function showSummary() {
+    const sc = currentScenario;
 
-      // Update UI from kb status + progress
-      updateCrawlProgress(kb);
+    document.getElementById('sm-company').textContent = sc.company;
+    document.getElementById('sm-co-name').textContent = sc.company;
+    document.getElementById('sm-pages-meta').textContent =
+      `${sc.pages} page${sc.pages > 1 ? 's' : ''} · ${sc.industry}`;
+    document.getElementById('sm-about').textContent = sc.about;
 
-      if (kb.status === 'complete') {
-        onCrawlComplete(kb, url);
-      } else if (kb.status === 'failed') {
-        showCrawlError('We couldn\'t analyze this site. It may block automated requests. Try a different URL.');
-      } else {
-        pollCrawl(jobId, url);
-      }
-    }, 2000);
+    // Services tags
+    const svcEl = document.getElementById('sm-services');
+    svcEl.innerHTML = sc.services.map(s => `<span class="stag">${s}</span>`).join('');
+
+    // Gaps
+    const gapsEl = document.getElementById('sm-gaps');
+    gapsEl.innerHTML = sc.gaps.map(g => `<div class="gap-item">${g}</div>`).join('');
+
+    // Thin warning
+    document.getElementById('thin-warn').classList.toggle('show', sc.tier === 'thin');
+
+    // Hide gaps row if no gaps
+    document.getElementById('sm-gaps-row').style.display = sc.gaps.length ? '' : 'none';
+
+    show('summary');
   }
 
-  function updateCrawlProgress(kb) {
-    // Pages found
-    if (kb.pages_found > 0) {
-      $('pages-count').textContent = kb.pages_found;
-      $('pages-label').style.display = 'inline';
-    }
-
-    if (kb.status === 'crawling') {
-      setStep('finding', 'active');
-      setProgress(20);
-    } else if (kb.status === 'analyzing') {
-      setStep('finding', 'done');
-      const prog = kb.progress || '';
-      if (prog.includes('profile') || prog.includes('Generating')) {
-        setStep('reading', 'done');
-        setStep('profiling', 'active');
-        setProgress(70);
-      } else if (prog.includes('Extracting') || prog.includes('content')) {
-        setStep('reading', 'active');
-        setProgress(45);
-      } else {
-        setStep('reading', 'active');
-        setProgress(35);
-      }
-    }
-  }
-
-  function showCrawlError(msg) {
-    $('crawl-error-msg').textContent = msg;
-    $('crawl-error').classList.add('show');
-  }
-
-  $('crawl-retry').addEventListener('click', () => {
-    clearTimeout(state.pollTimer);
-    show('idle');
+  document.getElementById('open-chat-btn').addEventListener('click', () => {
+    // Collapse summary card with animation then show chat
+    const card = document.getElementById('summ-card');
+    card.classList.add('collapsing');
+    setTimeout(() => openChat(), 380);
   });
 
-  // ── State 3: Ready ─────────────────────────────────────────────────────────
+  // ── State 3b: Chat ─────────────────────────────────────────────────────────
 
-  async function onCrawlComplete(kb, url) {
-    // Finish progress animation
-    setStep('profiling', 'done');
-    setStep('pills', 'active');
-    setProgress(90);
+  function openChat() {
+    const sc = currentScenario;
+    msgCount = 0;
 
-    await delay(600);
+    document.getElementById('ch-company').textContent = sc.company;
+    document.getElementById('w-name').textContent = sc.company;
+    document.getElementById('brief-hint').classList.remove('show');
 
-    setStep('pills', 'done');
-    setProgress(100);
-    state.companyProfile = kb.company_profile;
+    // Reset messages
+    const msgs = document.getElementById('w-messages');
+    msgs.innerHTML = agentMsgHtml('Hi! How can I help you today?');
 
-    await delay(400);
+    // Render pills
+    const pillsEl = document.getElementById('w-pills');
+    pillsEl.style.display = 'flex';
+    pillsEl.innerHTML = sc.pills.map(p =>
+      `<button class="w-pill" onclick="sendPill(this)">${p}</button>`
+    ).join('');
 
-    // Create session + get pills
-    let sessionId, pills;
-    try {
-      const sr = await fetch(API_URL + '/api/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ knowledge_base_id: kb.job_id }),
-      });
-      if (sr.ok) {
-        const sd = await sr.json();
-        sessionId = sd.session_id;
-        pills = sd.pills && sd.pills.length ? sd.pills : null;
-        state.sessionId = sessionId;
-        window.__ctxSessionId = sessionId;
-      }
-    } catch { /* widget will create its own session */ }
-
-    // Populate ready state
-    const profile = kb.company_profile || {};
-    const companyName = profile.name || extractDomain(url);
-    $('ready-company-name').textContent = companyName;
-
-    // Profile strip tags
-    const strip = $('profile-strip');
-    strip.innerHTML = '';
-    if (profile.industry) addTag(strip, profile.industry);
-    if (profile.location) addTag(strip, profile.location);
-    addTag(strip, kb.pages_found + (kb.pages_found === 1 ? ' page' : ' pages') + ' crawled');
-
-    // Build widget iframe src
-    const greeting = encodeURIComponent('Ask anything about ' + companyName + '...');
-    const name     = encodeURIComponent(companyName);
-    let src = '/widget/widget.html?transparent=1&dynamicHeight=1'
-      + '&name=' + name
-      + '&greeting=' + greeting
-      + '&apiUrl=' + encodeURIComponent(API_URL)
-      + '&knowledgeBaseId=' + encodeURIComponent(kb.job_id);
-    if (pills) src += '&pills=' + encodeURIComponent(JSON.stringify(pills));
-
-    const iframe = $('widget-iframe');
-    iframe.src = src;
-
-    show('ready');
+    show('chat');
+    setTimeout(() => document.getElementById('w-input').focus(), 200);
   }
 
-  function addTag(container, text) {
-    const tag = document.createElement('div');
-    tag.className = 'profile-tag';
-    tag.textContent = text.toUpperCase();
-    container.appendChild(tag);
-  }
-
-  // Listen for messages from widget iframe
-  window.addEventListener('message', function (e) {
-    if (!e.data) return;
-
-    // Height resize
-    if (e.data.type === 'contextus:resize') {
-      const iframe = $('widget-iframe');
-      if (iframe) {
-        const scrollY = window.scrollY;
-        iframe.style.height = e.data.height + 'px';
-        window.scrollTo(0, scrollY);
-      }
-    }
-
-    // Message sent event — track count for brief hint
-    if (e.data.type === 'contextus:message_sent') {
-      state.messageCount = e.data.count || state.messageCount + 1;
-      if (state.messageCount >= 3) {
-        $('brief-hint').classList.add('show');
-      }
-    }
+  document.getElementById('back-summary-btn').addEventListener('click', () => {
+    // Re-show summary with card already visible (remove collapsing class)
+    const card = document.getElementById('summ-card');
+    card.classList.remove('collapsing');
+    card.style.animation = 'none';
+    card.style.opacity = '1';
+    card.style.maxHeight = '';
+    card.style.marginBottom = '';
+    show('summary');
   });
 
-  $('see-brief-btn').addEventListener('click', generateBrief);
+  // Widget interactions
+  window.sendPill = function (btn) {
+    document.getElementById('w-pills').style.display = 'none';
+    addVisitorMsg(btn.textContent);
+    simulateResponse(btn.textContent);
+  };
 
-  // ── State 4: Brief ─────────────────────────────────────────────────────────
+  document.getElementById('w-send').addEventListener('click', sendMsg);
+  document.getElementById('w-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendMsg();
+  });
 
-  async function generateBrief() {
-    if (!state.sessionId) return;
+  function sendMsg() {
+    const input = document.getElementById('w-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    document.getElementById('w-pills').style.display = 'none';
+    addVisitorMsg(text);
+    simulateResponse(text);
+  }
+
+  function addVisitorMsg(text) {
+    const msgs = document.getElementById('w-messages');
+    const row = document.createElement('div');
+    row.className = 'w-msg v';
+    row.innerHTML = `<div class="w-bubble vb">${esc(text)}</div>`;
+    msgs.appendChild(row);
+    msgs.scrollTop = msgs.scrollHeight;
+    msgCount++;
+  }
+
+  function simulateResponse(text) {
+    const msgs = document.getElementById('w-messages');
+    const thinking = document.createElement('div');
+    thinking.className = 'w-msg';
+    thinking.innerHTML = avatarHtml() + `<div class="w-bubble"><div class="w-dots"><span></span><span></span><span></span></div></div>`;
+    msgs.appendChild(thinking);
+    msgs.scrollTop = msgs.scrollHeight;
+
+    const responses = currentScenario.responses || [];
+    const match = responses.find(r => r.trigger.test(text)) || responses[responses.length - 1];
+
+    setTimeout(() => {
+      thinking.remove();
+      const row = document.createElement('div');
+      row.className = 'w-msg';
+      row.innerHTML = avatarHtml() + `<div class="w-bubble">${match.text}</div>`;
+      msgs.appendChild(row);
+      msgs.scrollTop = msgs.scrollHeight;
+      if (msgCount >= 2) {
+        document.getElementById('brief-hint').classList.add('show');
+      }
+    }, 1400);
+  }
+
+  document.getElementById('see-brief-btn').addEventListener('click', showBrief);
+
+  // ── State 4: Empty ─────────────────────────────────────────────────────────
+
+  document.getElementById('try-another-btn').addEventListener('click', function() { this.blur(); reset(); });
+
+  document.getElementById('manual-entry-btn').addEventListener('click', () => {
+    document.getElementById('manual-form').classList.add('show');
+    document.getElementById('manual-entry-btn').style.display = 'none';
+  });
+
+  document.getElementById('manual-submit').addEventListener('click', () => {
+    // Mock: treat manual entry as a thin-tier result
+    currentScenario = SCENARIOS.thin;
+    currentScenario.company = 'Your Business';
+    showSummary();
+  });
+
+  // ── State 5: Brief ─────────────────────────────────────────────────────────
+
+  function showBrief() {
+    const sc = currentScenario;
+    document.getElementById('b-company').textContent = sc.company || 'Visitor';
+    // Adjust quality badge for thin tier
+    if (sc.tier === 'thin') {
+      document.getElementById('b-quality').innerHTML = '<span class="qbadge medium"><span class="qdot"></span>Medium</span>';
+    } else {
+      document.getElementById('b-quality').innerHTML = '<span class="qbadge high"><span class="qdot"></span>High</span>';
+    }
     show('brief');
-    $('brief-skeleton').style.display = 'block';
-    $('brief-card-real').innerHTML = '';
-
-    let brief;
-    try {
-      const res = await fetch(API_URL + '/api/brief/' + state.sessionId, {
-        method: 'POST',
-      });
-      if (!res.ok) throw new Error(res.status);
-      brief = await res.json();
-    } catch {
-      $('brief-skeleton').style.display = 'none';
-      $('brief-card-real').innerHTML = '<div class="error-banner show"><p>Could not generate brief. The conversation may be too short.</p></div>';
-      return;
-    }
-
-    $('brief-skeleton').style.display = 'none';
-    renderBriefCard(brief);
   }
 
-  function renderBriefCard(brief) {
-    const profile = state.companyProfile || {};
-    const domain = state.jobId ? '' : '';
+  document.getElementById('start-over-btn').addEventListener('click', reset);
 
-    const qualityClass = brief.quality_score || 'medium';
-    const qualityLabel = { high: 'High', medium: 'Medium', low: 'Low' }[qualityClass] || 'Medium';
+  // ── Reset ──────────────────────────────────────────────────────────────────
 
-    const contactHtml = brief.contact
-      ? [brief.contact.email, brief.contact.phone, brief.contact.whatsapp].filter(Boolean).join(', ')
-      : null;
-
-    const rows = [
-      { label: 'WHO',      value: brief.who },
-      { label: 'NEED',     value: brief.need },
-      { label: 'SIGNALS',  value: brief.signals },
-      { label: 'OPEN Qs',  value: brief.open_questions },
-      { label: 'APPROACH', value: brief.suggested_approach },
-      { label: 'QUALITY',  value: null, badge: qualityClass, badgeLabel: qualityLabel },
-      contactHtml ? { label: 'CONTACT', value: contactHtml } : null,
-    ].filter(Boolean);
-
-    const rowsHtml = rows.map(r => `
-      <div class="brief-row">
-        <div class="brief-label">${r.label}</div>
-        <div class="brief-value">
-          ${r.badge
-            ? `<span class="quality-badge ${r.badge}"><span class="dot"></span>${r.badgeLabel}</span>`
-            : escHtml(r.value || '—')}
-        </div>
-      </div>`).join('');
-
-    $('brief-card-real').innerHTML = `
-      <div class="brief-card fu">
-        <div class="brief-card-head">
-          <span class="brief-card-title">New lead — ${escHtml(profile.name || 'Visitor')}</span>
-          <span class="brief-card-meta">via your site &middot; just now</span>
-        </div>
-        <div class="brief-card-body">${rowsHtml}</div>
-      </div>`;
+  function reset() {
+    msgCount = 0;
+    currentScenario = null;
+    urlInput.value = '';
+    urlWrap.classList.remove('err');
+    urlErr.classList.remove('show');
+    document.getElementById('manual-form').classList.remove('show');
+    document.getElementById('manual-entry-btn').style.display = '';
+    document.getElementById('brief-hint').classList.remove('show');
+    resetSteps();
+    show('idle');
+    setTimeout(() => urlInput.focus(), 300);
   }
-
-  $('start-over-btn').addEventListener('click', reset);
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  function reset() {
-    clearTimeout(state.pollTimer);
-    state.jobId = null;
-    state.sessionId = null;
-    state.companyProfile = null;
-    state.messageCount = 0;
-    state.pollStart = null;
-    $('url-input').value = '';
-    $('widget-iframe').src = '';
-    $('brief-hint').classList.remove('show');
-    $('brief-card-real').innerHTML = '';
-    $('crawl-error').classList.remove('show');
-    urlWrap.classList.remove('error');
-    urlError.classList.remove('show');
-    show('idle');
-    $('url-input').focus();
+  function agentMsgHtml(text) {
+    return `<div class="w-msg">${avatarHtml()}<div class="w-bubble">${text}</div></div>`;
   }
 
-  function delay(ms) {
-    return new Promise(r => setTimeout(r, ms));
+  function avatarHtml() {
+    return `<div class="w-av"><svg width="24" height="24" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg></div>`;
   }
 
-  function extractDomain(url) {
-    try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
-  }
-
-  function escHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  function esc(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
 })();
 </script>
-
 </body>
 </html>
