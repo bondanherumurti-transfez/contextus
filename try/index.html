@@ -302,6 +302,10 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
         <span>Generating conversation starters</span>
       </div>
     </div>
+    <div id="crawl-error" style="display:none;margin-top:1.5rem;text-align:center">
+      <p class="page-sub" id="crawl-error-msg" style="margin-bottom:1rem"></p>
+      <button class="btn-s" onclick="reset()">Try a different URL</button>
+    </div>
   </div>
 
   <!-- ══════════════════════════════════════
@@ -370,23 +374,7 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
       <button class="back-to-summary" id="back-summary-btn" type="button">← What we learned</button>
     </div>
 
-    <div class="widget-shell fu fd1">
-      <div class="w-header">
-        <svg width="18" height="18" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg>
-        <span class="w-header-name" id="w-name">Acme Web Agency</span>
-        <span class="w-powered">powered by contextus</span>
-      </div>
-      <div class="w-body">
-        <div class="w-messages" id="w-messages"></div>
-        <div class="w-input-area">
-          <input type="text" id="w-input" placeholder="Ask anything...">
-          <button class="w-sbtn" id="w-send" type="button">
-            <svg viewBox="0 0 24 24"><path d="M5.694 12 2.299 3.272c-.236-.607.356-1.188.942-.982l.093.04 18 9a.75.75 0 0 1 .097 1.283l-.097.058-18 9c-.619.31-1.263-.277-1.035-.916l.035-.084L5.694 12 2.3 3.272 5.694 12ZM4.402 4.54l2.61 6.71h6.627a.75.75 0 0 1 .102 1.493l-.102.007H7.01l-2.609 6.71L19.322 12 4.401 4.54Z"/></svg>
-          </button>
-        </div>
-        <div class="w-pills" id="w-pills"></div>
-      </div>
-    </div>
+    <div id="widget-iframe-container" class="fu fd1"></div>
 
     <p class="widget-caption fu fd2">This is how it would look on your site.</p>
 
@@ -426,15 +414,15 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
       <div class="mf-body">
         <div class="mf-field">
           <label>WHAT DOES YOUR BUSINESS DO?</label>
-          <input type="text" placeholder="e.g. We help F&B businesses with tax filing and accounting">
+          <input type="text" id="mf-biz" placeholder="e.g. We help F&B businesses with tax filing and accounting">
         </div>
         <div class="mf-field">
           <label>WHO ARE YOUR CUSTOMERS?</label>
-          <input type="text" placeholder="e.g. Restaurant owners and food business founders in Jakarta">
+          <input type="text" id="mf-cust" placeholder="e.g. Restaurant owners and food business founders in Jakarta">
         </div>
         <div class="mf-field">
           <label>WHAT SHOULD VISITORS DO AFTER CHATTING?</label>
-          <textarea rows="2" placeholder="e.g. Book a free consultation, or reach us on WhatsApp"></textarea>
+          <textarea rows="2" id="mf-cta" placeholder="e.g. Book a free consultation, or reach us on WhatsApp"></textarea>
         </div>
         <button class="mf-submit" id="manual-submit" type="button">Build my assistant →</button>
       </div>
@@ -456,31 +444,31 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
       </div>
       <div class="bc-row">
         <div class="bc-lbl">WHO</div>
-        <div class="bc-val"><strong>Marketing Manager at a D2C skincare brand.</strong> Team of 12, using a basic contact form generating ~3 qualified leads per week with almost no context.</div>
+        <div class="bc-val" id="b-who">Marketing Manager at a D2C skincare brand. Team of 12, using a basic contact form generating ~3 qualified leads per week with almost no context.</div>
       </div>
       <div class="bc-row">
         <div class="bc-lbl">NEED</div>
-        <div class="bc-val">Replace their contact form with something that qualifies leads before they reach the sales team. Interested in the inline embed option for their /contact page.</div>
+        <div class="bc-val" id="b-need">Replace their contact form with something that qualifies leads before they reach the sales team. Interested in the inline embed option for their /contact page.</div>
       </div>
       <div class="bc-row">
         <div class="bc-lbl">SIGNALS</div>
-        <div class="bc-val"><strong>High intent</strong> — asked about pricing and setup time. <strong>Urgency</strong> — Q2 campaign starting next month. <strong>Decision maker</strong> — mentioned "I'll run this by my CTO."</div>
+        <div class="bc-val" id="b-signals">High intent — asked about pricing and setup time. Urgency — Q2 campaign starting next month.</div>
       </div>
       <div class="bc-row">
         <div class="bc-lbl">OPEN Qs</div>
-        <div class="bc-val">Asked about Shopify compatibility — not answered yet. <em>This is your follow-up hook.</em></div>
+        <div class="bc-val" id="b-openqs">Asked about Shopify compatibility — not answered yet.</div>
       </div>
       <div class="bc-row">
         <div class="bc-lbl">APPROACH</div>
-        <div class="bc-val">Lead with the inline embed for /contact. Mention Shopify support upfront. Offer a 15-min demo call before their Q2 push.</div>
+        <div class="bc-val" id="b-approach">Lead with the inline embed for /contact. Mention Shopify support upfront. Offer a 15-min demo call before their Q2 push.</div>
       </div>
       <div class="bc-row">
         <div class="bc-lbl">QUALITY</div>
         <div class="bc-val" id="b-quality"><span class="qbadge high"><span class="qdot"></span>High</span></div>
       </div>
-      <div class="bc-row">
+      <div class="bc-row" id="b-contact-row">
         <div class="bc-lbl">CONTACT</div>
-        <div class="bc-val">sarah@brand.co &middot; via WhatsApp</div>
+        <div class="bc-val" id="b-contact">sarah@brand.co</div>
       </div>
     </div>
 
@@ -504,55 +492,13 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
 (function () {
   'use strict';
 
-  // ── Mock scenarios ─────────────────────────────────────────────────────────
-  // Switch SCENARIO to test different crawl tiers.
-  // In production this is driven by the real KB quality_tier field.
+  const API_URL = 'https://contextus-2d16.onrender.com';
 
-  const SCENARIOS = {
-    rich: {
-      tier: 'rich',
-      company: 'Acme Web Agency',
-      industry: 'Web Agency',
-      location: 'Jakarta',
-      pages: 5,
-      about: 'A Jakarta-based web design agency helping SMBs and startups build fast, modern websites. Specialises in custom design with no templates.',
-      services: ['Web Design', 'SEO', 'Hosting', 'Maintenance'],
-      gaps: ['Pricing not mentioned anywhere on the site', 'No portfolio or case studies shown', 'No clear contact method listed'],
-      pills: ['What\'s included in web design?', 'What are your pricing plans?', 'Do you work with startups?'],
-      responses: [
-        { trigger: /pric|harg|cost|biaya/i, text: 'Our pricing starts from <strong>Rp 15 million</strong> for a standard 5-page website. We\'d love to give you a proper quote based on your specific needs — what kind of site are you looking to build?' },
-        { trigger: /startup|small|kecil|smb/i, text: 'Absolutely — about 60% of our clients are startups and SMBs. We have a dedicated <strong>Starter Package</strong> designed to get you live quickly. What stage is your business at right now?' },
-        { trigger: /design|web|include|include/i, text: 'Our web design service includes:<ol><li><strong>Custom design</strong> — no templates, built to your brand</li><li><strong>Mobile-first development</strong></li><li><strong>CMS integration</strong> — update content yourself</li><li><strong>30-day post-launch support</strong></li></ol>What kind of website are you building?' },
-        { trigger: /.*/,  text: 'Great question. Could you tell me a bit more about your business so I can point you in the right direction?' },
-      ],
-    },
-    thin: {
-      tier: 'thin',
-      company: 'Toko Roti Manis',
-      industry: 'Food & Bakery',
-      location: null,
-      pages: 1,
-      about: 'A home bakery selling custom cakes and pastries. Based on a single landing page with limited detail.',
-      services: ['Custom Cakes', 'Pastries'],
-      gaps: ['Pricing completely missing', 'No ordering process explained', 'No location or delivery info', 'No contact details found'],
-      pills: ['How do I order a cake?', 'Do you deliver?', 'What are your prices?'],
-      responses: [
-        { trigger: /order|pesan/i, text: 'I found limited details about the ordering process on the site. The best way is probably to reach out directly — do you have a WhatsApp number I can help you get in touch with the team?' },
-        { trigger: /deliv|antar|kirim/i, text: 'Delivery details weren\'t mentioned on the site. That\'s a great question to ask the team directly — what area are you in?' },
-        { trigger: /.*/,  text: 'That\'s a good question! The site has limited information on this. What I can tell you is they specialise in custom cakes and pastries. Is there something specific you\'d like to know?' },
-      ],
-    },
-    empty: {
-      tier: 'empty',
-    },
-  };
-
-  // ── Change this to test scenarios: 'rich' | 'thin' | 'empty' ──────────────
-  // In the real product, the URL entered determines which scenario plays out.
-  // For the mockup, we cycle through scenarios based on what the user types.
-
-  let currentScenario = null;
+  let jobId = null;
+  let sessionId = null;
   let msgCount = 0;
+  let pollTimer = null;
+  let currentKb = null;
 
   // ── State machine ──────────────────────────────────────────────────────────
 
@@ -606,20 +552,29 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
       return;
     }
     removeIdleInputs();
-    // Pick scenario based on URL hint (mock logic):
-    // Contains "toko" / "roti" / "thin" → thin
-    // Contains "empty" / "blocked" / "login" → empty
-    // Anything else → rich
-    const lower = val.toLowerCase();
-    if (/empty|blocked|login|nopage/.test(lower)) {
-      currentScenario = SCENARIOS.empty;
-    } else if (/thin|toko|roti|blog|under.construction/.test(lower)) {
-      currentScenario = SCENARIOS.thin;
-    } else {
-      currentScenario = SCENARIOS.rich;
-    }
-    const domain = val.replace(/^https?:\/\//, '').replace(/\/.*$/, '') || val;
-    startCrawl(domain);
+    fetch(API_URL + '/api/crawl', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: val }),
+    })
+    .then(r => {
+      if (r.status === 429) { const e = new Error('rate_limit'); throw e; }
+      if (!r.ok) throw new Error('crawl_failed');
+      return r.json();
+    })
+    .then(data => {
+      jobId = data.job_id;
+      startCrawl(val);
+    })
+    .catch(err => {
+      restoreIdleInputs();
+      const msg = err.message === 'rate_limit'
+        ? 'Too many requests — please wait an hour before trying again.'
+        : 'Could not start crawl. Please check the URL and try again.';
+      const urlErr = document.getElementById('url-err');
+      urlErr.textContent = msg;
+      urlErr.classList.add('show');
+    });
   }
 
   // ── State 2: Crawling ──────────────────────────────────────────────────────
@@ -641,68 +596,96 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     document.getElementById('prog').style.width = pct + '%';
   }
 
-  function startCrawl(domain) {
+  function startCrawl(url) {
+    const domain = url.replace(/^https?:\/\//, '').replace(/\/.*$/, '') || url;
     document.getElementById('crawl-domain').textContent = domain;
+    document.getElementById('crawl-error').style.display = 'none';
     resetSteps();
     setStep('cs-find', 'active');
     setProgress(8);
     show('crawling');
 
-    // For empty scenario skip the full animation
-    if (currentScenario.tier === 'empty') {
-      setTimeout(() => { setProgress(18); }, 800);
-      setTimeout(() => {
-        document.getElementById('pages-tag').textContent = '— 0 pages found';
-        document.getElementById('pages-tag').style.opacity = '1';
-        setProgress(30);
-      }, 1600);
-      setTimeout(() => { show('empty'); }, 3000);
-      return;
-    }
+    let elapsed = 0;
+    pollTimer = setInterval(async () => {
+      elapsed += 2;
+      if (elapsed > 90) {
+        clearInterval(pollTimer);
+        showCrawlError('Crawl timed out — the site may be too slow to read. Try a different URL.');
+        return;
+      }
+      try {
+        const r = await fetch(API_URL + '/api/crawl/' + jobId);
+        if (!r.ok) return;
+        const kb = await r.json();
+        updateCrawlProgress(kb);
+        if (kb.status === 'complete') {
+          clearInterval(pollTimer);
+          onCrawlComplete(kb);
+        } else if (kb.status === 'failed') {
+          clearInterval(pollTimer);
+          showCrawlError("We couldn't read this site. It may block automated access.");
+        }
+      } catch (e) { /* keep polling */ }
+    }, 2000);
+  }
 
-    const pageCount = currentScenario.pages;
-    setTimeout(() => {
-      document.getElementById('pages-tag').textContent = `— ${pageCount} page${pageCount > 1 ? 's' : ''} found`;
-      document.getElementById('pages-tag').style.opacity = '1';
-      setProgress(25);
-    }, 1200);
-    setTimeout(() => { setStep('cs-find','done'); setStep('cs-read','active'); setProgress(42); }, 2400);
-    setTimeout(() => { setStep('cs-read','done'); setStep('cs-profile','active'); setProgress(65); }, 4200);
-    setTimeout(() => { setStep('cs-profile','done'); setStep('cs-pills','active'); setProgress(85); }, 6000);
-    setTimeout(() => { setStep('cs-pills','done'); setProgress(100); }, 7200);
-    setTimeout(() => { showSummary(); }, 7800);
+  function updateCrawlProgress(kb) {
+    const pagesTag = document.getElementById('pages-tag');
+    if (kb.pages_found > 0) {
+      pagesTag.textContent = `— ${kb.pages_found} page${kb.pages_found > 1 ? 's' : ''} found`;
+      pagesTag.style.opacity = '1';
+    }
+    if (kb.status === 'crawling') {
+      setStep('cs-find', 'active'); setProgress(25);
+    } else if (kb.status === 'analyzing') {
+      setStep('cs-find', 'done'); setStep('cs-read', 'active'); setProgress(55);
+      setStep('cs-profile', 'active');
+    }
+  }
+
+  function showCrawlError(msg) {
+    document.getElementById('crawl-error-msg').textContent = msg;
+    document.getElementById('crawl-error').style.display = 'block';
   }
 
   // ── State 3a: Summary ──────────────────────────────────────────────────────
 
-  function showSummary() {
-    const sc = currentScenario;
+  function onCrawlComplete(kb) {
+    currentKb = kb;
+    const p = kb.company_profile;
 
-    document.getElementById('sm-company').textContent = sc.company;
-    document.getElementById('sm-co-name').textContent = sc.company;
+    if (!p || kb.quality_tier === 'empty') {
+      show('empty');
+      return;
+    }
+
+    // Mark all steps done and fill progress
+    ['cs-find','cs-read','cs-profile','cs-pills'].forEach(id => setStep(id, 'done'));
+    setProgress(100);
+
+    document.getElementById('sm-company').textContent = p.name;
+    document.getElementById('sm-co-name').textContent = p.name;
     document.getElementById('sm-pages-meta').textContent =
-      `${sc.pages} page${sc.pages > 1 ? 's' : ''} · ${sc.industry}`;
-    document.getElementById('sm-about').textContent = sc.about;
+      [kb.pages_found + ' pages', p.industry, p.location].filter(Boolean).join(' · ');
+    document.getElementById('sm-about').textContent = p.summary;
 
-    // Services tags
     const svcEl = document.getElementById('sm-services');
-    svcEl.innerHTML = sc.services.map(s => `<span class="stag">${s}</span>`).join('');
+    svcEl.innerHTML = (p.services || []).map(s => `<span class="stag">${esc(s)}</span>`).join('');
 
-    // Gaps
     const gapsEl = document.getElementById('sm-gaps');
-    gapsEl.innerHTML = sc.gaps.map(g => `<div class="gap-item">${g}</div>`).join('');
+    if (p.gaps && p.gaps.length) {
+      gapsEl.innerHTML = p.gaps.map(g => `<div class="gap-item">${esc(g)}</div>`).join('');
+      document.getElementById('sm-gaps-row').style.display = '';
+    } else {
+      document.getElementById('sm-gaps-row').style.display = 'none';
+    }
 
-    // Thin warning
-    document.getElementById('thin-warn').classList.toggle('show', sc.tier === 'thin');
+    document.getElementById('thin-warn').classList.toggle('show', kb.quality_tier === 'thin');
 
-    // Hide gaps row if no gaps
-    document.getElementById('sm-gaps-row').style.display = sc.gaps.length ? '' : 'none';
-
-    show('summary');
+    setTimeout(() => show('summary'), 400);
   }
 
   document.getElementById('open-chat-btn').addEventListener('click', () => {
-    // Collapse summary card with animation then show chat
     const card = document.getElementById('summ-card');
     card.classList.add('collapsing');
     setTimeout(() => openChat(), 380);
@@ -711,30 +694,32 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
   // ── State 3b: Chat ─────────────────────────────────────────────────────────
 
   function openChat() {
-    const sc = currentScenario;
+    if (!currentKb) return;
+    const p = currentKb.company_profile;
     msgCount = 0;
+    sessionId = null;
 
-    document.getElementById('ch-company').textContent = sc.company;
-    document.getElementById('w-name').textContent = sc.company;
+    document.getElementById('ch-company').textContent = p.name;
     document.getElementById('brief-hint').classList.remove('show');
+    document.getElementById('brief-hint-btn').textContent = 'See lead brief';
+    document.getElementById('brief-hint-btn').disabled = false;
 
-    // Reset messages
-    const msgs = document.getElementById('w-messages');
-    msgs.innerHTML = agentMsgHtml('Hi! How can I help you today?');
+    const name = encodeURIComponent(p.name);
+    const greeting = encodeURIComponent('Ask anything about ' + p.name + '...');
+    const src = '/widget/widget.html'
+      + '?apiUrl=' + encodeURIComponent(API_URL)
+      + '&knowledgeBaseId=' + encodeURIComponent(jobId)
+      + '&name=' + name
+      + '&greeting=' + greeting
+      + '&transparent=0&dynamicHeight=1';
 
-    // Render pills
-    const pillsEl = document.getElementById('w-pills');
-    pillsEl.style.display = 'flex';
-    pillsEl.innerHTML = sc.pills.map(p =>
-      `<button class="w-pill" onclick="sendPill(this)">${p}</button>`
-    ).join('');
+    const container = document.getElementById('widget-iframe-container');
+    container.innerHTML = '<iframe src="' + src + '" width="100%" height="500" frameborder="0" scrolling="no" style="border:none;display:block;border-radius:12px" title="' + esc(p.name) + ' assistant"></iframe>';
 
     show('chat');
-    setTimeout(() => document.getElementById('w-input').focus(), 200);
   }
 
   document.getElementById('back-summary-btn').addEventListener('click', () => {
-    // Re-show summary with card already visible (remove collapsing class)
     const card = document.getElementById('summ-card');
     card.classList.remove('collapsing');
     card.style.animation = 'none';
@@ -744,63 +729,66 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     show('summary');
   });
 
-  // Widget interactions
-  window.sendPill = function (btn) {
-    document.getElementById('w-pills').style.display = 'none';
-    addVisitorMsg(btn.textContent);
-    simulateResponse(btn.textContent);
-  };
+  // ── postMessage listener (widget → try page) ───────────────────────────────
 
-  document.getElementById('w-send').addEventListener('click', sendMsg);
-  document.getElementById('w-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') sendMsg();
-  });
-
-  function sendMsg() {
-    const input = document.getElementById('w-input');
-    const text = input.value.trim();
-    if (!text) return;
-    input.value = '';
-    document.getElementById('w-pills').style.display = 'none';
-    addVisitorMsg(text);
-    simulateResponse(text);
-  }
-
-  function addVisitorMsg(text) {
-    const msgs = document.getElementById('w-messages');
-    const row = document.createElement('div');
-    row.className = 'w-msg v';
-    row.innerHTML = `<div class="w-bubble vb">${esc(text)}</div>`;
-    msgs.appendChild(row);
-    msgs.scrollTop = msgs.scrollHeight;
-    msgCount++;
-  }
-
-  function simulateResponse(text) {
-    const msgs = document.getElementById('w-messages');
-    const thinking = document.createElement('div');
-    thinking.className = 'w-msg';
-    thinking.innerHTML = avatarHtml() + `<div class="w-bubble"><div class="w-dots"><span></span><span></span><span></span></div></div>`;
-    msgs.appendChild(thinking);
-    msgs.scrollTop = msgs.scrollHeight;
-
-    const responses = currentScenario.responses || [];
-    const match = responses.find(r => r.trigger.test(text)) || responses[responses.length - 1];
-
-    setTimeout(() => {
-      thinking.remove();
-      const row = document.createElement('div');
-      row.className = 'w-msg';
-      row.innerHTML = avatarHtml() + `<div class="w-bubble">${match.text}</div>`;
-      msgs.appendChild(row);
-      msgs.scrollTop = msgs.scrollHeight;
-      if (msgCount >= 2) {
+  window.addEventListener('message', function(e) {
+    if (!e.data) return;
+    if (e.data.type === 'contextus:session_ready') {
+      sessionId = e.data.session_id;
+    }
+    if (e.data.type === 'contextus:message_sent') {
+      msgCount++;
+      if (msgCount >= 3) {
         document.getElementById('brief-hint').classList.add('show');
       }
-    }, 1400);
+    }
+    if (e.data.type === 'contextus:resize') {
+      const iframe = document.querySelector('#widget-iframe-container iframe');
+      if (iframe) iframe.style.height = e.data.height + 'px';
+    }
+  });
+
+  document.getElementById('see-brief-btn').addEventListener('click', generateBrief);
+
+  async function generateBrief() {
+    if (!sessionId) {
+      document.getElementById('brief-hint').style.display = 'none';
+      return;
+    }
+    const btn = document.getElementById('brief-hint-btn');
+    btn.textContent = 'Generating...';
+    btn.disabled = true;
+    try {
+      const r = await fetch(API_URL + '/api/brief/' + sessionId, { method: 'POST' });
+      if (!r.ok) throw new Error();
+      const brief = await r.json();
+      renderBrief(brief);
+      show('brief');
+    } catch {
+      document.getElementById('brief-hint').style.display = 'none';
+    }
   }
 
-  document.getElementById('see-brief-btn').addEventListener('click', showBrief);
+  function renderBrief(b) {
+    const p = currentKb && currentKb.company_profile;
+    document.getElementById('b-company').textContent = p ? p.name : 'Visitor';
+    document.getElementById('b-who').textContent = b.who;
+    document.getElementById('b-need').textContent = b.need;
+    document.getElementById('b-signals').textContent = b.signals;
+    document.getElementById('b-openqs').textContent = b.open_questions;
+    document.getElementById('b-approach').textContent = b.suggested_approach;
+    const badge = document.getElementById('b-quality');
+    const score = b.quality_score || 'medium';
+    badge.innerHTML = '<span class="qbadge ' + score + '"><span class="qdot"></span>' + score.charAt(0).toUpperCase() + score.slice(1) + '</span>';
+    const contact = b.contact;
+    const contactRow = document.getElementById('b-contact-row');
+    if (contact && (contact.email || contact.phone || contact.whatsapp)) {
+      document.getElementById('b-contact').textContent = contact.email || contact.phone || contact.whatsapp;
+      contactRow.style.display = '';
+    } else {
+      contactRow.style.display = 'none';
+    }
+  }
 
   // ── State 4: Empty ─────────────────────────────────────────────────────────
 
@@ -811,51 +799,56 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     document.getElementById('manual-entry-btn').style.display = 'none';
   });
 
-  document.getElementById('manual-submit').addEventListener('click', () => {
-    // Mock: treat manual entry as a thin-tier result
-    currentScenario = SCENARIOS.thin;
-    currentScenario.company = 'Your Business';
-    showSummary();
+  document.getElementById('manual-submit').addEventListener('click', async () => {
+    const biz  = document.getElementById('mf-biz').value.trim();
+    const cust = document.getElementById('mf-cust').value.trim();
+    const cta  = document.getElementById('mf-cta').value.trim();
+    if (!biz) return;
+    const btn = document.getElementById('manual-submit');
+    btn.textContent = 'Building...';
+    btn.disabled = true;
+    try {
+      const r = await fetch(API_URL + '/api/crawl/' + jobId + '/enrich', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers: {
+          'What does your business do?': biz,
+          'Who are your customers?': cust,
+          'What do you want visitors to do?': cta,
+        }}),
+      });
+      if (!r.ok) throw new Error();
+      const profile = await r.json();
+      onCrawlComplete({ company_profile: profile, quality_tier: 'thin', pages_found: 0 });
+    } catch {
+      btn.textContent = 'Build my assistant →';
+      btn.disabled = false;
+    }
   });
 
   // ── State 5: Brief ─────────────────────────────────────────────────────────
-
-  function showBrief() {
-    const sc = currentScenario;
-    document.getElementById('b-company').textContent = sc.company || 'Visitor';
-    // Adjust quality badge for thin tier
-    if (sc.tier === 'thin') {
-      document.getElementById('b-quality').innerHTML = '<span class="qbadge medium"><span class="qdot"></span>Medium</span>';
-    } else {
-      document.getElementById('b-quality').innerHTML = '<span class="qbadge high"><span class="qdot"></span>High</span>';
-    }
-    show('brief');
-  }
 
   document.getElementById('start-over-btn').addEventListener('click', reset);
 
   // ── Reset ──────────────────────────────────────────────────────────────────
 
   function reset() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    jobId = null;
+    sessionId = null;
     msgCount = 0;
-    currentScenario = null;
+    currentKb = null;
+    document.getElementById('widget-iframe-container').innerHTML = '';
+    document.getElementById('brief-hint').classList.remove('show');
     document.getElementById('manual-form').classList.remove('show');
     document.getElementById('manual-entry-btn').style.display = '';
-    document.getElementById('brief-hint').classList.remove('show');
+    document.getElementById('crawl-error').style.display = 'none';
     resetSteps();
     restoreIdleInputs();
     show('idle');
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-
-  function agentMsgHtml(text) {
-    return `<div class="w-msg">${avatarHtml()}<div class="w-bubble">${text}</div></div>`;
-  }
-
-  function avatarHtml() {
-    return `<div class="w-av"><svg width="24" height="24" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg></div>`;
-  }
 
   function esc(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
