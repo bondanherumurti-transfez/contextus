@@ -568,24 +568,44 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
 
   // ── State 1: Idle ──────────────────────────────────────────────────────────
 
-  const urlInput = document.getElementById('url-input');
-  const urlWrap  = document.getElementById('url-wrap');
-  const urlErr   = document.getElementById('url-err');
+  const idleInputContainer = document.getElementById('s-idle').querySelector('.fu.fd4');
+  const idleInputHTML = idleInputContainer.innerHTML;
 
-  document.getElementById('url-submit').addEventListener('click', submitUrl);
-  urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitUrl(); });
-  urlInput.addEventListener('input', () => {
-    urlWrap.classList.remove('err');
-    urlErr.classList.remove('show');
-  });
+  function bindIdleInputs() {
+    const urlInput = document.getElementById('url-input');
+    const urlWrap  = document.getElementById('url-wrap');
+    const urlErr   = document.getElementById('url-err');
+    document.getElementById('url-submit').addEventListener('click', submitUrl);
+    urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitUrl(); });
+    urlInput.addEventListener('input', () => {
+      urlWrap.classList.remove('err');
+      urlErr.classList.remove('show');
+    });
+  }
+
+  function removeIdleInputs() {
+    const c = document.getElementById('s-idle').querySelector('.fu.fd4');
+    if (c) c.innerHTML = '';
+  }
+
+  function restoreIdleInputs() {
+    const c = document.getElementById('s-idle').querySelector('.fu.fd4');
+    if (c) { c.innerHTML = idleInputHTML; bindIdleInputs(); }
+  }
+
+  bindIdleInputs();
 
   function submitUrl() {
+    const urlInput = document.getElementById('url-input');
+    const urlWrap  = document.getElementById('url-wrap');
+    const urlErr   = document.getElementById('url-err');
     const val = urlInput.value.trim();
     if (!val || val.length < 4) {
       urlWrap.classList.add('err');
       urlErr.classList.add('show');
       return;
     }
+    removeIdleInputs();
     // Pick scenario based on URL hint (mock logic):
     // Contains "toko" / "roti" / "thin" → thin
     // Contains "empty" / "blocked" / "login" → empty
@@ -819,15 +839,12 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
   function reset() {
     msgCount = 0;
     currentScenario = null;
-    urlInput.value = '';
-    urlWrap.classList.remove('err');
-    urlErr.classList.remove('show');
     document.getElementById('manual-form').classList.remove('show');
     document.getElementById('manual-entry-btn').style.display = '';
     document.getElementById('brief-hint').classList.remove('show');
     resetSteps();
+    restoreIdleInputs();
     show('idle');
-    setTimeout(() => urlInput.focus(), 300);
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
