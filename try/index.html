@@ -269,6 +269,7 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
       </div>
       <p class="url-err-msg" id="url-err">Please enter a valid URL — e.g. https://yoursite.com</p>
       <p class="idle-note fu fd5">No signup required &middot; Works on any website &middot; ~30 seconds</p>
+      <p id="wake-banner" style="display:none;font-size:13px;color:#999;margin-top:8px;text-align:center;">⚡ Server warming up — ready in ~30s</p>
     </div>
   </div>
 
@@ -499,6 +500,8 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
   let msgCount = 0;
   let pollTimer = null;
   let currentKb = null;
+  let serverReady = false;
+  let wakeUpTimer = null;
 
   // ── State machine ──────────────────────────────────────────────────────────
 
@@ -602,6 +605,9 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     const domain = url.replace(/^https?:\/\//, '').replace(/\/.*$/, '') || url;
     document.getElementById('crawl-domain').textContent = domain;
     document.getElementById('crawl-error').style.display = 'none';
+    if (!serverReady) {
+      document.querySelector('.crawl-note').textContent = 'Server is waking up — this may take ~30s more than usual.';
+    }
     resetSteps();
     setStep('cs-find', 'active');
     setProgress(8);
@@ -845,10 +851,33 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     document.getElementById('manual-form').classList.remove('show');
     document.getElementById('manual-entry-btn').style.display = '';
     document.getElementById('crawl-error').style.display = 'none';
+    hideWakeUpBanner();
     resetSteps();
     restoreIdleInputs();
     show('idle');
   }
+
+  // ── Wake-up helpers ────────────────────────────────────────────────────────
+
+  function showWakeUpBanner() {
+    const el = document.getElementById('wake-banner');
+    if (el) el.style.display = 'block';
+  }
+
+  function hideWakeUpBanner() {
+    clearTimeout(wakeUpTimer);
+    const el = document.getElementById('wake-banner');
+    if (el) el.style.display = 'none';
+  }
+
+  (function pingHealth() {
+    wakeUpTimer = setTimeout(() => {
+      if (!serverReady) showWakeUpBanner();
+    }, 2000);
+    fetch(API_URL + '/api/health', { cache: 'no-store' })
+      .then(r => { if (r.ok) { serverReady = true; hideWakeUpBanner(); } })
+      .catch(() => {});
+  })();
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
