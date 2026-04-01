@@ -13,7 +13,7 @@ class CompanyProfile(BaseModel):
     industry: str
     services: list[str]
     location: str | None = None
-    contact: str | None = None
+    contact: dict | None = None
     summary: str
     gaps: list[str]
     pill_suggestions: PillSuggestions | None = None
