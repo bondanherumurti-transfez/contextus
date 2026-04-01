@@ -180,16 +180,16 @@ async def _crawl_site_firecrawl(
     if not api_key:
         return CrawlResult(pages=[], total_pages=0, duration_ms=0)
 
-    from firecrawl import FirecrawlApp
+    from firecrawl import Firecrawl
 
     start_time = time.time()
-    app = FirecrawlApp(api_key=api_key)
+    app = Firecrawl(api_key=api_key)
 
     if on_progress:
         on_progress("Trying alternative crawler...")
 
     result = await asyncio.to_thread(
-        app.crawl_url,
+        app.crawl,
         url,
         {"limit": MAX_PAGES, "scrapeOptions": {"formats": ["markdown"]}},
     )
