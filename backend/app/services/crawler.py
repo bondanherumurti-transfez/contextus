@@ -189,10 +189,7 @@ async def _crawl_site_firecrawl(
         on_progress("Trying alternative crawler...")
 
     result = await asyncio.to_thread(
-        app.crawl,
-        url,
-        limit=MAX_PAGES,
-        scrape_options={"formats": ["markdown"]},
+        lambda: app.crawl(url, limit=MAX_PAGES, scrape_options={"formats": ["markdown"]})
     )
 
     pages = []
