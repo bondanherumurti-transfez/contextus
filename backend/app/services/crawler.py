@@ -36,6 +36,19 @@ BLOCKED_EXTENSIONS = {
 }
 BOILERPLATE_TAGS = ["nav", "footer", "header", "script", "style", "aside", "form"]
 
+PRIORITY_KEYWORDS = ["about", "service", "product", "pricing", "contact", "team", "feature", "solution", "why", "how"]
+DEPRIORITY_KEYWORDS = ["blog", "news", "post", "article", "tag", "category", "author"]
+MAX_PAGES = 10
+
+
+def score_url(url: str) -> int:
+    path = urlparse(url).path.lower()
+    if any(kw in path for kw in PRIORITY_KEYWORDS):
+        return 2
+    if any(kw in path for kw in DEPRIORITY_KEYWORDS):
+        return 0
+    return 1
+
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -126,7 +139,7 @@ async def _crawl_site_httpx(
             if is_valid_url(normalized, base_domain) and normalized != url.rstrip("/"):
                 links.add(normalized)
 
-        links = list(links)[:19]
+        links = sorted(links, key=score_url, reverse=True)[:MAX_PAGES - 1]
 
         if on_progress:
             on_progress(f"Found {len(links) + 1} pages to crawl...")
@@ -178,7 +191,7 @@ async def _crawl_site_firecrawl(
     result = await asyncio.to_thread(
         app.crawl_url,
         url,
-        {"limit": 20, "scrapeOptions": {"formats": ["markdown"]}},
+        {"limit": MAX_PAGES, "scrapeOptions": {"formats": ["markdown"]}},
     )
 
     pages = []
