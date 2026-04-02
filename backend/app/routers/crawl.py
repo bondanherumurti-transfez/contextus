@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Request
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Request, Header
+from pydantic import BaseModel
 from nanoid import generate
 import time
 
@@ -10,6 +11,7 @@ from app.models import (
     EnrichRequest,
 )
 from app.services.redis import save_knowledge_base, get_knowledge_base, check_rate_limit
+from app.services.database import save_customer_config
 from app.services.crawler import crawl_site, validate_url
 from app.services.chunker import chunk_pages
 from app.services.llm import generate_company_profile, assess_quality_tier, select_pills
@@ -17,11 +19,11 @@ from app.services.llm import generate_company_profile, assess_quality_tier, sele
 router = APIRouter(tags=["crawl"])
 
 
-DEMO_URL = "https://project-b0yme.vercel.app"
+DEMO_URL = "https://getcontextus.dev"
 DEMO_JOB_ID = "demo"
 
 
-async def run_crawl_job(job_id: str, url: str, ttl: int | None = 1800):
+async def run_crawl_job(job_id: str, url: str, ttl: int | None = 1800, permanent: bool = False):
     try:
         kb = await get_knowledge_base(job_id)
         if not kb:
@@ -29,7 +31,7 @@ async def run_crawl_job(job_id: str, url: str, ttl: int | None = 1800):
 
         kb.status = "analyzing"
         kb.progress = "Analyzing website content..."
-        await save_knowledge_base(job_id, kb, ttl=ttl)
+        await save_knowledge_base(job_id, kb, ttl=ttl, permanent=permanent)
 
         def on_progress(msg: str):
             kb.progress = msg
@@ -38,13 +40,13 @@ async def run_crawl_job(job_id: str, url: str, ttl: int | None = 1800):
 
         kb.pages_found = result.total_pages
         kb.progress = "Extracting content..."
-        await save_knowledge_base(job_id, kb, ttl=ttl)
+        await save_knowledge_base(job_id, kb, ttl=ttl, permanent=permanent)
 
         chunks = chunk_pages(result.pages)
 
         if chunks:
             kb.progress = "Generating company profile..."
-            await save_knowledge_base(job_id, kb, ttl=ttl)
+            await save_knowledge_base(job_id, kb, ttl=ttl, permanent=permanent)
 
             company_profile = generate_company_profile(chunks, url)
             kb.company_profile = company_profile
@@ -54,7 +56,7 @@ async def run_crawl_job(job_id: str, url: str, ttl: int | None = 1800):
 
         kb.status = "complete"
         kb.progress = ""
-        await save_knowledge_base(job_id, kb, ttl=ttl)
+        await save_knowledge_base(job_id, kb, ttl=ttl, permanent=permanent)
 
     except Exception as e:
         kb = await get_knowledge_base(job_id)
@@ -66,7 +68,7 @@ async def run_crawl_job(job_id: str, url: str, ttl: int | None = 1800):
 
 @router.post("/crawl/demo")
 async def seed_demo_kb(background_tasks: BackgroundTasks, force: bool = False):
-    """Seed or refresh the permanent demo knowledge base (no TTL)."""
+    """Seed or refresh the permanent demo knowledge base (stored in Neon)."""
     existing = await get_knowledge_base(DEMO_JOB_ID)
     if existing and existing.status == "complete" and not force:
         return {"job_id": DEMO_JOB_ID, "status": "complete", "cached": True}
@@ -77,9 +79,57 @@ async def seed_demo_kb(background_tasks: BackgroundTasks, force: bool = False):
         progress="Starting demo crawl...",
         created_at=int(time.time()),
     )
-    await save_knowledge_base(DEMO_JOB_ID, kb, ttl=None)
-    background_tasks.add_task(run_crawl_job, DEMO_JOB_ID, DEMO_URL, None)
+    await save_knowledge_base(DEMO_JOB_ID, kb, ttl=None, permanent=True)
+    background_tasks.add_task(run_crawl_job, DEMO_JOB_ID, DEMO_URL, None, True)
     return {"job_id": DEMO_JOB_ID, "status": "crawling"}
+
+
+class SeedRequest(BaseModel):
+    url: str
+    kb_id: str
+    notion_db_id: str | None = None
+    allowed_origins: list[str] = []
+
+
+@router.post("/crawl/seed")
+async def seed_customer_kb(
+    body: SeedRequest,
+    background_tasks: BackgroundTasks,
+    x_admin_secret: str | None = Header(default=None),
+):
+    """Seed a permanent customer KB (stored in Neon). Admin-protected."""
+    import os
+    from nanoid import generate as nanoid_generate
+
+    admin_secret = os.getenv("ADMIN_SECRET", "")
+    if admin_secret and x_admin_secret != admin_secret:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    if not validate_url(body.url):
+        raise HTTPException(status_code=400, detail="Invalid URL")
+
+    token = f"pk_{body.kb_id}_{nanoid_generate(size=8)}"
+
+    config = {
+        "kb_id": body.kb_id,
+        "url": body.url,
+        "notion_db_id": body.notion_db_id,
+        "allowed_origins": body.allowed_origins,
+        "token": token,
+        "created_at": int(time.time()),
+    }
+    await save_customer_config(config)
+
+    kb = KnowledgeBase(
+        job_id=body.kb_id,
+        status="crawling",
+        progress="Starting crawl...",
+        created_at=int(time.time()),
+    )
+    await save_knowledge_base(body.kb_id, kb, ttl=None, permanent=True)
+    background_tasks.add_task(run_crawl_job, body.kb_id, body.url, None, True)
+
+    return {"kb_id": body.kb_id, "status": "crawling", "token": token}
 
 
 @router.post("/crawl", response_model=CrawlResponse)
@@ -95,9 +145,9 @@ async def start_crawl(
             detail="Invalid URL. Must be http/https and not a private IP.",
         )
 
-    if not await check_rate_limit(client_ip, "crawl", 3, 3600):
+    if not await check_rate_limit(client_ip, "crawl", 30, 3600):
         raise HTTPException(
-            status_code=429, detail="Rate limit exceeded. Max 3 crawls per hour."
+            status_code=429, detail="Rate limit exceeded. Max 30 crawls per hour."
         )
 
     job_id = generate(size=10)

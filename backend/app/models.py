@@ -13,7 +13,7 @@ class CompanyProfile(BaseModel):
     industry: str
     services: list[str]
     location: str | None = None
-    contact: str | None = None
+    contact: dict | None = None
     summary: str
     gaps: list[str]
     pill_suggestions: PillSuggestions | None = None
@@ -50,6 +50,7 @@ class Session(BaseModel):
     messages: list[Message] = []
     contact_captured: bool = False
     contact_value: str | None = None
+    brief_sent: bool = False
     created_at: int
 
 

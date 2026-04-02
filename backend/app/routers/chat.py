@@ -5,8 +5,8 @@ import re
 import time
 
 from app.models import ChatRequest, Message
-from app.services.redis import get_session, save_session, get_knowledge_base
-from app.services.llm import stream_chat_response
+from app.services.redis import get_session, save_session, get_knowledge_base, redis, extend_session_ttl
+from app.services.llm import stream_chat_response, build_waitlist_system_prompt
 
 router = APIRouter(tags=["chat"])
 
@@ -50,9 +50,20 @@ async def send_chat_message(session_id: str, body: ChatRequest):
         )
 
     contact = detect_contact(body.message)
-    if contact:
+    newly_captured = False
+    if contact and not session.contact_captured:
         session.contact_captured = True
         session.contact_value = json.dumps(contact)
+        newly_captured = True
+
+    # Detect waitlist session — use waitlist system prompt if prefill exists
+    waitlist_prompt = None
+    raw_prefill = redis.get(f"waitlist:{session_id}")
+    if raw_prefill:
+        prefill = json.loads(raw_prefill)
+        waitlist_prompt = build_waitlist_system_prompt(
+            prefill.get("name", ""), prefill.get("website", "")
+        )
 
     messages = [{"role": msg.role, "content": msg.text} for msg in session.messages]
 
@@ -60,7 +71,9 @@ async def send_chat_message(session_id: str, body: ChatRequest):
         full_text = ""
         try:
             for token in stream_chat_response(
-                messages, kb.company_profile, kb.chunks, body.message
+                messages, kb.company_profile, kb.chunks, body.message,
+                system_prompt_override=waitlist_prompt,
+                kb_id=session.kb_id,
             ):
                 full_text += token
                 yield f"data: {json.dumps({'token': token})}\n\n"
@@ -74,6 +87,10 @@ async def send_chat_message(session_id: str, body: ChatRequest):
                 Message(role="assistant", text=full_text, timestamp=int(time.time()))
             )
             await save_session(session_id, session)
+
+            # Extend TTL to 24hr when contact is first captured so cron can process it
+            if newly_captured:
+                await extend_session_ttl(session_id, ttl=86400)
 
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"

@@ -68,6 +68,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
 .send-btn{width:34px;height:34px;background:var(--black);border:none;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .15s;flex-shrink:0;-webkit-appearance:none;appearance:none;box-shadow:none}
 .send-btn:hover{opacity:.8}
 .send-btn svg{width:16px;height:16px;fill:#fff}
+.send-btn.loading{opacity:.6;cursor:default;pointer-events:none}
+.send-btn.loading svg{display:none}
+.send-btn.loading::after{content:'';width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;display:block;animation:spin .7s linear infinite}
 .url-err-msg{font-size:12px;color:#a32d2d;margin-bottom:.5rem;display:none}
 .url-err-msg.show{display:block}
 .idle-note{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spacing:.3px;text-align:center}
@@ -269,6 +272,7 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
       </div>
       <p class="url-err-msg" id="url-err">Please enter a valid URL — e.g. https://yoursite.com</p>
       <p class="idle-note fu fd5">No signup required &middot; Works on any website &middot; ~30 seconds</p>
+      <p id="wake-banner" style="display:none;font-size:13px;color:#999;margin-top:8px;text-align:center;">⚡ Server warming up — ready in ~30s</p>
     </div>
   </div>
 
@@ -475,7 +479,7 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     <div class="brief-cta-block fu fd4">
       <p>Every visitor who chats with your assistant gets you a brief like this — automatically.</p>
       <div class="cta-row">
-        <a href="/#ea" class="btn-p">Add this to my site →</a>
+        <a id="add-to-site-btn" href="/join" class="btn-p">Add this to my site →</a>
         <button class="btn-s" id="start-over-btn" type="button">Try another URL</button>
       </div>
     </div>
@@ -499,6 +503,9 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
   let msgCount = 0;
   let pollTimer = null;
   let currentKb = null;
+  let crawledUrl = '';
+  let serverReady = false;
+  let wakeUpTimer = null;
 
   // ── State machine ──────────────────────────────────────────────────────────
 
@@ -553,7 +560,11 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     }
     // Prepend https:// if no scheme given (e.g. user typed "stripe.com")
     if (!/^https?:\/\//i.test(val)) val = 'https://' + val;
-    removeIdleInputs();
+
+    const submitBtn = document.getElementById('url-submit');
+    submitBtn.classList.add('loading');
+    urlInput.disabled = true;
+
     fetch(API_URL + '/api/crawl', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -566,10 +577,12 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     })
     .then(data => {
       jobId = data.job_id;
+      removeIdleInputs();
       startCrawl(val);
     })
     .catch(err => {
-      restoreIdleInputs();
+      submitBtn.classList.remove('loading');
+      urlInput.disabled = false;
       const msg = err.message === 'rate_limit'
         ? 'Too many requests — please wait an hour before trying again.'
         : 'Could not start crawl. Please check the URL and try again.';
@@ -599,9 +612,13 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
   }
 
   function startCrawl(url) {
+    crawledUrl = url;
     const domain = url.replace(/^https?:\/\//, '').replace(/\/.*$/, '') || url;
     document.getElementById('crawl-domain').textContent = domain;
     document.getElementById('crawl-error').style.display = 'none';
+    if (!serverReady) {
+      document.querySelector('.crawl-note').textContent = 'Server is waking up — this may take ~30s more than usual.';
+    }
     resetSteps();
     setStep('cs-find', 'active');
     setProgress(8);
@@ -772,6 +789,8 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
   }
 
   function renderBrief(b) {
+    const btn = document.getElementById('add-to-site-btn');
+    if (btn) btn.href = '/join' + (crawledUrl ? '?website=' + encodeURIComponent(crawledUrl) : '');
     const p = currentKb && currentKb.company_profile;
     document.getElementById('b-company').textContent = p ? p.name : 'Visitor';
     document.getElementById('b-who').textContent = b.who;
@@ -845,10 +864,33 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     document.getElementById('manual-form').classList.remove('show');
     document.getElementById('manual-entry-btn').style.display = '';
     document.getElementById('crawl-error').style.display = 'none';
+    hideWakeUpBanner();
     resetSteps();
     restoreIdleInputs();
     show('idle');
   }
+
+  // ── Wake-up helpers ────────────────────────────────────────────────────────
+
+  function showWakeUpBanner() {
+    const el = document.getElementById('wake-banner');
+    if (el) el.style.display = 'block';
+  }
+
+  function hideWakeUpBanner() {
+    clearTimeout(wakeUpTimer);
+    const el = document.getElementById('wake-banner');
+    if (el) el.style.display = 'none';
+  }
+
+  (function pingHealth() {
+    wakeUpTimer = setTimeout(() => {
+      if (!serverReady) showWakeUpBanner();
+    }, 2000);
+    fetch(API_URL + '/api/health', { cache: 'no-store' })
+      .then(r => { if (r.ok) { serverReady = true; hideWakeUpBanner(); } })
+      .catch(() => {});
+  })();
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 

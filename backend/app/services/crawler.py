@@ -1,3 +1,4 @@
+import os
 import httpx
 import asyncio
 from bs4 import BeautifulSoup
@@ -34,6 +35,29 @@ BLOCKED_EXTENSIONS = {
     ".exe",
 }
 BOILERPLATE_TAGS = ["nav", "footer", "header", "script", "style", "aside", "form"]
+
+PRIORITY_KEYWORDS = ["about", "service", "product", "pricing", "contact", "team", "feature", "solution", "why", "how"]
+DEPRIORITY_KEYWORDS = ["blog", "news", "post", "article", "tag", "category", "author"]
+MAX_PAGES = 10
+
+
+def score_url(url: str) -> int:
+    path = urlparse(url).path.lower()
+    if any(kw in path for kw in PRIORITY_KEYWORDS):
+        return 2
+    if any(kw in path for kw in DEPRIORITY_KEYWORDS):
+        return 0
+    return 1
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+}
 
 
 def is_valid_url(url: str, base_domain: str) -> bool:
@@ -78,7 +102,7 @@ async def fetch_page(
         return None
 
 
-async def crawl_site(
+async def _crawl_site_httpx(
     url: str, on_progress: Callable[[str], None] | None = None
 ) -> CrawlResult:
     start_time = time.time()
@@ -86,7 +110,7 @@ async def crawl_site(
     parsed = urlparse(url)
     base_domain = parsed.netloc
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(headers=HEADERS) as client:
         if on_progress:
             on_progress(f"Fetching {url}...")
 
@@ -115,7 +139,7 @@ async def crawl_site(
             if is_valid_url(normalized, base_domain) and normalized != url.rstrip("/"):
                 links.add(normalized)
 
-        links = list(links)[:19]
+        links = sorted(links, key=score_url, reverse=True)[:MAX_PAGES - 1]
 
         if on_progress:
             on_progress(f"Found {len(links) + 1} pages to crawl...")
@@ -147,6 +171,55 @@ async def crawl_site(
         on_progress(f"Crawled {len(pages)} pages in {duration_ms}ms")
 
     return CrawlResult(pages=pages, total_pages=len(pages), duration_ms=duration_ms)
+
+
+async def _crawl_site_firecrawl(
+    url: str, on_progress: Callable[[str], None] | None = None
+) -> CrawlResult:
+    api_key = os.getenv("FIRECRAWL_API_KEY")
+    if not api_key:
+        return CrawlResult(pages=[], total_pages=0, duration_ms=0)
+
+    from firecrawl import Firecrawl
+
+    start_time = time.time()
+    app = Firecrawl(api_key=api_key)
+
+    if on_progress:
+        on_progress("Trying alternative crawler...")
+
+    result = await asyncio.to_thread(
+        lambda: app.crawl(url, limit=MAX_PAGES, scrape_options={"formats": ["markdown"]})
+    )
+
+    pages = []
+    for doc in getattr(result, "data", None) or []:
+        text = getattr(doc, "markdown", None) or ""
+        if text.strip():
+            metadata = getattr(doc, "metadata", None) or {}
+            if isinstance(metadata, dict):
+                src = metadata.get("source_url") or metadata.get("sourceURL") or url
+                title = metadata.get("og_title") or metadata.get("title") or url
+            else:
+                src = getattr(metadata, "source_url", None) or getattr(metadata, "sourceURL", url)
+                title = getattr(metadata, "og_title", None) or getattr(metadata, "title", url)
+            pages.append(PageContent(url=src, title=title, text=text))
+
+    return CrawlResult(
+        pages=pages,
+        total_pages=len(pages),
+        duration_ms=int((time.time() - start_time) * 1000),
+    )
+
+
+async def crawl_site(
+    url: str, on_progress: Callable[[str], None] | None = None
+) -> CrawlResult:
+    result = await _crawl_site_httpx(url, on_progress)
+    total_words = sum(len(p.text.split()) for p in result.pages)
+    if total_words < 100:
+        result = await _crawl_site_firecrawl(url, on_progress)
+    return result
 
 
 def validate_url(url: str) -> bool:

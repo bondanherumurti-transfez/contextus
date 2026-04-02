@@ -27,9 +27,15 @@
 
       var apiUrl = params.get('apiUrl') || '';
       var knowledgeBaseId = params.get('knowledgeBaseId') || '';
+      var providedSessionId = params.get('sessionId') || '';
       var pills = null;
 
-      if (apiUrl && knowledgeBaseId) {
+      var autoMessage = params.get('autoMessage') || '';
+
+      if (providedSessionId) {
+        window.__ctxSessionId = providedSessionId;
+        window.parent.postMessage({ type: 'contextus:session_ready', session_id: providedSessionId }, '*');
+      } else if (apiUrl && knowledgeBaseId) {
         try {
           var sr = await fetch(apiUrl + '/api/session', {
             method: 'POST',
@@ -45,7 +51,7 @@
         } catch (e) { /* fall through to defaults */ }
       }
 
-      ContextusWidget.init({
+      var widget = ContextusWidget.init({
         root: document.getElementById('contextus-root'),
         name: params.get('name') || 'contextus',
         greeting: params.get('greeting') || 'Ask us anything...',
@@ -55,6 +61,7 @@
         apiUrl: apiUrl,
         knowledgeBaseId: knowledgeBaseId,
         pills: pills || ['What services do you offer?', 'How can you help me?', 'How do I contact you?'],
+        autoMessage: autoMessage,
       });
     })();
   </script>

@@ -2,19 +2,23 @@
 
 **From Contact Us to contextus.**
 
-An embeddable AI chat widget that replaces traditional contact forms with intelligent, lead-qualifying conversations. Every chat becomes a structured lead brief — who the visitor is, what they need, their urgency signals, and a suggested follow-up — delivered to your WhatsApp or email.
+An embeddable AI chat widget that replaces traditional contact forms with intelligent, lead-qualifying conversations. Every chat becomes a structured lead brief — who the visitor is, what they need, their urgency signals, and a suggested follow-up.
 
 Live: [project-b0yme.vercel.app](https://project-b0yme.vercel.app)
+Backend API: [contextus-2d16.onrender.com](https://contextus-2d16.onrender.com)
 
 ---
 
 ## Status
 
 **Phase 1 — Widget frontend: complete.**
-The widget runs on the contextus landing page as a dogfood deployment. All 11 states are implemented against the design guideline.
+Vanilla JS widget, 11 states, iframe embed, postMessage communication.
 
-**Phase 2 — Backend API: in progress.**
-FastAPI backend with OpenRouter LLM integration, web crawler, Redis storage, and SSE streaming. Core endpoints implemented, test plan ready.
+**Phase 2 — Backend API: complete.**
+FastAPI backend with OpenRouter LLM integration, web crawler (httpx + Firecrawl fallback), Redis storage, SSE streaming. Live on Render.
+
+**Phase 3 — /try page: complete.**
+Interactive demo page — paste any URL, crawl it in real time, chat with the resulting AI assistant, and generate a lead brief. Fully wired to the real backend.
 
 ---
 
@@ -22,7 +26,9 @@ FastAPI backend with OpenRouter LLM integration, web crawler, Redis storage, and
 
 ```
 contextus/
-├── index.html                          # Landing page (live deployment)
+├── index.html                          # Landing page (Vercel)
+├── try/
+│   └── index.html                      # /try demo page — real backend wired
 ├── widget/
 │   ├── widget.html                     # Standalone iframe shell
 │   ├── widget.js                       # Widget component (vanilla JS, 11-state machine)
@@ -33,32 +39,51 @@ contextus/
 │   ├── contextus-logo-light.svg
 │   └── contextus-logo-lockup.svg
 ├── docs/
-│   ├── backend-plan.md                 # Backend implementation plan
-│   ├── contextus-widget-design-guideline.html  # Pixel-level spec for all 11 states
-│   └── prd-contextus.docx              # Full PRD
-├── backend/                            # FastAPI backend (new)
+│   ├── backend-plan.md
+│   └── contextus-widget-design-guideline.html
+├── backend/
 │   ├── app/
 │   │   ├── main.py                     # FastAPI app, CORS, router mount
 │   │   ├── models.py                   # Pydantic models
 │   │   ├── routers/
-│   │   │   ├── crawl.py                # Crawl endpoints
+│   │   │   ├── crawl.py                # Crawl + demo KB endpoints
 │   │   │   ├── session.py              # Session endpoints
 │   │   │   ├── chat.py                 # Chat endpoint (SSE)
 │   │   │   └── brief.py                # Lead brief endpoint
 │   │   └── services/
 │   │       ├── redis.py                # Upstash Redis client
-│   │       ├── crawler.py              # Web crawler (httpx + BeautifulSoup)
+│   │       ├── crawler.py              # Web crawler (httpx + Firecrawl fallback)
 │   │       ├── chunker.py              # Text chunking
 │   │       ├── retrieval.py            # Keyword-based retrieval
 │   │       └── llm.py                  # OpenRouter LLM wrapper
-│   ├── tests/
-│   │   └── test_plan.md                # Comprehensive test plan
 │   ├── requirements.txt
-│   ├── render.yaml                     # Render deployment config
+│   ├── render.yaml
 │   └── .env.example
-├── CLAUDE-CODE-BRIEF.md                # Implementation brief for Claude Code
 └── vercel.json                         # Vercel headers config (iframe embedding)
 ```
+
+---
+
+## /try page
+
+The `/try` page at `/try/index.html` is a full end-to-end demo:
+
+1. **Paste a URL** — crawls the site in the background (real API call)
+2. **Summary card** — shows the extracted company profile (name, industry, services, gaps)
+3. **Chat** — opens the real widget in an iframe, wired to the crawled knowledge base
+4. **Lead brief** — after 3+ messages, generates a structured brief from the conversation
+5. **Empty state** — if the site can't be crawled, a manual form lets users fill in their business info
+
+### States
+`idle → crawling → summary → chat → brief`
+`idle → crawling → empty (thin/unscrapable site) → manual form → summary → chat → brief`
+
+### postMessage events
+| Event | Direction | Payload |
+|-------|-----------|---------|
+| `contextus:session_ready` | widget → parent | `{ session_id }` |
+| `contextus:message_sent` | widget → parent | `{}` |
+| `contextus:resize` | widget → parent | `{ height }` |
 
 ---
 
@@ -66,30 +91,24 @@ contextus/
 
 ### Embedding (Tier 1 — iframe)
 
-The simplest embed. Works on any website builder (Webflow, WordPress, Wix, Squarespace, Notion, etc.).
-
 ```html
 <iframe
-  src="https://contextus-five.vercel.app/widget/widget.html?transparent=1&dynamicHeight=1&name=contextus&greeting=Ask%20anything%20about%20contextus..."
+  src="https://project-b0yme.vercel.app/widget/widget.html?apiUrl=https://contextus-2d16.onrender.com&knowledgeBaseId=YOUR_JOB_ID&name=Your+Company&greeting=Ask+us+anything...&transparent=0&dynamicHeight=1"
   width="100%"
   height="420"
   frameborder="0"
   scrolling="no"
-  style="border: none; display: block; min-width: 320px;"
+  style="border: none; display: block;"
 ></iframe>
-```
 
-Add the resize listener to the parent page so the iframe grows with conversation:
-
-```html
 <script>
   window.addEventListener('message', function(e) {
     if (e.data && e.data.type === 'contextus:resize') {
-      var iframe = document.getElementById('contextus-iframe');
+      var iframe = document.getElementById('your-iframe-id');
       if (iframe) {
         var scrollY = window.scrollY;
         iframe.style.height = e.data.height + 'px';
-        window.scrollTo(0, scrollY); // prevent browser autoscroll on resize
+        window.scrollTo(0, scrollY);
       }
     }
   });
@@ -100,6 +119,8 @@ Add the resize listener to the parent page so the iframe grows with conversation
 
 | Param | Values | Description |
 |---|---|---|
+| `apiUrl` | URL | Backend API base URL |
+| `knowledgeBaseId` | string | Job ID from crawl, or `demo` for the contextus demo KB |
 | `name` | string | Widget header name |
 | `greeting` | string | Input placeholder text |
 | `lang` | `auto`, `en`, `id` | Language override |
@@ -115,24 +136,12 @@ Add the resize listener to the parent page so the iframe grows with conversation
 | 3 | agent-thinking | Message sent. Typing dots. Input disabled. |
 | 4 | active | Multi-turn conversation. |
 | 5 | scroll | Messages overflow max-height. Internal scroll. |
-| 6 | boundary | Agent hits knowledge limit. Amber banner. Redirects to team. |
+| 6 | boundary | Agent hits knowledge limit. Amber banner. |
 | 7 | contact | Contact info captured. Lead brief starts. |
 | 8 | idle-nudge | 60s silence. Single muted italic nudge. |
 | 9 | error | Network/LLM timeout. Red banner. Auto-retries once after 2s. |
 | 10 | returning | Previous conversation shown at 55% opacity with label. |
-| 11 | complete | Sign-off message. "Conversation ended — lead brief sent." Soft-reset after 30s. |
-
-### Dynamic height behavior
-
-When `dynamicHeight=1`:
-- `widget.js` observes the widget element with `ResizeObserver`
-- On any size change, sends `postMessage({ type: 'contextus:resize', height })` to the parent
-- Parent updates `iframe.style.height` and restores `window.scrollY` to prevent page autoscroll
-- `max-height` on the message area is disabled in JS so the widget expands freely and never triggers internal scroll for short conversations
-
-When `dynamicHeight=0`:
-- `max-height: 400px` (desktop) / `50vh` (mobile) applies on the message area
-- Content overflows internally with a scrollbar — correct for fixed-height embeds
+| 11 | complete | Sign-off message. Soft-reset after 30s. |
 
 ---
 
@@ -141,113 +150,137 @@ When `dynamicHeight=0`:
 ### Architecture
 
 ```
-FRONTEND (Vercel — existing)
-  index.html + widget/ → https://project-b0yme.vercel.app
+FRONTEND (Vercel)
+  index.html + try/ + widget/ → project-b0yme.vercel.app
 
-BACKEND (Render — new)
-  Python + FastAPI → https://api.contextus.ai
+BACKEND (Render — free tier, sleeps on inactivity)
+  Python + FastAPI → contextus-2d16.onrender.com
   ├── POST   /api/crawl              — Start crawl job
   ├── GET    /api/crawl/{job_id}     — Poll crawl status + result
-  ├── POST   /api/crawl/{job_id}/enrich — Add guided interview answers
-  ├── POST   /api/session            — Create chat session
-  ├── POST   /api/chat/{session_id}  — Send message, get SSE stream
+  ├── POST   /api/crawl/demo         — Seed/refresh demo KB (no TTL)
+  ├── POST   /api/crawl/{job_id}/enrich — Enrich KB with manual answers
+  ├── POST   /api/session            — Create chat session from KB
   ├── GET    /api/session/{id}       — Get session state
-  ├── POST   /api/brief/{session_id} — Generate lead brief
-  └── GET    /api/health
+  ├── POST   /api/chat/{session_id}  — Send message, receive SSE stream
+  ├── POST   /api/brief/{session_id} — Generate lead brief from session
+  └── GET    /api/health             — Health check (used for wake-up ping)
 
 STORAGE (Upstash Redis)
-  Redis with TTL-based keys
-  kb:{job_id}       → knowledge base — 30min TTL
+  kb:{job_id}       → knowledge base — 30min TTL (no TTL for demo)
   session:{id}      → chat session — 30min TTL
-  rate:{ip}:crawl   → rate limit counter — 1hr TTL
+  rate:{ip}:crawl   → rate limit counter — 1hr TTL (30 crawls/hr)
 ```
 
-### Tech Stack
+### Crawler
+
+The crawler runs in two stages with automatic fallback:
+
+**Stage 1 — httpx (free, no credits)**
+- Fetches homepage with a realistic browser User-Agent (Chrome 124)
+- Extracts all same-domain links from homepage HTML
+- Prioritizes pages by URL keywords: `about`, `service`, `product`, `pricing`, `contact`, `team`, `feature`, `solution` scored higher; `blog`, `news`, `post`, `article` scored lower
+- Crawls top 9 links + homepage = max 10 pages concurrently (semaphore 5)
+- 30s timeout for all page fetches
+
+**Stage 2 — Firecrawl (fallback)**
+- Triggers when httpx returns < 100 total words (blank SPAs, Cloudflare-protected sites)
+- Uses Firecrawl API to render JavaScript and bypass anti-bot systems
+- Same 10-page limit
+- Requires `FIRECRAWL_API_KEY` — silently skips if not set
+
+### Quality tiers
+
+| Tier | Criteria | Behavior |
+|------|----------|----------|
+| `rich` | 2000+ words, 3+ pages | Full demo, chat enabled |
+| `thin` | 500–1999 words | Summary shown with warning, chat enabled |
+| `empty` | < 500 words | Manual form shown to fill in business info |
+
+### Tech stack
 
 | Component | Technology |
 |-----------|------------|
 | Framework | FastAPI (Python 3.12) |
-| LLM | OpenRouter via OpenAI SDK (Claude, Gemini, GPT, etc.) |
+| LLM | OpenRouter via OpenAI SDK |
 | Storage | Upstash Redis (TTL-based) |
 | Streaming | SSE (Server-Sent Events) |
-| Deployment | Render |
+| Crawler | httpx + BeautifulSoup → Firecrawl fallback |
+| Deployment | Render (free tier) |
 
-### API Endpoints
+### API endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `POST` | `/api/crawl` | Start crawling a URL, returns `job_id` |
-| `GET` | `/api/crawl/{job_id}` | Get crawl status and results |
-| `POST` | `/api/crawl/{job_id}/enrich` | Enrich KB with interview answers |
+| `GET` | `/api/crawl/{job_id}` | Poll crawl status and results |
+| `POST` | `/api/crawl/demo` | Seed the permanent demo knowledge base |
+| `POST` | `/api/crawl/{job_id}/enrich` | Add manual answers to enrich a thin/empty KB |
 | `POST` | `/api/session` | Create chat session from KB |
 | `GET` | `/api/session/{id}` | Get session state |
 | `POST` | `/api/chat/{session_id}` | Send message, receive SSE stream |
-| `POST` | `/api/brief/{session_id}` | Generate lead brief from session |
+| `POST` | `/api/brief/{session_id}` | Generate lead brief from conversation |
 | `GET` | `/api/health` | Health check |
 
-### Quick Start
+### Quick start
 
 ```bash
 cd backend
 
-# Create virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate
 
-# Install dependencies
 pip install -r requirements.txt
 
-# Configure environment
 cp .env.example .env
 # Edit .env with your API keys
 
-# Run development server
 uvicorn app.main:app --reload
-
-# Access API docs
-open http://localhost:8000/docs
+# API docs: http://localhost:8000/docs
 ```
 
-### Environment Variables
+### Environment variables
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `OPENROUTER_API_KEY` | API key from openrouter.ai/keys | Yes |
-| `UPSTASH_REDIS_REST_URL` | Upstash Redis URL | Yes |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis token | Yes |
-| `MODEL_PROFILE` | Model for profile generation | No (default: `anthropic/claude-3-haiku`) |
-| `MODEL_CHAT` | Model for chat | No (default: `anthropic/claude-sonnet-4`) |
-| `MODEL_BRIEF` | Model for brief generation | No (default: `anthropic/claude-sonnet-4`) |
+| `OPENROUTER_API_KEY` | API key from openrouter.ai | Yes |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL | Yes |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token | Yes |
+| `FIRECRAWL_API_KEY` | Firecrawl API key (free tier: 500 pages/mo) | No — fallback disabled if unset |
+| `MODEL_PROFILE` | Model for company profile generation | No (default: `anthropic/claude-3-haiku`) |
+| `MODEL_CHAT` | Model for chat responses | No (default: `anthropic/claude-sonnet-4`) |
+| `MODEL_BRIEF` | Model for lead brief generation | No (default: `anthropic/claude-sonnet-4`) |
 | `SITE_URL` | Site URL for OpenRouter attribution | No |
-| `ALLOWED_ORIGINS` | CORS allowed origins | No |
+| `ALLOWED_ORIGINS` | CORS allowed origins (comma-separated) | No |
 
-### Models
+### Data models
 
-**CompanyProfile** — Extracted business information:
+**CompanyProfile**
 ```json
 {
-  "name": "Company Name",
-  "industry": "Technology",
-  "services": ["Web Development", "Consulting"],
+  "name": "Transfez",
+  "industry": "Fintech, remittance services",
+  "services": ["International money transfer", "B2B payments"],
   "location": "Jakarta, Indonesia",
-  "contact": "hello@company.com",
-  "summary": "Description of the business",
-  "gaps": ["Missing pricing info"]
+  "contact": { "email": "hello@transfez.com", "phone": "+62..." },
+  "summary": "Licensed remittance company...",
+  "gaps": ["No pricing page found"]
 }
 ```
 
-**KnowledgeBase** — Crawl result with profile and chunks:
+**KnowledgeBase**
 ```json
 {
   "job_id": "abc123",
   "status": "complete",
+  "pages_found": 10,
   "quality_tier": "rich",
   "company_profile": { ... },
-  "chunks": [{ "id": "...", "source": "...", "text": "...", "word_count": 42 }]
+  "suggested_pills": ["What services do you offer?", ...],
+  "chunks": [{ "id": "...", "source": "https://...", "text": "...", "word_count": 42 }]
 }
 ```
 
-**LeadBrief** — Structured lead summary:
+**LeadBrief**
 ```json
 {
   "who": "Potential customer description",
@@ -255,110 +288,65 @@ open http://localhost:8000/docs
   "signals": "Buying signals detected",
   "open_questions": "Unanswered questions",
   "suggested_approach": "Recommended follow-up",
-  "quality_score": "high"
+  "quality_score": "high",
+  "contact": { "email": "...", "phone": "...", "whatsapp": "..." }
 }
 ```
 
-### Quality Tiers
+### Render wake-up
 
-| Tier | Criteria | Behavior |
-|------|----------|----------|
-| `rich` | 2000+ words, 3+ pages | Ready for demo |
-| `thin` | 500-1999 words | Show guided interview |
-| `empty` | < 500 words | Require interview |
+The backend runs on Render's free tier, which sleeps after inactivity (~30–60s to wake). Both the landing page and /try page handle this gracefully:
 
-### Deployment
-
-The backend is configured for Render deployment via `render.yaml`:
-
-```bash
-# Push to GitHub, then connect to Render
-# Set environment variables in Render dashboard
-# Deploy automatically on push to main branch
-```
-
-### Testing
-
-```bash
-cd backend
-
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=app --cov-report=html
-
-# Run specific test category
-pytest tests/unit/
-pytest tests/integration/
-```
-
-See `backend/tests/test_plan.md` for the complete test strategy.
-
----
-
-## Design tokens
-
-All colors are hardcoded hex. No CSS variables. This prevents dark mode bleed from host sites.
-
-| Token | Value | Usage |
-|---|---|---|
-| Black | `#000000` | Send button active, visitor bubble, logo |
-| Near-black | `#111111` | Visitor bubble background |
-| Body text | `#222222` | Message text |
-| Border | `#e0e0e0` | Widget border, dividers |
-| Input bg | `#f0f0f0` | Input wrapper background |
-| Muted | `#888888` | Timestamps, nudge text |
-| Error bg | `#fcebeb` | Error banner |
-| Boundary bg | `#faeeda` | Boundary banner |
-
-Fonts: **DM Sans** (400, 500, 700) + **DM Mono** (400, 500) — loaded from Google Fonts.
+- **Landing page** — pings `/api/health` on load, shows "Warming up server..." placeholder in the widget area, injects the real iframe once the server responds
+- **Try page** — background health ping on load; shows "⚡ Server warming up — ready in ~30s" below the URL input after 2s if no response; if user submits before server wakes, the crawl screen notes the extra wait
 
 ---
 
 ## Deployment
 
-Uses [Vercel](https://vercel.com). No build step.
+### Frontend (Vercel)
 
 ```bash
-# Deploy to production
 npx vercel --prod
 ```
 
-`vercel.json` sets headers on `/widget/*` to allow iframe embedding from any origin:
+`vercel.json` sets headers on `/widget/*` to allow iframe embedding from any origin.
 
-```json
-{
-  "headers": [
-    {
-      "source": "/widget/(.*)",
-      "headers": [
-        { "key": "X-Frame-Options", "value": "ALLOWALL" },
-        { "key": "Content-Security-Policy", "value": "frame-ancestors *" }
-      ]
-    }
-  ]
-}
-```
+### Backend (Render)
 
-> **Note:** `git push` deploys are blocked on Vercel Hobby plan due to author checks. Use `npx vercel --prod` from the CLI instead.
+Push to `backend-development` branch. Render auto-deploys on push.
+
+Set these environment variables in the Render dashboard:
+- `OPENROUTER_API_KEY`
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
+- `FIRECRAWL_API_KEY` (optional but recommended)
+
+### Branch strategy
+
+| Branch | Purpose |
+|--------|---------|
+| `main` | Frontend production (Vercel) |
+| `backend-development` | Backend + all active development; merges into main for frontend deploys |
 
 ---
 
-## Bugs fixed (Phase 1)
+## Design tokens
 
-**CSS reset specificity conflict** — `#contextus-widget * { padding: 0; margin: 0 }` (specificity 1,0,0) overrode all class-level padding and margin rules (specificity 0,1,0). Fixed by removing `padding: 0` and `margin: 0` from the reset — it now only sets `box-sizing: border-box`.
+All widget colors are hardcoded hex. No CSS variables — prevents dark mode bleed from host sites.
 
-**Bottom border clipped** — `scrollHeight` excludes borders, so the iframe was 1px too short. Fixed with `Math.ceil(widget.getBoundingClientRect().height)` which includes sub-pixel borders.
+| Token | Value | Usage |
+|---|---|---|
+| Black | `#000000` | Send button, visitor bubble, logo |
+| Near-black | `#111111` | Visitor bubble background |
+| Body text | `#222222` | Message text |
+| Border | `#e0e0e0` | Widget border, dividers |
+| Input bg | `#f0f0f0` | Input wrapper |
+| Muted | `#888888` | Timestamps, nudge text |
+| Error bg | `#fcebeb` | Error banner |
+| Boundary bg | `#faeeda` | Boundary banner |
 
-**Greeting on idle** — Design spec says State 1 (idle) shows only header + input + pills. Greeting was incorrectly shown on load. Fixed by moving greeting injection to first `sendMessage()` call.
-
-**Mobile scroll after agent response** — Two compounding bugs:
-1. Parent page resize handler didn't preserve `window.scrollY`. When the iframe grew taller on agent response, the browser autoscrolled the page to keep the iframe bottom visible, pushing the top of the widget (greeting + visitor bubble) off screen.
-2. `renderBanners()` unconditionally set `msgArea.scrollTop = msgArea.scrollHeight` on every render, unlike `renderMessages()` which had a guard.
-3. At viewport widths < 480px, the CSS `max-height: 50vh` on the message area capped it smaller than the content, creating artificial overflow that triggered the scroll-to-bottom condition.
-
-Fixed by: saving/restoring `scrollY` in the resize listener, guarding `scrollTop` in `renderBanners()`, and disabling `max-height` on the message area when `dynamicHeight=1`.
+Fonts: **DM Sans** (400, 500, 700) + **DM Mono** (400, 500) — Google Fonts.
 
 ---
 
@@ -366,18 +354,11 @@ Fixed by: saving/restoring `scrollY` in the resize listener, guarding `scrollTop
 
 | Phase | Status | Description |
 |---|---|---|
-| 1 — Widget frontend | **Done** | Vanilla JS widget, 11 states, iframe embed, mock responses |
-| 2 — Backend API | **In Progress** | FastAPI, OpenRouter LLM, Redis storage, SSE streaming |
-| 3 — Lead brief engine | Not started | WhatsApp/email delivery integration |
-| 4 — Landing page (real LLM) | Not started | Swap mock engine for real backend |
-| 5 — Platform plugins | Not started | WordPress, Wix (build at traction, not before) |
-
-### Branch Strategy
-
-| Branch | Purpose |
-|--------|---------|
-| `main` | Production-ready code |
-| `backend-development` | Backend API development |
+| 1 — Widget frontend | **Done** | Vanilla JS widget, 11 states, iframe embed |
+| 2 — Backend API | **Done** | FastAPI, OpenRouter LLM, Redis, SSE, Firecrawl fallback |
+| 3 — /try demo page | **Done** | Full crawl → chat → brief flow, real backend wired |
+| 4 — Lead delivery | Not started | WhatsApp/email delivery of lead briefs |
+| 5 — Platform plugins | Not started | WordPress, Wix (build at traction) |
 
 ---
 
