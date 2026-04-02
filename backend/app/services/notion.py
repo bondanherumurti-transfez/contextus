@@ -19,7 +19,7 @@ async def post_waitlist_to_notion(data: dict):
             "Name":           {"title": txt(data.get("name", "Unknown"))},
             "Email":          {"email": data.get("email") or None},
             "Website":        {"url": data.get("website") or None},
-            "Phone":          {"rich_text": txt(data.get("phone"))},
+            "Phone":          {"phone_number": data.get("phone") or None},
             "Business Type":  {"rich_text": txt(data.get("business_type"))},
             "Goal":           {"rich_text": txt(data.get("goal"))},
             "Agent Behavior": {"rich_text": txt(data.get("agent_behavior"))},

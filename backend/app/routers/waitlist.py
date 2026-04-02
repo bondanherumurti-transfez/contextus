@@ -98,7 +98,7 @@ async def test_notion():
             "Name":           {"title": txt("Test Entry")},
             "Email":          {"email": "test@contextus.ai"},
             "Website":        {"url": "https://contextus.ai"},
-            "Phone":          {"rich_text": txt("+628123456789")},
+            "Phone":          {"phone_number": "+628123456789"},
             "Business Type":  {"rich_text": txt("SaaS")},
             "Goal":           {"rich_text": txt("Lead generation")},
             "Agent Behavior": {"rich_text": txt("Friendly and concise")},
