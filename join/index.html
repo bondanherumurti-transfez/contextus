@@ -232,7 +232,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
       const data = await res.json();
       sessionId = data.session_id;
 
-      loadWidget(sessionId, name, website);
+      loadWidget(sessionId, name, website, email, phone);
 
       document.getElementById('chat-context').innerHTML =
         `Got it, <strong>${escHtml(name)}</strong>. Our agent is ready — answer a few quick questions about <strong>${escHtml(website)}</strong> so we can set you up properly.`;
@@ -247,15 +247,21 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
     }
   }
 
-  function loadWidget(sid, name, website) {
+  function loadWidget(sid, name, website, email, phone) {
     const greeting = encodeURIComponent('Hi ' + name + '! Ready to get contextus set up on ' + website + '?');
+
+    let intro = 'This is ' + name + ' from ' + website + ', email: ' + email;
+    if (phone) intro += ', phone: ' + phone;
+    intro += ' looking to join waitlist';
+
     const src = WIDGET_BASE + '/widget/widget.html'
       + '?apiUrl=' + encodeURIComponent(API_URL)
       + '&knowledgeBaseId=demo'
       + '&sessionId=' + encodeURIComponent(sid)
       + '&name=contextus'
       + '&greeting=' + greeting
-      + '&dynamicHeight=1';
+      + '&dynamicHeight=1'
+      + '&autoMessage=' + encodeURIComponent(intro);
 
     const iframe = document.getElementById('join-widget');
     iframe.src = src;

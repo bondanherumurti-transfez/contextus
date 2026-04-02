@@ -82,6 +82,7 @@
       pills: ['How can you help?', 'Pricing & plans', 'How do I embed this?'],
       apiUrl: '',           // e.g. 'https://api.contextus.ai'
       knowledgeBaseId: '',  // job_id from POST /api/crawl
+      autoMessage: '',      // if set, sent automatically on widget load
     }, config);
 
     // ── State ────────────────────────────────────────────────────────────────
@@ -524,6 +525,12 @@
     // ── Initial render ───────────────────────────────────────────────────────
 
     render();
+
+    if (cfg.autoMessage) {
+      setTimeout(() => sendMessage(cfg.autoMessage), 300);
+    }
+
+    return { sendMessage };
   }
 
   // ── Utilities ────────────────────────────────────────────────────────────────

@@ -30,6 +30,8 @@
       var providedSessionId = params.get('sessionId') || '';
       var pills = null;
 
+      var autoMessage = params.get('autoMessage') || '';
+
       if (providedSessionId) {
         window.__ctxSessionId = providedSessionId;
         window.parent.postMessage({ type: 'contextus:session_ready', session_id: providedSessionId }, '*');
@@ -49,7 +51,7 @@
         } catch (e) { /* fall through to defaults */ }
       }
 
-      ContextusWidget.init({
+      var widget = ContextusWidget.init({
         root: document.getElementById('contextus-root'),
         name: params.get('name') || 'contextus',
         greeting: params.get('greeting') || 'Ask us anything...',
@@ -59,6 +61,7 @@
         apiUrl: apiUrl,
         knowledgeBaseId: knowledgeBaseId,
         pills: pills || ['What services do you offer?', 'How can you help me?', 'How do I contact you?'],
+        autoMessage: autoMessage,
       });
     })();
   </script>
