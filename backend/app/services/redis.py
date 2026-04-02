@@ -35,10 +35,14 @@ async def save_knowledge_base(
 
 async def get_knowledge_base(job_id: str) -> KnowledgeBase | None:
     # Check Neon first for permanent KBs (demo + customer sites)
-    from app.services.database import db_get_knowledge_base
-    kb = await db_get_knowledge_base(job_id)
-    if kb:
-        return kb
+    try:
+        from app.services.database import db_get_knowledge_base
+        kb = await db_get_knowledge_base(job_id)
+        if kb:
+            return kb
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Neon lookup failed, falling back to Redis: %s", e)
     # Fall back to Redis for temporary /try crawls
     raw = redis.get(kb_key(job_id))
     if raw is None:
