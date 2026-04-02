@@ -181,9 +181,10 @@ def stream_chat_response(
     company_profile: CompanyProfile,
     chunks: list[Chunk],
     user_message: str,
+    system_prompt_override: str | None = None,
 ) -> tuple[AsyncIterator[str], str]:
     retrieved = retrieve_chunks(user_message, chunks, top_k=5)
-    system_prompt = build_chat_system_prompt(company_profile, retrieved)
+    system_prompt = system_prompt_override if system_prompt_override else build_chat_system_prompt(company_profile, retrieved)
 
     chat_messages = [{"role": "system", "content": system_prompt}]
     for msg in messages:
@@ -269,6 +270,56 @@ def select_pills(pill_suggestions: PillSuggestions | None) -> list[str]:
             pills.append(fallback)
 
     return pills[:3]
+
+
+def build_waitlist_system_prompt(name: str, website: str) -> str:
+    first = name.split()[0] if name else name
+    return f"""You are the onboarding assistant for contextus — an AI widget that automatically qualifies leads for businesses.
+
+You already know:
+- Visitor name: {name}
+- Their website: {website}
+
+Your job: gather these 4 things through warm, natural conversation (one question at a time):
+1. What kind of business they run (industry, what they sell)
+2. Their goal for placing contextus (lead gen, support, sales qualification, etc.)
+3. How they want the agent to behave (tone, topics to focus on, what to do when asked about pricing)
+4. Their timeline (when do they want this live?)
+
+Rules:
+- Address them by first name ({first})
+- Ask ONE question per turn
+- If they skip or say "I don't know" — accept it and move on
+- You can answer questions about contextus if they ask, then return to gathering info
+- Keep responses short and warm
+
+When you have gathered all 4 points (or the visitor has skipped all), send your closing message:
+"Perfect, {first} — you're all set! We'll be in touch at your email to get contextus live on {website} soon. Looking forward to working with you."
+
+Then on a new line append exactly this token (do not explain it): WAITLIST_COMPLETE"""
+
+
+def extract_waitlist_context(transcript: str) -> dict:
+    response = client.chat.completions.create(
+        model=MODEL_PROFILE,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    'Extract from this conversation as JSON: '
+                    '{"business_type": "...", "goal": "...", "agent_behavior": "...", "timeline": "..."}. '
+                    'Empty string if not mentioned. Return JSON only.'
+                ),
+            },
+            {"role": "user", "content": transcript},
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.1,
+    )
+    try:
+        return extract_json(response.choices[0].message.content)
+    except Exception:
+        return {"business_type": "", "goal": "", "agent_behavior": "", "timeline": ""}
 
 
 def assess_quality_tier(chunks: list[Chunk]) -> str:

@@ -479,7 +479,7 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     <div class="brief-cta-block fu fd4">
       <p>Every visitor who chats with your assistant gets you a brief like this — automatically.</p>
       <div class="cta-row">
-        <a href="/#ea" class="btn-p">Add this to my site →</a>
+        <a id="add-to-site-btn" href="/join" class="btn-p">Add this to my site →</a>
         <button class="btn-s" id="start-over-btn" type="button">Try another URL</button>
       </div>
     </div>
@@ -503,6 +503,7 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
   let msgCount = 0;
   let pollTimer = null;
   let currentKb = null;
+  let crawledUrl = '';
   let serverReady = false;
   let wakeUpTimer = null;
 
@@ -611,6 +612,7 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
   }
 
   function startCrawl(url) {
+    crawledUrl = url;
     const domain = url.replace(/^https?:\/\//, '').replace(/\/.*$/, '') || url;
     document.getElementById('crawl-domain').textContent = domain;
     document.getElementById('crawl-error').style.display = 'none';
@@ -787,6 +789,8 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
   }
 
   function renderBrief(b) {
+    const btn = document.getElementById('add-to-site-btn');
+    if (btn) btn.href = '/join' + (crawledUrl ? '?website=' + encodeURIComponent(crawledUrl) : '');
     const p = currentKb && currentKb.company_profile;
     document.getElementById('b-company').textContent = p ? p.name : 'Visitor';
     document.getElementById('b-who').textContent = b.who;

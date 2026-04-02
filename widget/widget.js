@@ -358,8 +358,7 @@
           }
         }
 
-        // Notify parent page (e.g. /try) that a message was sent
-        window.parent.postMessage({ type: 'contextus:message_sent' }, '*');
+        // Notify parent page after stream completes (done below, after SSE ends)
 
         // agentMsg is prepared but NOT added to state yet — thinkingMsg stays visible
         // until the first token arrives, keeping the dots throughout the entire wait.
@@ -414,6 +413,20 @@
 
             succeeded = true;
             state.errorMessage = null;
+
+            // Strip WAITLIST_COMPLETE signal from rendered text, but keep it in postMessage
+            const SIGNAL = 'WAITLIST_COMPLETE';
+            const rawText = agentMsg.text;
+            if (rawText.includes(SIGNAL)) {
+              agentMsg.text = rawText.replace(SIGNAL, '').trimEnd();
+              if (streamBubble) {
+                streamBubble.innerHTML = markdownToHtml(agentMsg.text);
+              }
+            }
+
+            // Notify parent — send raw text (may contain WAITLIST_COMPLETE signal)
+            window.parent.postMessage({ type: 'contextus:message_sent', text: rawText }, '*');
+
             break;
           } catch (err) {
             if (attempt === 0) {

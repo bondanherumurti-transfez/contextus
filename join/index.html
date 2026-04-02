@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
+<title>Join the waitlist — contextus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+button{outline:none;-webkit-tap-highlight-color:transparent}
+a{color:inherit;text-decoration:none}
+:root{
+  --black:#000;--white:#fff;
+  --g50:#fafafa;--g100:#f5f5f5;--g200:#ebebeb;--g300:#e0e0e0;
+  --g400:#bbb;--g500:#888;--g600:#666;--g700:#444;--g800:#222;--g900:#111;
+  --sans:'DM Sans',-apple-system,sans-serif;
+  --mono:'DM Mono',monospace;
+  --max:520px;--px:1.5rem;
+}
+html{scroll-behavior:smooth;color-scheme:light}
+body{font-family:var(--sans);color:#000;background:#fff;font-size:16px;line-height:1.7;-webkit-font-smoothing:antialiased}
+::selection{background:#000;color:#fff}
+
+/* ── Nav ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-bottom:.5px solid var(--g300)}
+.nav-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:.875rem var(--px)}
+.logo{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--black)}
+.logo-svg{width:24px;height:24px}
+.logo-text{font-weight:500;font-size:15px;letter-spacing:-.3px}
+.nav-back{font-size:13px;color:var(--g500);text-decoration:none;transition:color .15s}
+.nav-back:hover{color:var(--black)}
+
+/* ── Page ── */
+.page{min-height:100vh;padding:7rem var(--px) 5rem;display:flex;flex-direction:column;align-items:center}
+.content{width:100%;max-width:var(--max)}
+
+/* ── Animations ── */
+@keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fu{animation:fu .35s ease forwards}
+.fd1{animation-delay:.06s;opacity:0}
+.fd2{animation-delay:.13s;opacity:0}
+.fd3{animation-delay:.2s;opacity:0}
+
+/* ── State visibility ── */
+.state{display:none}.state.active{display:block}
+
+/* ── Shared typography ── */
+.eyebrow{font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:.875rem}
+.page-h1{font-size:clamp(1.75rem,5vw,2.25rem);font-weight:500;letter-spacing:-.75px;line-height:1.15;margin-bottom:.625rem}
+.page-sub{font-size:.9375rem;color:var(--g600);line-height:1.6;margin-bottom:2rem;max-width:400px}
+
+/* ── Buttons ── */
+.btn-p{display:inline-flex;align-items:center;gap:6px;background:var(--black);color:#fff;padding:11px 22px;border-radius:8px;font-size:14px;font-weight:500;font-family:var(--sans);border:none;cursor:pointer;transition:opacity .15s;white-space:nowrap;-webkit-appearance:none;appearance:none;box-shadow:none}
+.btn-p:hover{opacity:.8}
+.btn-p:disabled{opacity:.5;cursor:default}
+.btn-p.loading{opacity:.7;cursor:default;pointer-events:none}
+.btn-p.loading::after{content:'';width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;display:inline-block;animation:spin .7s linear infinite;margin-left:2px}
+.btn-s{display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--g600);padding:10px 16px;border-radius:8px;font-size:14px;font-family:var(--sans);border:.5px solid var(--g300);cursor:pointer;transition:border-color .15s,color .15s;white-space:nowrap;-webkit-appearance:none;appearance:none;box-shadow:none;text-decoration:none}
+.btn-s:hover{border-color:var(--g500);color:var(--black)}
+
+/* ════════════════════
+   STATE 1 — FORM
+════════════════════ */
+.join-form{display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.5rem}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:.3px;text-transform:uppercase}
+.field input{width:100%;border:.5px solid var(--g300);border-radius:10px;padding:11px 14px;font-size:15px;font-family:var(--sans);color:var(--black);background:var(--g50);outline:none;transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;appearance:none}
+.field input:focus{border-color:var(--g500);box-shadow:0 0 0 3px rgba(0,0,0,.04);background:#fff}
+.field input::placeholder{color:var(--g400)}
+.field input.err{border-color:#a32d2d;box-shadow:0 0 0 3px rgba(163,45,45,.06)}
+.form-err{font-size:12px;color:#a32d2d;margin-top:-.25rem;display:none}
+.form-err.show{display:block}
+.form-footer{display:flex;justify-content:space-between;align-items:center}
+.form-note{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spacing:.3px}
+
+/* ════════════════════
+   STATE 2 — CHAT
+════════════════════ */
+.chat-context{font-size:.875rem;color:var(--g600);margin-bottom:1.25rem;line-height:1.5}
+.chat-context strong{color:var(--black);font-weight:500}
+.widget-frame{border:.5px solid var(--g300);border-radius:12px;overflow:hidden;margin-bottom:1rem;min-height:420px}
+.widget-frame iframe{width:100%;height:420px;border:none;display:block}
+.chat-footer{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.chat-skip-note{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spacing:.3px}
+
+/* ════════════════════
+   STATE 3 — DONE
+════════════════════ */
+.done-icon{width:48px;height:48px;background:var(--g100);border:.5px solid var(--g300);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem}
+.done-icon svg{width:22px;height:22px}
+.done-email{font-family:var(--mono);font-size:.875rem;color:var(--g600)}
+.done-actions{margin-top:2.5rem;display:flex;gap:.75rem;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="logo">
+      <svg class="logo-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <rect width="64" height="64" rx="12" fill="#000"/>
+        <text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text>
+      </svg>
+      <span class="logo-text">contextus</span>
+    </a>
+    <a href="/try" class="nav-back">← Back to demo</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="content">
+
+    <!-- STATE 1: FORM -->
+    <div id="s-form" class="state active">
+      <p class="eyebrow fu fd1">Get started</p>
+      <h1 class="page-h1 fu fd2">Let's get you set up.</h1>
+      <p class="page-sub fu fd3">We'll reach out when your slot is ready — usually within a day or two.</p>
+
+      <div class="join-form fu fd3">
+        <div class="field">
+          <label for="j-name">Your name</label>
+          <input id="j-name" type="text" placeholder="Jane Smith" autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="j-email">Email address</label>
+          <input id="j-email" type="email" placeholder="jane@company.com" autocomplete="email">
+        </div>
+        <div class="field">
+          <label for="j-website">Website</label>
+          <input id="j-website" type="url" placeholder="https://your-site.com" autocomplete="url">
+        </div>
+        <div class="field">
+          <label for="j-phone">Phone / WhatsApp <span style="color:var(--g400);font-style:italic;text-transform:none;letter-spacing:0">optional</span></label>
+          <input id="j-phone" type="tel" placeholder="+62 812 3456 7890" autocomplete="tel">
+        </div>
+        <p id="form-err" class="form-err">Please fill in your name, email, and website.</p>
+      </div>
+
+      <div class="form-footer fu fd3">
+        <button id="j-continue" class="btn-p" onclick="submitForm()">Continue →</button>
+        <span class="form-note">no credit card needed</span>
+      </div>
+    </div>
+
+    <!-- STATE 2: CHAT -->
+    <div id="s-chat" class="state">
+      <p class="eyebrow">One more thing</p>
+      <h1 class="page-h1">Tell the agent about your business.</h1>
+      <p class="chat-context" id="chat-context"></p>
+
+      <div class="widget-frame">
+        <iframe id="join-widget" scrolling="no" allowtransparency="true"></iframe>
+      </div>
+
+      <div class="chat-footer">
+        <button class="btn-p" id="j-skip" onclick="skipAndSubmit()">Submit →</button>
+        <span class="chat-skip-note">or just chat with the agent above</span>
+      </div>
+    </div>
+
+    <!-- STATE 3: DONE -->
+    <div id="s-done" class="state">
+      <div class="done-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <p class="eyebrow">You're in</p>
+      <h1 class="page-h1">You're on the list.</h1>
+      <p class="page-sub">We'll reach out at</p>
+      <p class="done-email" id="done-email"></p>
+      <p class="page-sub" style="margin-top:.375rem;margin-bottom:0">when your slot is ready.</p>
+      <div class="done-actions">
+        <a href="/" class="btn-s">← Back to contextus</a>
+        <a href="/try" class="btn-s">Try it again</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const API_URL = 'https://contextus-2d16.onrender.com';
+  const WIDGET_BASE = 'https://project-b0yme.vercel.app';
+
+  let sessionId = null;
+  let submitting = false;
+
+  // Pre-fill website from URL param
+  (function () {
+    var ws = new URLSearchParams(location.search).get('website');
+    if (ws) document.getElementById('j-website').value = ws;
+  })();
+
+  function show(state) {
+    document.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
+    document.getElementById('s-' + state).classList.add('active');
+  }
+
+  async function submitForm() {
+    const name    = document.getElementById('j-name').value.trim();
+    const email   = document.getElementById('j-email').value.trim();
+    const website = document.getElementById('j-website').value.trim();
+    const phone   = document.getElementById('j-phone').value.trim();
+    const errEl   = document.getElementById('form-err');
+    const btn     = document.getElementById('j-continue');
+
+    // Validate
+    if (!name || !email || !website) {
+      errEl.classList.add('show');
+      if (!name)    document.getElementById('j-name').classList.add('err');
+      if (!email)   document.getElementById('j-email').classList.add('err');
+      if (!website) document.getElementById('j-website').classList.add('err');
+      return;
+    }
+    errEl.classList.remove('show');
+
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    try {
+      const res = await fetch(API_URL + '/api/waitlist/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, website, phone: phone || null }),
+      });
+
+      if (!res.ok) throw new Error('start failed');
+      const data = await res.json();
+      sessionId = data.session_id;
+
+      loadWidget(sessionId, name, website);
+
+      document.getElementById('chat-context').innerHTML =
+        `Got it, <strong>${escHtml(name)}</strong>. Our agent is ready — answer a few quick questions about <strong>${escHtml(website)}</strong> so we can set you up properly.`;
+      document.getElementById('done-email').textContent = email;
+
+      show('chat');
+    } catch (e) {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      errEl.textContent = 'Something went wrong. Please try again.';
+      errEl.classList.add('show');
+    }
+  }
+
+  function loadWidget(sid, name, website) {
+    const greeting = encodeURIComponent('Hi ' + name + '! Ready to get contextus set up on ' + website + '?');
+    const src = WIDGET_BASE + '/widget/widget.html'
+      + '?apiUrl=' + encodeURIComponent(API_URL)
+      + '&knowledgeBaseId=demo'
+      + '&sessionId=' + encodeURIComponent(sid)
+      + '&name=contextus'
+      + '&greeting=' + greeting
+      + '&dynamicHeight=1';
+
+    const iframe = document.getElementById('join-widget');
+    iframe.src = src;
+  }
+
+  async function submitWaitlist() {
+    if (submitting) return;
+    submitting = true;
+
+    const skipBtn = document.getElementById('j-skip');
+    if (skipBtn) { skipBtn.classList.add('loading'); skipBtn.disabled = true; }
+
+    try {
+      await fetch(API_URL + '/api/waitlist/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+    } catch (e) { /* best-effort — still show done */ }
+
+    show('done');
+  }
+
+  function skipAndSubmit() {
+    submitWaitlist();
+  }
+
+  // Listen for widget events
+  window.addEventListener('message', function (e) {
+    if (!e.data) return;
+
+    // Agent-driven completion: WAITLIST_COMPLETE signal in message text
+    if (e.data.type === 'contextus:message_sent' && e.data.text && e.data.text.includes('WAITLIST_COMPLETE')) {
+      submitWaitlist();
+    }
+
+    // Dynamic height resize
+    if (e.data.type === 'contextus:resize') {
+      const iframe = document.getElementById('join-widget');
+      if (iframe && e.data.height) {
+        var scrollY = window.scrollY;
+        iframe.style.height = e.data.height + 'px';
+        iframe.parentElement.style.minHeight = '';
+        window.scrollTo(0, scrollY);
+      }
+    }
+  });
+
+  // Clear field error on input
+  ['j-name', 'j-email', 'j-website'].forEach(function (id) {
+    document.getElementById(id).addEventListener('input', function () {
+      this.classList.remove('err');
+    });
+  });
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>

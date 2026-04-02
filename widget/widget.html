@@ -27,9 +27,13 @@
 
       var apiUrl = params.get('apiUrl') || '';
       var knowledgeBaseId = params.get('knowledgeBaseId') || '';
+      var providedSessionId = params.get('sessionId') || '';
       var pills = null;
 
-      if (apiUrl && knowledgeBaseId) {
+      if (providedSessionId) {
+        window.__ctxSessionId = providedSessionId;
+        window.parent.postMessage({ type: 'contextus:session_ready', session_id: providedSessionId }, '*');
+      } else if (apiUrl && knowledgeBaseId) {
         try {
           var sr = await fetch(apiUrl + '/api/session', {
             method: 'POST',
