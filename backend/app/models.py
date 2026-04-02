@@ -50,6 +50,7 @@ class Session(BaseModel):
     messages: list[Message] = []
     contact_captured: bool = False
     contact_value: str | None = None
+    brief_sent: bool = False
     created_at: int
 
 

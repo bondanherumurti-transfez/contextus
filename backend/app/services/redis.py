@@ -68,3 +68,26 @@ async def get_rate_limit_count(ip: str, action: str) -> int:
     if current is None:
         return 0
     return int(current)
+
+
+async def extend_session_ttl(session_id: str, ttl: int = 86400) -> None:
+    """Extend session TTL — called when contact is captured to survive until cron runs."""
+    redis.expire(session_key(session_id), ttl)
+
+
+async def scan_all_sessions() -> list[Session]:
+    """Scan all session:* keys and return deserialized Session objects."""
+    sessions = []
+    cursor = 0
+    while True:
+        cursor, keys = redis.scan(cursor, match="session:*", count=100)
+        for key in keys:
+            raw = redis.get(key)
+            if raw:
+                try:
+                    sessions.append(Session.model_validate_json(raw))
+                except Exception:
+                    pass
+        if cursor == 0:
+            break
+    return sessions

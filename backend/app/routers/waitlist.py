@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from nanoid import generate
 
-from app.services.redis import redis, save_session, get_session
+from app.services.redis import redis, save_session, get_session, extend_session_ttl
 from app.models import Session
 from app.services.notion import post_waitlist_to_notion
 from app.services.llm import extract_waitlist_context
@@ -50,6 +50,7 @@ async def waitlist_start(body: WaitlistStartRequest):
     )
 
     await save_session(session_id, session)
+    await extend_session_ttl(session_id, ttl=86400)
     return {"session_id": session_id}
 
 

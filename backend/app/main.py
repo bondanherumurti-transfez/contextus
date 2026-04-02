@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 
-from app.routers import crawl, session, chat, brief, waitlist
+from app.routers import crawl, session, chat, brief, waitlist, jobs
 
 load_dotenv()
 
@@ -36,6 +36,7 @@ app.include_router(session.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(brief.router, prefix="/api")
 app.include_router(waitlist.router, prefix="/api")
+app.include_router(jobs.router, prefix="/api")
 
 
 @app.get("/api/health")
