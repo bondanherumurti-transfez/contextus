@@ -46,9 +46,9 @@ async def post_waitlist_to_notion(data: dict):
             logger.error("Notion waitlist post failed %s: %s", res.status_code, res.text)
 
 
-async def post_lead_brief_to_notion(data: dict):
-    """Post a lead brief to NOTION_DB_LEADS. Works for both organic and waitlist sessions."""
-    database_id = os.getenv("NOTION_DB_LEADS", "")
+async def post_lead_brief_to_notion(data: dict, notion_db_id: str | None = None):
+    """Post a lead brief to NOTION_DB_LEADS (or per-customer DB). Works for both organic and waitlist sessions."""
+    database_id = notion_db_id or os.getenv("NOTION_DB_LEADS", "")
     if not NOTION_TOKEN or not database_id:
         return
 

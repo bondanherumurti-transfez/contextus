@@ -7,6 +7,7 @@ from fastapi import APIRouter, Header, HTTPException
 from app.services.redis import redis, scan_all_sessions, save_session
 from app.services.llm import generate_lead_brief
 from app.services.notion import post_lead_brief_to_notion
+from app.services.database import get_customer_config
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["jobs"])
@@ -48,17 +49,21 @@ async def process_sessions(x_cron_secret: str | None = Header(default=None)):
         try:
             brief = generate_lead_brief(session)
 
+            # Look up per-customer Notion DB
+            customer_config = await get_customer_config(session.kb_id) if session.kb_id else None
+            customer_notion_db = customer_config.get("notion_db_id") if customer_config else None
+
             notion_data = {
                 **brief.model_dump(),
                 "kb_id": session.kb_id,
                 "is_waitlist": is_waitlist,
                 # Enrich with prefill data for waitlist sessions
-                "email": prefill.get("email") or brief.contact and brief.contact.get("email"),
-                "phone": prefill.get("phone") or brief.contact and brief.contact.get("phone"),
+                "email": prefill.get("email") or (brief.contact and brief.contact.get("email")),
+                "phone": prefill.get("phone") or (brief.contact and brief.contact.get("phone")),
                 "website": prefill.get("website"),
             }
 
-            success = await post_lead_brief_to_notion(notion_data)
+            success = await post_lead_brief_to_notion(notion_data, notion_db_id=customer_notion_db)
 
             if success is not False:
                 session.brief_sent = True

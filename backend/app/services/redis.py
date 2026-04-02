@@ -24,12 +24,22 @@ def rate_key(ip: str, action: str) -> str:
 
 
 async def save_knowledge_base(
-    job_id: str, data: KnowledgeBase, ttl: int | None = 1800
+    job_id: str, data: KnowledgeBase, ttl: int | None = 1800, permanent: bool = False
 ) -> None:
-    redis.set(kb_key(job_id), data.model_dump_json(), ex=ttl)
+    if permanent:
+        from app.services.database import db_save_knowledge_base
+        await db_save_knowledge_base(data)
+    else:
+        redis.set(kb_key(job_id), data.model_dump_json(), ex=ttl)
 
 
 async def get_knowledge_base(job_id: str) -> KnowledgeBase | None:
+    # Check Neon first for permanent KBs (demo + customer sites)
+    from app.services.database import db_get_knowledge_base
+    kb = await db_get_knowledge_base(job_id)
+    if kb:
+        return kb
+    # Fall back to Redis for temporary /try crawls
     raw = redis.get(kb_key(job_id))
     if raw is None:
         return None
