@@ -1,5 +1,7 @@
 import json
+import os
 import time
+import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from nanoid import generate
@@ -75,3 +77,51 @@ async def waitlist_submit(body: WaitlistSubmitRequest):
     })
 
     return {"status": "ok"}
+
+
+@router.get("/waitlist/test-notion")
+async def test_notion():
+    token = os.getenv("NOTION_TOKEN", "")
+    database_id = os.getenv("NOTION_DB_WAITLIST", "")
+
+    if not token:
+        return {"error": "NOTION_TOKEN not set"}
+    if not database_id:
+        return {"error": "NOTION_DB_WAITLIST not set"}
+
+    def txt(val):
+        return [{"text": {"content": str(val or "—")}}]
+
+    page = {
+        "parent": {"database_id": database_id},
+        "properties": {
+            "Name":           {"title": txt("Test Entry")},
+            "Email":          {"email": "test@contextus.ai"},
+            "Website":        {"url": "https://contextus.ai"},
+            "Phone":          {"rich_text": txt("+628123456789")},
+            "Business Type":  {"rich_text": txt("SaaS")},
+            "Goal":           {"rich_text": txt("Lead generation")},
+            "Agent Behavior": {"rich_text": txt("Friendly and concise")},
+            "Timeline":       {"rich_text": txt("ASAP")},
+            "Session":        {"rich_text": txt("test-session-debug")},
+        },
+    }
+
+    async with httpx.AsyncClient() as client:
+        res = await client.post(
+            "https://api.notion.com/v1/pages",
+            json=page,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Notion-Version": "2022-06-28",
+                "Content-Type": "application/json",
+            },
+            timeout=10.0,
+        )
+
+    return {
+        "notion_status": res.status_code,
+        "notion_response": res.json(),
+        "token_prefix": token[:12] + "...",
+        "database_id": database_id,
+    }
