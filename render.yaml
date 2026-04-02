@@ -17,10 +17,10 @@ services:
       - key: MODEL_BRIEF
         value: anthropic/claude-sonnet-4
       - key: SITE_URL
-        value: https://project-b0yme.vercel.app
+        value: https://getcontextus.dev
       - key: UPSTASH_REDIS_REST_URL
         sync: false
       - key: UPSTASH_REDIS_REST_TOKEN
         sync: false
       - key: ALLOWED_ORIGINS
-        value: https://project-b0yme.vercel.app
+        value: https://getcontextus.dev,https://www.getcontextus.dev,https://project-b0yme.vercel.app

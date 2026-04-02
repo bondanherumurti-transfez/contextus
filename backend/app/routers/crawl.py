@@ -17,7 +17,7 @@ from app.services.llm import generate_company_profile, assess_quality_tier, sele
 router = APIRouter(tags=["crawl"])
 
 
-DEMO_URL = "https://project-b0yme.vercel.app"
+DEMO_URL = "https://getcontextus.dev"
 DEMO_JOB_ID = "demo"
 
 
