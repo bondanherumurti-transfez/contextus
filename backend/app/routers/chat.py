@@ -73,6 +73,7 @@ async def send_chat_message(session_id: str, body: ChatRequest):
             for token in stream_chat_response(
                 messages, kb.company_profile, kb.chunks, body.message,
                 system_prompt_override=waitlist_prompt,
+                kb_id=session.kb_id,
             ):
                 full_text += token
                 yield f"data: {json.dumps({'token': token})}\n\n"

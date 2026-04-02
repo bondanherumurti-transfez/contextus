@@ -84,10 +84,38 @@ BRIEF_SYSTEM_PROMPT = """You are a sales analyst. Analyze the chat transcript an
 Be specific and actionable. Quote relevant parts of the conversation."""
 
 
+LEAD_QUAL_DEMO = """Lead qualification — weave naturally into every response:
+- Answer the visitor's question first, then ask one qualifying question which relates to their question
+- Pick the highest-priority unknown from this list (skip anything already answered):
+  1. Visitor's name — always ask "By the way, who am I speaking with?" — never use "What's your name?". On first or second reply if they haven't introduced themselves. Address them by name throughout after.
+  2. Ask whether they know what contextus is — to gauge if this is their first encounter
+  3. What kind of business do you run / what is your role?
+  4. Ask whether they have a website and use it to engage with customers — if yes, ask for the URL
+  5. Ask how customers currently reach them through their website — uncover pain with the current method
+  6. Only if they show openness to contextus — ask when they're looking to have this in place
+  7. Only ask for contact (email or WhatsApp) when buying intent is clear — never on the first message
+- Never ask more than one question per message
+- Make the question feel like natural curiosity, not a form — tie it to what the visitor just said"""
+
+LEAD_QUAL_GENERIC = """Lead qualification — weave naturally into every response:
+- Answer the visitor's question first, then ask one qualifying question which relates to their question
+- Pick the highest-priority unknown from this list (skip anything already answered):
+  1. Visitor's name — always ask "By the way, who am I speaking with?" — never use "What's your name?". On first or second reply if they haven't introduced themselves. Address them by name throughout after.
+  2. What brings them here today — gauge their intent and familiarity with this business
+  3. What kind of business do you run / what is your role?
+  4. What specific problem are they trying to solve?
+  5. What are they currently doing about it — uncover pain and urgency
+  6. Only if they show clear interest — ask when they're looking to get started
+  7. Only ask for contact (email or WhatsApp) when buying intent is clear — never on the first message
+- Never ask more than one question per message
+- Make the question feel like natural curiosity, not a form — tie it to what the visitor just said"""
+
+
 def build_chat_system_prompt(
-    company_profile: CompanyProfile, retrieved_chunks: list[Chunk]
+    company_profile: CompanyProfile, retrieved_chunks: list[Chunk], kb_id: str = ""
 ) -> str:
     chunks_text = "\n\n".join([f"[{c.source}]\n{c.text}" for c in retrieved_chunks])
+    lead_qual = LEAD_QUAL_DEMO if kb_id == "demo" else LEAD_QUAL_GENERIC
 
     return f"""You are the AI assistant for {company_profile.name}, a {company_profile.industry} business.
 
@@ -108,18 +136,7 @@ Rules:
 - Be friendly and helpful
 - Keep responses concise (2-3 sentences unless more detail is needed)
 
-Lead qualification — weave naturally into every response:
-- Answer the visitor's question first, then ask one qualifying question which relate to visitor's question
-- Pick the highest-priority unknown from this list (skip anything already answered):
-  1. Visitor's name — always ask "By the way, who am I speaking with? never use phrase "Whats your name?" or similar on the first or second reply if they haven't introduced themselves. Once you know their name, address them by it throughout the conversation.
-  2. Ask whether they know what contextus is? to gauge whether is this their first time encounter contextus or not
-  3. What kind of business do you run / what is your role?
-  4. Ask whether they have currently have a website and use the website as medium to engage with their customer? if yes inquiry what is their current website url
-  5. Ask how their customer reach them currently through their website? Any problem with current method they mentioned? 
-  6. Ask if they open with contextus, only if they open then ask when are you looking to have this in place?
-  7. Only ask for contact (email or WhatsApp) when buying intent is clear — never on the first message
-- Never ask more than one question per message
-- Make the question feel like natural curiosity, not a form — tie it to what the visitor just said"""
+{lead_qual}"""
 
 
 def _call_profile_model(chunks_text: str, site_url: str, temperature: float = 0.3) -> dict:
@@ -184,9 +201,10 @@ def stream_chat_response(
     chunks: list[Chunk],
     user_message: str,
     system_prompt_override: str | None = None,
+    kb_id: str = "",
 ) -> tuple[AsyncIterator[str], str]:
     retrieved = retrieve_chunks(user_message, chunks, top_k=5)
-    system_prompt = system_prompt_override if system_prompt_override else build_chat_system_prompt(company_profile, retrieved)
+    system_prompt = system_prompt_override if system_prompt_override else build_chat_system_prompt(company_profile, retrieved, kb_id=kb_id)
 
     chat_messages = [{"role": "system", "content": system_prompt}]
     for msg in messages:
