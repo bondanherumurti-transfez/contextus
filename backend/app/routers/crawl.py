@@ -23,7 +23,9 @@ DEMO_URL = "https://getcontextus.dev"
 DEMO_JOB_ID = "demo"
 
 
-async def run_crawl_job(job_id: str, url: str, ttl: int | None = 1800, permanent: bool = False):
+async def run_crawl_job(
+    job_id: str, url: str, ttl: int | None = 1800, permanent: bool = False
+):
     try:
         kb = await get_knowledge_base(job_id)
         if not kb:
@@ -48,7 +50,7 @@ async def run_crawl_job(job_id: str, url: str, ttl: int | None = 1800, permanent
             kb.progress = "Generating company profile..."
             await save_knowledge_base(job_id, kb, ttl=ttl, permanent=permanent)
 
-            company_profile = generate_company_profile(chunks, url)
+            company_profile = await generate_company_profile(chunks, url)
             kb.company_profile = company_profile
             kb.chunks = chunks
             kb.quality_tier = assess_quality_tier(chunks)
@@ -200,7 +202,7 @@ async def enrich_knowledge_base(job_id: str, body: EnrichRequest):
             kb.chunks.append(chunk)
 
     if kb.chunks:
-        new_profile = generate_company_profile(kb.chunks, f"enriched:{job_id}")
+        new_profile = await generate_company_profile(kb.chunks, f"enriched:{job_id}")
         kb.company_profile = new_profile
         kb.quality_tier = assess_quality_tier(kb.chunks)
 

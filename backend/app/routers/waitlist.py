@@ -38,14 +38,16 @@ async def waitlist_start(body: WaitlistStartRequest):
         created_at=int(time.time()),
     )
 
-    redis.set(
+    await redis.set(
         f"waitlist:{session_id}",
-        json.dumps({
-            "name": body.name,
-            "email": body.email,
-            "website": body.website,
-            "phone": body.phone or "",
-        }),
+        json.dumps(
+            {
+                "name": body.name,
+                "email": body.email,
+                "website": body.website,
+                "phone": body.phone or "",
+            }
+        ),
         ex=3600,
     )
 
@@ -56,7 +58,7 @@ async def waitlist_start(body: WaitlistStartRequest):
 
 @router.post("/waitlist/submit")
 async def waitlist_submit(body: WaitlistSubmitRequest):
-    raw = redis.get(f"waitlist:{body.session_id}")
+    raw = await redis.get(f"waitlist:{body.session_id}")
     if not raw:
         raise HTTPException(status_code=404, detail="Waitlist session not found")
 
@@ -66,16 +68,18 @@ async def waitlist_submit(body: WaitlistSubmitRequest):
     context = {"business_type": "", "goal": "", "agent_behavior": "", "timeline": ""}
     if session and session.messages:
         transcript = "\n".join(f"{m.role}: {m.text}" for m in session.messages)
-        context = extract_waitlist_context(transcript)
+        context = await extract_waitlist_context(transcript)
 
-    await post_waitlist_to_notion({
-        **prefill,
-        "business_type": context.get("business_type", ""),
-        "goal": context.get("goal", ""),
-        "agent_behavior": context.get("agent_behavior", ""),
-        "timeline": context.get("timeline", ""),
-        "session_id": body.session_id,
-    })
+    await post_waitlist_to_notion(
+        {
+            **prefill,
+            "business_type": context.get("business_type", ""),
+            "goal": context.get("goal", ""),
+            "agent_behavior": context.get("agent_behavior", ""),
+            "timeline": context.get("timeline", ""),
+            "session_id": body.session_id,
+        }
+    )
 
     return {"status": "ok"}
 
@@ -96,15 +100,15 @@ async def test_notion():
     page = {
         "parent": {"database_id": database_id},
         "properties": {
-            "Name":           {"title": txt("Test Entry")},
-            "Email":          {"email": "test@contextus.ai"},
-            "Website":        {"url": "https://contextus.ai"},
-            "Phone":          {"phone_number": "+628123456789"},
-            "Business Type":  {"rich_text": txt("SaaS")},
-            "Goal":           {"rich_text": txt("Lead generation")},
+            "Name": {"title": txt("Test Entry")},
+            "Email": {"email": "test@contextus.ai"},
+            "Website": {"url": "https://contextus.ai"},
+            "Phone": {"phone_number": "+628123456789"},
+            "Business Type": {"rich_text": txt("SaaS")},
+            "Goal": {"rich_text": txt("Lead generation")},
             "Agent Behavior": {"rich_text": txt("Friendly and concise")},
-            "Timeline":       {"rich_text": txt("ASAP")},
-            "Session":        {"rich_text": txt("test-session-debug")},
+            "Timeline": {"rich_text": txt("ASAP")},
+            "Session": {"rich_text": txt("test-session-debug")},
         },
     }
 

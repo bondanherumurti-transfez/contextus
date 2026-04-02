@@ -38,7 +38,7 @@ async def process_sessions(x_cron_secret: str | None = Header(default=None)):
             continue
 
         # Check if this is a waitlist session
-        raw_prefill = redis.get(f"waitlist:{session.session_id}")
+        raw_prefill = await redis.get(f"waitlist:{session.session_id}")
         is_waitlist = raw_prefill is not None
         prefill = json.loads(raw_prefill) if raw_prefill else {}
 
@@ -47,23 +47,31 @@ async def process_sessions(x_cron_secret: str | None = Header(default=None)):
             continue
 
         try:
-            brief = generate_lead_brief(session)
+            brief = await generate_lead_brief(session)
 
             # Look up per-customer Notion DB
-            customer_config = await get_customer_config(session.kb_id) if session.kb_id else None
-            customer_notion_db = customer_config.get("notion_db_id") if customer_config else None
+            customer_config = (
+                await get_customer_config(session.kb_id) if session.kb_id else None
+            )
+            customer_notion_db = (
+                customer_config.get("notion_db_id") if customer_config else None
+            )
 
             notion_data = {
                 **brief.model_dump(),
                 "kb_id": session.kb_id,
                 "is_waitlist": is_waitlist,
                 # Enrich with prefill data for waitlist sessions
-                "email": prefill.get("email") or (brief.contact and brief.contact.get("email")),
-                "phone": prefill.get("phone") or (brief.contact and brief.contact.get("phone")),
+                "email": prefill.get("email")
+                or (brief.contact and brief.contact.get("email")),
+                "phone": prefill.get("phone")
+                or (brief.contact and brief.contact.get("phone")),
                 "website": prefill.get("website"),
             }
 
-            success = await post_lead_brief_to_notion(notion_data, notion_db_id=customer_notion_db)
+            success = await post_lead_brief_to_notion(
+                notion_data, notion_db_id=customer_notion_db
+            )
 
             if success is not False:
                 session.brief_sent = True

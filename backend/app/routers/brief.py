@@ -22,6 +22,6 @@ async def generate_brief(session_id: str):
     if not kb:
         raise HTTPException(status_code=404, detail="Knowledge base not found")
 
-    brief = generate_lead_brief(session)
+    brief = await generate_lead_brief(session)
 
     return brief
