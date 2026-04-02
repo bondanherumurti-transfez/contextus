@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+import logging
 import os
 
 from app.routers import crawl, session, chat, brief, waitlist, jobs
@@ -12,11 +13,20 @@ from app.services.database import init_db
 
 load_dotenv()
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
+    logger.info("[startup] Running init_db...")
+    try:
+        await init_db()
+        logger.info("[startup] init_db complete")
+    except Exception as e:
+        logger.error("[startup] init_db failed: %s — continuing without Neon", e)
     yield
+    logger.info("[shutdown] App shutting down")
 
 
 app = FastAPI(
