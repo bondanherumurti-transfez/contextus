@@ -31,30 +31,36 @@ async def get_pool() -> asyncpg.Pool:
 async def init_db():
     """Create tables if they don't exist. Called on app startup."""
     if not DATABASE_URL:
-        logger.warning("DATABASE_URL not set — skipping Neon init")
+        logger.warning("[db] DATABASE_URL not set — skipping Neon init")
         return
-    pool = await get_pool()
-    async with pool.acquire() as conn:
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS knowledge_bases (
-                kb_id       TEXT PRIMARY KEY,
-                url         TEXT,
-                data        JSONB NOT NULL,
-                created_at  BIGINT NOT NULL,
-                updated_at  BIGINT NOT NULL
-            )
-        """)
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS customer_configs (
-                kb_id           TEXT PRIMARY KEY,
-                url             TEXT,
-                notion_db_id    TEXT,
-                allowed_origins TEXT[],
-                token           TEXT,
-                created_at      BIGINT NOT NULL
-            )
-        """)
-    logger.info("Neon DB tables ready")
+    logger.info("[db] Connecting to Neon...")
+    try:
+        pool = await get_pool()
+        logger.info("[db] Pool created OK")
+        async with pool.acquire() as conn:
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS knowledge_bases (
+                    kb_id       TEXT PRIMARY KEY,
+                    url         TEXT,
+                    data        JSONB NOT NULL,
+                    created_at  BIGINT NOT NULL,
+                    updated_at  BIGINT NOT NULL
+                )
+            """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS customer_configs (
+                    kb_id           TEXT PRIMARY KEY,
+                    url             TEXT,
+                    notion_db_id    TEXT,
+                    allowed_origins TEXT[],
+                    token           TEXT,
+                    created_at      BIGINT NOT NULL
+                )
+            """)
+        logger.info("[db] Neon DB tables ready")
+    except Exception as e:
+        logger.error("[db] Neon init failed: %s", e)
+        raise
 
 
 # ── Knowledge bases ──────────────────────────────────────────────────────────
