@@ -16,10 +16,10 @@
   background: #ffffff;
   -webkit-font-smoothing: antialiased;
   width: 100%;
+  height: 100%;
   max-width: 600px;
   border: 0.5px solid #e0e0e0;
   border-radius: 12px;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -48,15 +48,45 @@
   color: #bbbbbb;
 }
 
+/* ── Message area wrapper (flex child that fills remaining space) ── */
+.ctx-messages-wrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
 /* ── Message area ── */
 .ctx-messages {
+  height: 100%;
   padding: 14px;
   background: #ffffff;
   overflow-y: auto;
-  flex-grow: 1;
-  max-height: 400px;
+  scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: #dddddd transparent;
+}
+
+/* ── Scroll-to-bottom FAB ── */
+.ctx-scroll-fab {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #000000;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
 }
 
 .ctx-messages::-webkit-scrollbar {
@@ -310,10 +340,6 @@
 
 /* ── Responsive ── */
 @media (max-width: 480px) {
-  .ctx-messages {
-    max-height: 50vh;
-  }
-
   .ctx-input {
     font-size: 16px; /* prevents iOS auto-zoom */
   }
