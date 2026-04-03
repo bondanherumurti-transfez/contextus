@@ -1,9 +1,12 @@
+import logging
 from upstash_redis.asyncio import Redis as AsyncRedis
 import os
 from dotenv import load_dotenv
 from app.models import KnowledgeBase, Session
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 redis = AsyncRedis(
     url=os.getenv("UPSTASH_REDIS_REST_URL", ""),
@@ -40,17 +43,30 @@ async def get_knowledge_base(job_id: str) -> KnowledgeBase | None:
 
         kb = await db_get_knowledge_base(job_id)
         if kb:
+            logger.debug(
+                "get_knowledge_base: found in Neon, job_id=%s, status=%s",
+                job_id,
+                kb.status,
+            )
             return kb
     except Exception as e:
-        import logging
+        logger.warning("Neon lookup failed, falling back to Redis: %s", e)
 
-        logging.getLogger(__name__).warning(
-            "Neon lookup failed, falling back to Redis: %s", e
+    try:
+        raw = await redis.get(kb_key(job_id))
+        if raw is None:
+            logger.debug("get_knowledge_base: not found in Redis, job_id=%s", job_id)
+            return None
+        kb = KnowledgeBase.model_validate_json(raw)
+        logger.debug(
+            "get_knowledge_base: found in Redis, job_id=%s, status=%s",
+            job_id,
+            kb.status,
         )
-    raw = await redis.get(kb_key(job_id))
-    if raw is None:
+        return kb
+    except Exception as e:
+        logger.error("get_knowledge_base error for job_id=%s: %s", job_id, e)
         return None
-    return KnowledgeBase.model_validate_json(raw)
 
 
 async def save_session(session_id: str, data: Session, ttl: int = 1800) -> None:
