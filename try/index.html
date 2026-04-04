@@ -776,7 +776,10 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
       if (wrapper) {
         wrapper.classList.add('expanded');
         const iframe = wrapper.querySelector('iframe');
-        if (iframe) iframe.dataset.expanded = '1';
+        if (iframe) {
+          iframe.dataset.expanded = '1';
+          iframe.style.height = '';
+        }
         setTimeout(function() {
           wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 50);
