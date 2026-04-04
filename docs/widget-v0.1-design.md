@@ -106,6 +106,71 @@ if (!state.expanded) {
 
 ---
 
+## Common Implementation Pitfalls
+
+### 1. Iframe height set unconditionally
+
+**Wrong:**
+```css
+#widget-wrapper iframe {
+  height: 480px;  /* PROBLEM: always 480px, clips idle content */
+}
+```
+
+**Correct:**
+```css
+#widget-wrapper iframe {
+  /* no height — auto-sizes to content in idle */
+}
+#widget-wrapper.expanded iframe {
+  height: 480px;  /* only set after expand */
+}
+```
+
+**Why it matters:** During idle phase, the iframe should auto-size to header + pills + input. If CSS sets a fixed height, the wrapper's `max-height: 250px` clips the content, making the widget look stuck even after `data-expanded="1"` is set.
+
+### 2. Inline style.height not cleared on expand
+
+The `contextus:resize` message sets inline `style.height` during idle phase. This inline style has higher specificity than CSS rules, so it blocks the `height: 480px` from taking effect.
+
+**Wrong:**
+```js
+if (e.data.type === 'contextus:expand') {
+  wrapper.classList.add('expanded');
+  iframe.dataset.expanded = '1';
+  // BUG: inline style.height="197px" still present
+}
+```
+
+**Correct:**
+```js
+if (e.data.type === 'contextus:expand') {
+  wrapper.classList.add('expanded');
+  iframe.dataset.expanded = '1';
+  iframe.style.height = '';  // clear inline height so CSS 480px applies
+}
+```
+
+### 3. Missing contextus:expand listener
+
+The widget fires `contextus:expand` on first message, but if the parent page doesn't listen for it, the expand never happens.
+
+**Symptom:** Widget stays at idle height (~180px) even after first message. `data-expanded="1"` may be set but wrapper never gets `expanded` class.
+
+### Real bugs fixed (2026-04-03)
+
+**`/try` page (try/index.html):**
+- CSS had `height: 480px` on iframe unconditionally → fixed to only apply on `.expanded`
+- `contextus:expand` handler didn't clear inline `style.height` → added `iframe.style.height = ''`
+
+**`/join` page (join/index.html):**
+- No wrapper element with max-height animation → added wrapper div
+- Fixed `height: 420px` on iframe → removed, now auto-sizes in idle
+- No `contextus:expand` listener → added full handler
+- Resize handler didn't check expanded state → added `!iframe.dataset.expanded` guard
+
+---
+
 ## CSS Changes Required (widget.css + widget.html)
 
 ### 1. Full-height chain — html → body → root → widget
