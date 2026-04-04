@@ -16,6 +16,10 @@ html.ctx-expanded .ctx-messages-wrap {
   flex: 1;
   min-height: 0;
 }
+html.ctx-expanded .ctx-input-area {
+  padding-top: 10px;
+  border-top: 0.5px solid #e0e0e0;
+}
 
 #contextus-widget {
   color-scheme: light;
