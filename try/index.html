@@ -801,6 +801,7 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     if (e.data.type === 'contextus:expand') {
       const wrapper = document.getElementById('widget-wrapper');
       if (wrapper) {
+        wrapper.style.maxHeight = '';
         wrapper.classList.add('expanded');
         const iframe = wrapper.querySelector('iframe');
         if (iframe) {

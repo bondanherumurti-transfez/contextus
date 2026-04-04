@@ -347,6 +347,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
     if (e.data.type === 'contextus:expand') {
       const frame = document.getElementById('join-widget-frame');
       if (frame) {
+        frame.style.maxHeight = '';
         frame.classList.add('expanded');
         const iframe = frame.querySelector('iframe');
         if (iframe) {
