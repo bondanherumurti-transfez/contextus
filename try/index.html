@@ -278,9 +278,12 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
         </div>
       </div>
       <p class="url-err-msg" id="url-err">Please enter a valid URL — e.g. https://yoursite.com</p>
-      <div id="cf-turnstile" class="cf-turnstile" data-sitekey="0x4AAAAAAC0ov0LoH7wYM2-F" data-callback="onTurnstileSuccess" data-xx-sensitive="true"></div>
       <p class="idle-note fu fd5">No signup required &middot; Works on any website &middot; ~30 seconds</p>
       <p id="wake-banner" style="display:none;font-size:13px;color:#999;margin-top:8px;text-align:center;">⚡ Server warming up — ready in ~30s</p>
+      <div id="turnstile-step" class="fu fd5" style="margin-top:1rem;text-align:center">
+        <p style="font-size:13px;color:var(--g500);margin-bottom:.75rem">Verify you're human to continue</p>
+        <div id="cf-turnstile" class="cf-turnstile" data-sitekey="0x4AAAAAAC0ov0LoH7wYM2-F" data-callback="onTurnstileSuccess"></div>
+      </div>
     </div>
   </div>
 
@@ -515,14 +518,11 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
   let serverReady = false;
   let wakeUpTimer = null;
   let cfToken = '';
-  let submitPending = false;
 
   function onTurnstileSuccess(token) {
     cfToken = token;
-    if (submitPending) {
-      submitPending = false;
-      submitUrl();
-    }
+    const ts = document.getElementById('turnstile-step');
+    if (ts) ts.style.display = 'none';
   }
 
   // ── State machine ──────────────────────────────────────────────────────────
@@ -579,8 +579,8 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     if (!/^https?:\/\//i.test(val)) val = 'https://' + val;
 
     if (!cfToken) {
-      submitPending = true;
-      turnstile.execute('#cf-turnstile');
+      urlErr.textContent = 'Please complete the verification first.';
+      urlErr.classList.add('show');
       return;
     }
 
@@ -621,7 +621,9 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     })
     .finally(() => {
       cfToken = '';
-      turnstile.reset('#cf-turnstile');
+      if (typeof turnstile !== 'undefined') turnstile.reset('#cf-turnstile');
+      const ts = document.getElementById('turnstile-step');
+      if (ts) ts.style.display = 'block';
     });
   }
 
@@ -906,6 +908,7 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     sessionId = null;
     msgCount = 0;
     currentKb = null;
+    cfToken = '';
     document.getElementById('widget-wrapper').innerHTML = '';
     document.getElementById('widget-wrapper').classList.remove('expanded');
     document.getElementById('brief-hint').classList.remove('show');
@@ -915,6 +918,9 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     hideWakeUpBanner();
     resetSteps();
     restoreIdleInputs();
+    const ts = document.getElementById('turnstile-step');
+    if (ts) ts.style.display = 'block';
+    if (typeof turnstile !== 'undefined') turnstile.reset('#cf-turnstile');
     show('idle');
   }
 

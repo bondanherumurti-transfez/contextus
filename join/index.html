@@ -143,7 +143,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
       </div>
 
       <div class="form-footer fu fd3">
-        <div id="cf-turnstile" class="cf-turnstile" data-sitekey="0x4AAAAAAC0ov0LoH7wYM2-F" data-callback="onTurnstileSuccess" data-xx-sensitive="true"></div>
+        <div id="turnstile-step" style="text-align:center">
+          <p style="font-size:13px;color:var(--g500);margin-bottom:.75rem">Verify you're human to continue</p>
+          <div id="cf-turnstile" class="cf-turnstile" data-sitekey="0x4AAAAAAC0ov0LoH7wYM2-F" data-callback="onTurnstileSuccess"></div>
+        </div>
         <button id="j-continue" class="btn-p" onclick="submitForm()">Continue →</button>
         <span class="form-note">no credit card needed</span>
       </div>
@@ -193,14 +196,11 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
   let sessionId = null;
   let submitting = false;
   let cfToken = '';
-  let submitPending = false;
 
   function onTurnstileSuccess(token) {
     cfToken = token;
-    if (submitPending) {
-      submitPending = false;
-      submitForm();
-    }
+    const ts = document.getElementById('turnstile-step');
+    if (ts) ts.style.display = 'none';
   }
 
   // Pre-fill website from URL param
@@ -232,8 +232,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
     errEl.classList.remove('show');
 
     if (!cfToken) {
-      submitPending = true;
-      turnstile.execute('#cf-turnstile');
+      errEl.textContent = 'Please complete the verification first.';
+      errEl.classList.add('show');
       return;
     }
 
@@ -272,7 +272,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
       errEl.classList.add('show');
     } finally {
       cfToken = '';
-      turnstile.reset('#cf-turnstile');
+      if (typeof turnstile !== 'undefined') turnstile.reset('#cf-turnstile');
+      const ts = document.getElementById('turnstile-step');
+      if (ts) ts.style.display = 'block';
     }
   }
 
