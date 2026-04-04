@@ -7,6 +7,16 @@
   box-sizing: border-box;
 }
 
+/* ── Expanded state: full-height chain (activated by JS on first message) ── */
+html.ctx-expanded body { overflow: hidden; }
+html.ctx-expanded #contextus-root { height: 100%; }
+html.ctx-expanded #contextus-widget { height: 100%; }
+html.ctx-expanded .ctx-messages-wrap {
+  display: block;
+  flex: 1;
+  min-height: 0;
+}
+
 #contextus-widget {
   color-scheme: light;
   font-family: 'DM Sans', sans-serif;
@@ -16,7 +26,6 @@
   background: #ffffff;
   -webkit-font-smoothing: antialiased;
   width: 100%;
-  height: 100%;
   max-width: 600px;
   border: 0.5px solid #e0e0e0;
   border-radius: 12px;
@@ -48,10 +57,9 @@
   color: #bbbbbb;
 }
 
-/* ── Message area wrapper (flex child that fills remaining space) ── */
+/* ── Message area wrapper ── */
 .ctx-messages-wrap {
-  flex: 1;
-  min-height: 0;
+  display: none;     /* hidden in idle phase — shown via html.ctx-expanded */
   position: relative;
 }
 

@@ -733,7 +733,7 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
       + '&transparent=0&dynamicHeight=1';
 
     const container = document.getElementById('widget-iframe-container');
-    container.innerHTML = '<iframe src="' + src + '" width="100%" height="500" frameborder="0" scrolling="no" style="border:none;display:block;border-radius:12px" title="' + esc(p.name) + ' assistant"></iframe>';
+    container.innerHTML = '<iframe src="' + src + '" width="100%" frameborder="0" scrolling="no" style="border:none;display:block;border-radius:12px" title="' + esc(p.name) + ' assistant"></iframe>';
 
     show('chat');
   }
@@ -763,7 +763,11 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     }
     if (e.data.type === 'contextus:resize') {
       const iframe = document.querySelector('#widget-iframe-container iframe');
-      if (iframe) iframe.style.height = e.data.height + 'px';
+      if (iframe && !iframe.dataset.expanded) iframe.style.height = e.data.height + 'px';
+    }
+    if (e.data.type === 'contextus:expand') {
+      const iframe = document.querySelector('#widget-iframe-container iframe');
+      if (iframe) { iframe.dataset.expanded = '1'; iframe.style.height = '480px'; }
     }
   });
 

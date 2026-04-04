@@ -330,9 +330,10 @@
       state.phase = 'active';
       state.nudgeSent = false;
 
-      // Two-phase expand: notify parent to grow iframe on first message
+      // Two-phase expand: activate full-height CSS chain + notify parent on first message
       if (!state.expanded) {
         state.expanded = true;
+        document.documentElement.classList.add('ctx-expanded');
         window.parent.postMessage({ type: 'contextus:expand' }, '*');
       }
 
