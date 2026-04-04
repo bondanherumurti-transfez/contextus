@@ -7,6 +7,7 @@
 <title>Try contextus — See it work on your website</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 button{outline:none;-webkit-tap-highlight-color:transparent}
@@ -277,6 +278,7 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
         </div>
       </div>
       <p class="url-err-msg" id="url-err">Please enter a valid URL — e.g. https://yoursite.com</p>
+      <div id="cf-turnstile" class="cf-turnstile" data-sitekey="0x4AAAAAAC0ov0LoH7wYM2-F" data-callback="onTurnstileSuccess" data-size="invisible"></div>
       <p class="idle-note fu fd5">No signup required &middot; Works on any website &middot; ~30 seconds</p>
       <p id="wake-banner" style="display:none;font-size:13px;color:#999;margin-top:8px;text-align:center;">⚡ Server warming up — ready in ~30s</p>
     </div>
@@ -512,6 +514,16 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
   let crawledUrl = '';
   let serverReady = false;
   let wakeUpTimer = null;
+  let cfToken = '';
+  let submitPending = false;
+
+  function onTurnstileSuccess(token) {
+    cfToken = token;
+    if (submitPending) {
+      submitPending = false;
+      submitUrl();
+    }
+  }
 
   // ── State machine ──────────────────────────────────────────────────────────
 
@@ -564,8 +576,13 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
       urlErr.classList.add('show');
       return;
     }
-    // Prepend https:// if no scheme given (e.g. user typed "stripe.com")
     if (!/^https?:\/\//i.test(val)) val = 'https://' + val;
+
+    if (!cfToken) {
+      submitPending = true;
+      turnstile.execute('#cf-turnstile');
+      return;
+    }
 
     const submitBtn = document.getElementById('url-submit');
     submitBtn.classList.add('loading');
@@ -574,10 +591,13 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     fetch(API_URL + '/api/crawl', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: val }),
+      body: JSON.stringify({ url: val, cf_turnstile_response: cfToken }),
     })
     .then(r => {
-      if (r.status === 429) { const e = new Error('rate_limit'); throw e; }
+      if (r.status === 403) {
+        return r.json().then(data => { throw new Error(data.detail || 'forbidden'); });
+      }
+      if (r.status === 429) throw new Error('rate_limit');
       if (!r.ok) throw new Error('crawl_failed');
       return r.json();
     })
@@ -589,12 +609,19 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     .catch(err => {
       submitBtn.classList.remove('loading');
       urlInput.disabled = false;
-      const msg = err.message === 'rate_limit'
-        ? 'Too many requests — please wait an hour before trying again.'
-        : 'Could not start crawl. Please check the URL and try again.';
+      let msg = 'Could not start crawl. Please check the URL and try again.';
+      if (err.message === 'rate_limit') {
+        msg = 'Too many requests — please wait an hour before trying again.';
+      } else if (err.message.includes('Turnstile') || err.message.includes('verification')) {
+        msg = 'Verification failed. Please try again.';
+      }
       const urlErr = document.getElementById('url-err');
       urlErr.textContent = msg;
       urlErr.classList.add('show');
+    })
+    .finally(() => {
+      cfToken = '';
+      turnstile.reset('#cf-turnstile');
     });
   }
 

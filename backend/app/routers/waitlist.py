@@ -2,7 +2,7 @@ import json
 import os
 import time
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from nanoid import generate
 
@@ -10,6 +10,7 @@ from app.services.redis import redis, save_session, get_session, extend_session_
 from app.models import Session
 from app.services.notion import post_waitlist_to_notion
 from app.services.llm import extract_waitlist_context
+from app.services.turnstile import verify_turnstile
 
 router = APIRouter(tags=["waitlist"])
 
@@ -19,6 +20,7 @@ class WaitlistStartRequest(BaseModel):
     email: str
     website: str
     phone: str | None = None
+    cf_turnstile_response: str | None = None
 
 
 class WaitlistSubmitRequest(BaseModel):
@@ -26,7 +28,12 @@ class WaitlistSubmitRequest(BaseModel):
 
 
 @router.post("/waitlist/start")
-async def waitlist_start(body: WaitlistStartRequest):
+async def waitlist_start(request: Request, body: WaitlistStartRequest):
+    client_ip = request.client.host if request.client else ""
+
+    if not await verify_turnstile(body.cf_turnstile_response or "", client_ip):
+        raise HTTPException(status_code=403, detail="Turnstile verification failed")
+
     session_id = generate(size=10)
 
     session = Session(

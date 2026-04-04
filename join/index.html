@@ -7,6 +7,7 @@
 <title>Join the waitlist — contextus</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 button{outline:none;-webkit-tap-highlight-color:transparent}
@@ -142,6 +143,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
       </div>
 
       <div class="form-footer fu fd3">
+        <div id="cf-turnstile" class="cf-turnstile" data-sitekey="0x4AAAAAAC0ov0LoH7wYM2-F" data-callback="onTurnstileSuccess" data-size="invisible"></div>
         <button id="j-continue" class="btn-p" onclick="submitForm()">Continue →</button>
         <span class="form-note">no credit card needed</span>
       </div>
@@ -190,6 +192,16 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
 
   let sessionId = null;
   let submitting = false;
+  let cfToken = '';
+  let submitPending = false;
+
+  function onTurnstileSuccess(token) {
+    cfToken = token;
+    if (submitPending) {
+      submitPending = false;
+      submitForm();
+    }
+  }
 
   // Pre-fill website from URL param
   (function () {
@@ -210,7 +222,6 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
     const errEl   = document.getElementById('form-err');
     const btn     = document.getElementById('j-continue');
 
-    // Validate
     if (!name || !email || !website) {
       errEl.classList.add('show');
       if (!name)    document.getElementById('j-name').classList.add('err');
@@ -220,6 +231,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
     }
     errEl.classList.remove('show');
 
+    if (!cfToken) {
+      submitPending = true;
+      turnstile.execute('#cf-turnstile');
+      return;
+    }
+
     btn.classList.add('loading');
     btn.disabled = true;
 
@@ -227,10 +244,15 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
       const res = await fetch(API_URL + '/api/waitlist/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, website, phone: phone || null }),
+        body: JSON.stringify({ name, email, website, phone: phone || null, cf_turnstile_response: cfToken }),
       });
 
+      if (res.status === 403) {
+        const data = await res.json();
+        throw new Error(data.detail || 'forbidden');
+      }
       if (!res.ok) throw new Error('start failed');
+      
       const data = await res.json();
       sessionId = data.session_id;
 
@@ -244,8 +266,13 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
     } catch (e) {
       btn.classList.remove('loading');
       btn.disabled = false;
-      errEl.textContent = 'Something went wrong. Please try again.';
+      errEl.textContent = e.message.includes('Turnstile') || e.message.includes('verification')
+        ? 'Verification failed. Please try again.'
+        : 'Something went wrong. Please try again.';
       errEl.classList.add('show');
+    } finally {
+      cfToken = '';
+      turnstile.reset('#cf-turnstile');
     }
   }
 
