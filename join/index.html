@@ -122,7 +122,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
       <h1 class="page-h1 fu fd2">Let's get you set up.</h1>
       <p class="page-sub fu fd3">We'll reach out when your slot is ready — usually within a day or two.</p>
 
-      <div class="join-form fu fd3">
+      <div id="turnstile-step" class="fu fd3" style="text-align:center;margin-top:.5rem">
+        <p style="font-size:14px;color:var(--g600);margin-bottom:1rem">Verify you're human to continue</p>
+        <div id="cf-turnstile" class="cf-turnstile" data-sitekey="0x4AAAAAAC0ov0LoH7wYM2-F" data-callback="onTurnstileSuccess"></div>
+      </div>
+
+      <div id="join-form" class="fu fd3" style="display:none">
         <div class="field">
           <label for="j-name">Your name</label>
           <input id="j-name" type="text" placeholder="Jane Smith" autocomplete="name">
@@ -140,15 +145,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
           <input id="j-phone" type="tel" placeholder="+62 812 3456 7890" autocomplete="tel">
         </div>
         <p id="form-err" class="form-err">Please fill in your name, email, and website.</p>
-      </div>
-
-      <div class="form-footer fu fd3">
-        <div id="turnstile-step" style="text-align:center">
-          <p style="font-size:13px;color:var(--g500);margin-bottom:.75rem">Verify you're human to continue</p>
-          <div id="cf-turnstile" class="cf-turnstile" data-sitekey="0x4AAAAAAC0ov0LoH7wYM2-F" data-callback="onTurnstileSuccess"></div>
+        <div class="form-footer">
+          <button id="j-continue" class="btn-p" onclick="submitForm()">Continue →</button>
+          <span class="form-note">no credit card needed</span>
         </div>
-        <button id="j-continue" class="btn-p" onclick="submitForm()">Continue →</button>
-        <span class="form-note">no credit card needed</span>
       </div>
     </div>
 
@@ -200,7 +200,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
   function onTurnstileSuccess(token) {
     cfToken = token;
     const ts = document.getElementById('turnstile-step');
+    const jf = document.getElementById('join-form');
     if (ts) ts.style.display = 'none';
+    if (jf) jf.style.display = 'block';
   }
 
   // Pre-fill website from URL param
@@ -274,7 +276,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
       cfToken = '';
       if (typeof turnstile !== 'undefined') turnstile.reset('#cf-turnstile');
       const ts = document.getElementById('turnstile-step');
+      const jf = document.getElementById('join-form');
       if (ts) ts.style.display = 'block';
+      if (jf) jf.style.display = 'none';
     }
   }
 

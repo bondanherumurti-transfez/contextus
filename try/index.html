@@ -267,8 +267,14 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     <p class="eyebrow fu">Live demo</p>
     <h1 class="page-h1 fu fd1">See it work on<br>your website.</h1>
     <p class="page-sub fu fd2">Paste your URL — contextus crawls your site, builds a knowledge base, and shows you a live AI assistant in ~30 seconds.</p>
-    <p class="page-sub-id fu fd3">Tempel URL Anda — contextus membangun asisten AI untuk bisnis Anda dalam ~30 detik.</p>
-    <div class="fu fd4">
+    <p class="page-sub-id fu fd3">Tempel URL anda — contextus membangun asisten AI untuk bisnis Anda dalam ~30 detik.</p>
+    
+    <div id="turnstile-step" class="fu fd4" style="text-align:center;margin-top:.5rem">
+      <p style="font-size:14px;color:var(--g600);margin-bottom:1rem">Verify you're human to continue</p>
+      <div id="cf-turnstile" class="cf-turnstile" data-sitekey="0x4AAAAAAC0ov0LoH7wYM2-F" data-callback="onTurnstileSuccess"></div>
+    </div>
+    
+    <div id="url-form" class="fu fd4" style="display:none">
       <div class="url-wrap" id="url-wrap">
         <div class="url-row">
           <input type="url" id="url-input" placeholder="https://your-site.com" autocomplete="off" spellcheck="false">
@@ -276,6 +282,11 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
             <svg viewBox="0 0 24 24"><path d="M5.694 12 2.299 3.272c-.236-.607.356-1.188.942-.982l.093.04 18 9a.75.75 0 0 1 .097 1.283l-.097.058-18 9c-.619.31-1.263-.277-1.035-.916l.035-.084L5.694 12 2.3 3.272 5.694 12ZM4.402 4.54l2.61 6.71h6.627a.75.75 0 0 1 .102 1.493l-.102.007H7.01l-2.609 6.71L19.322 12 4.401 4.54Z"/></svg>
           </button>
         </div>
+      </div>
+      <p class="url-err-msg" id="url-err">Please enter a valid URL — e.g. https://yoursite.com</p>
+      <p class="idle-note">No signup required &middot; Works on any website &middot; ~30 seconds</p>
+      <p id="wake-banner" style="display:none;font-size:13px;color:#999;margin-top:8px;text-align:center;">⚡ Server warming up — ready in ~30s</p>
+    </div>
       </div>
       <p class="url-err-msg" id="url-err">Please enter a valid URL — e.g. https://yoursite.com</p>
       <p class="idle-note fu fd5">No signup required &middot; Works on any website &middot; ~30 seconds</p>
@@ -522,7 +533,9 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
   function onTurnstileSuccess(token) {
     cfToken = token;
     const ts = document.getElementById('turnstile-step');
+    const uf = document.getElementById('url-form');
     if (ts) ts.style.display = 'none';
+    if (uf) uf.style.display = 'block';
   }
 
   // ── State machine ──────────────────────────────────────────────────────────
@@ -539,29 +552,18 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
 
   // ── State 1: Idle ──────────────────────────────────────────────────────────
 
-  const idleInputContainer = document.getElementById('s-idle').querySelector('.fu.fd4');
-  const idleInputHTML = idleInputContainer.innerHTML;
-
   function bindIdleInputs() {
     const urlInput = document.getElementById('url-input');
     const urlWrap  = document.getElementById('url-wrap');
     const urlErr   = document.getElementById('url-err');
-    document.getElementById('url-submit').addEventListener('click', submitUrl);
+    const submitBtn = document.getElementById('url-submit');
+    if (!submitBtn) return;
+    submitBtn.addEventListener('click', submitUrl);
     urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitUrl(); });
     urlInput.addEventListener('input', () => {
       urlWrap.classList.remove('err');
       urlErr.classList.remove('show');
     });
-  }
-
-  function removeIdleInputs() {
-    const c = document.getElementById('s-idle').querySelector('.fu.fd4');
-    if (c) c.innerHTML = '';
-  }
-
-  function restoreIdleInputs() {
-    const c = document.getElementById('s-idle').querySelector('.fu.fd4');
-    if (c) { c.innerHTML = idleInputHTML; bindIdleInputs(); }
   }
 
   bindIdleInputs();
@@ -603,7 +605,6 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     })
     .then(data => {
       jobId = data.job_id;
-      removeIdleInputs();
       startCrawl(val);
     })
     .catch(err => {
@@ -623,7 +624,9 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
       cfToken = '';
       if (typeof turnstile !== 'undefined') turnstile.reset('#cf-turnstile');
       const ts = document.getElementById('turnstile-step');
+      const uf = document.getElementById('url-form');
       if (ts) ts.style.display = 'block';
+      if (uf) uf.style.display = 'none';
     });
   }
 
@@ -917,10 +920,12 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     document.getElementById('crawl-error').style.display = 'none';
     hideWakeUpBanner();
     resetSteps();
-    restoreIdleInputs();
     const ts = document.getElementById('turnstile-step');
+    const uf = document.getElementById('url-form');
     if (ts) ts.style.display = 'block';
+    if (uf) uf.style.display = 'none';
     if (typeof turnstile !== 'undefined') turnstile.reset('#cf-turnstile');
+    bindIdleInputs();
     show('idle');
   }
 
