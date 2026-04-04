@@ -335,6 +335,16 @@
         state.expanded = true;
         document.documentElement.classList.add('ctx-expanded');
         window.parent.postMessage({ type: 'contextus:expand' }, '*');
+        // scrollToBottom() called below runs before the parent resizes the iframe,
+        // so msgArea has no height yet. ResizeObserver fires once the iframe is
+        // expanded and msgArea reaches its real height, then scrolls to bottom.
+        const obs = new ResizeObserver(function() {
+          if (msgArea.clientHeight > 50) {
+            scrollToBottom(true);
+            obs.disconnect();
+          }
+        });
+        obs.observe(msgArea);
       }
 
       // Prepend greeting on first message
