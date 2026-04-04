@@ -494,6 +494,505 @@ pill click:  → message sent → DISABLED (bypasses ACTIVE)</div>
   <p class="muted">Implementation details are subject to change. This spec defines the design contract — visual appearance and behavior — not the final technical API.</p>
 </div>
 
+<!-- ══════════════════════════════════════ -->
+<!-- 07. WIDGET v0.1 — LAYOUT FIX & MOCKUP -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="v01">
+  <div class="section-label">07</div>
+  <h2>Widget v0.1 — Fixed layout (inline embed fix)</h2>
+  <p>When embedded inline in a customer website at a fixed height, the current widget scrolls as one block — header and input disappear as conversation grows. v0.1 fixes this with a three-zone fixed layout and auto-scroll to bottom.</p>
+
+  <h3>Three-zone model</h3>
+  <div class="code-block">┌─────────────────────────────────┐  ← iframe boundary (fixed height)
+│  ctx-header    (fixed, ~42px)   │  flex-shrink: 0
+├─────────────────────────────────┤
+│                                 │
+│  ctx-messages  (scrollable)     │  flex: 1 + min-height: 0
+│                                 │  overflow-y: auto
+│  new messages push to bottom ↓  │  scrollTo(scrollHeight) on each message
+│                                 │
+├─────────────────────────────────┤
+│  ctx-input-area (fixed, ~70px)  │  flex-shrink: 0
+└─────────────────────────────────┘</div>
+
+  <h3>CSS changes required</h3>
+  <div class="code-block"><span style="color:#888">/* widget.html — height chain */</span>
+html, body  { height: 100%; overflow: hidden; }
+#contextus-root { width: 100%; height: 100%; }  <span style="color:#888">/* was missing */</span>
+
+<span style="color:#888">/* widget.css — widget fills root */</span>
+#contextus-widget {
+  height: 100%;           <span style="color:#888">/* was sizing to content */</span>
+  <span style="color:#a32d2d;text-decoration:line-through">overflow: hidden;</span>      <span style="color:#888">/* remove */</span>
+  display: flex;
+  flex-direction: column;
+}
+
+<span style="color:#888">/* widget.css — messages fill remaining space */</span>
+.ctx-messages {
+  flex: 1;                <span style="color:#888">/* fills all space between header + input */</span>
+  min-height: 0;          <span style="color:#888">/* CRITICAL — without this, flex child won't scroll */</span>
+  overflow-y: auto;
+  <span style="color:#a32d2d;text-decoration:line-through">max-height: 400px;</span>     <span style="color:#888">/* remove */</span>
+  scroll-behavior: smooth;
+}
+
+<span style="color:#888">/* widget.css — remove mobile override */</span>
+<span style="color:#a32d2d;text-decoration:line-through">@media (max-width: 480px) { .ctx-messages { max-height: 50vh; } }</span>
+
+<span style="color:#888">/* widget.js — scroll helpers */</span>
+function scrollToBottom(instant) {
+  messagesEl.scrollTo({ top: messagesEl.scrollHeight,
+    behavior: instant ? 'instant' : 'smooth' });
+}
+function isNearBottom() {
+  return messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight &lt; 80;
+}</div>
+
+  <h3>Scroll behaviour spec</h3>
+  <table class="spec-table">
+    <tr><th>TRIGGER</th><th>BEHAVIOUR</th><th>CALL</th></tr>
+    <tr><td>Initial load / greeting</td><td>Snap to bottom immediately</td><td><code>scrollToBottom(instant)</code></td></tr>
+    <tr><td>Visitor sends message</td><td>Always snap — never leave visitor staring at old message</td><td><code>scrollToBottom(instant)</code></td></tr>
+    <tr><td>Typing dots appear</td><td>Snap so dots are visible</td><td><code>scrollToBottom(instant)</code></td></tr>
+    <tr><td>Each streaming token</td><td>Only scroll if user is within 80px of bottom — respects user scrolling up to re-read</td><td><code>if (isNearBottom()) scrollToBottom()</code></td></tr>
+    <tr><td>Stream ends</td><td>Final unconditional snap</td><td><code>scrollToBottom(instant)</code></td></tr>
+    <tr><td>User scrolled up</td><td>Show ↓ FAB button sticky inside message zone. Click snaps to bottom.</td><td>listen <code>scroll</code>, toggle FAB visibility</td></tr>
+  </table>
+
+  <h3>Live mockup</h3>
+  <p>Two side-by-side states showing the fixed layout in action inside a 520px container.</p>
+
+  <style>
+    .v01-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 380px)); gap: 32px; margin: 1.25rem 0; }
+    .v01-label { font-family: 'DM Mono', monospace; font-size: 11px; color: #aaa; margin-bottom: 6px; letter-spacing: 0.04em; }
+    .v01-frame { width: 100%; height: 480px; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 16px rgba(0,0,0,0.09); }
+    .v01-widget { width: 100%; height: 100%; display: flex; flex-direction: column; background: #fff; font-family: 'DM Sans', sans-serif; font-size: 15px; color: #222; -webkit-font-smoothing: antialiased; }
+    .v01-header { display: flex; align-items: center; gap: 6px; padding: 10px 14px; border-bottom: 0.5px solid #e0e0e0; background: #fff; flex-shrink: 0; }
+    .v01-av { width: 24px; height: 24px; border-radius: 6px; background: #000; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; font-weight: 600; flex-shrink: 0; }
+    .v01-hname { font-size: 13px; font-weight: 500; color: #000; }
+    .v01-dot { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; margin-left: 1px; }
+    .v01-powered { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 10px; color: #bbb; }
+    .v01-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 14px; scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: #ddd transparent; position: relative; }
+    .v01-messages::-webkit-scrollbar { width: 3px; }
+    .v01-messages::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+    .v01-msg { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 10px; }
+    .v01-msg.vis { justify-content: flex-end; }
+    .v01-bbl { max-width: 80%; font-size: 13px; line-height: 1.55; color: #222; padding: 2px 0; }
+    .v01-bbl p { margin: 0 0 0.5em; } .v01-bbl p:last-child { margin-bottom: 0; }
+    .v01-vbbl { max-width: 80%; font-size: 13px; line-height: 1.55; background: #111; color: #fff; padding: 8px 13px; border-radius: 12px; border-bottom-right-radius: 3px; }
+    .v01-dots { display: flex; gap: 3px; padding: 6px 0; }
+    .v01-dots span { width: 5px; height: 5px; background: #bbb; border-radius: 50%; animation: vdp 1.2s infinite; }
+    .v01-dots span:nth-child(2) { animation-delay: 0.2s; } .v01-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes vdp { 0%,60%,100% { opacity: 0.3; transform: scale(0.85); } 30% { opacity: 1; transform: scale(1); } }
+    .v01-fab { position: sticky; bottom: 4px; display: flex; justify-content: flex-end; pointer-events: none; }
+    .v01-fab button { pointer-events: all; width: 28px; height: 28px; border-radius: 50%; border: 0.5px solid #e0e0e0; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.12); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s; }
+    .v01-input-area { padding: 10px 14px 14px; background: #fff; border-top: 0.5px solid #e0e0e0; flex-shrink: 0; }
+    .v01-input-wrap { background: #f0f0f0; border: 0.5px solid #e0e0e0; border-radius: 16px; padding: 10px 10px 10px 16px; display: flex; align-items: center; gap: 10px; }
+    .v01-input { flex: 1; border: none; background: transparent; font-size: 14px; font-family: 'DM Sans', sans-serif; color: #000; outline: none; min-width: 0; }
+    .v01-input::placeholder { color: #bbb; }
+    .v01-send { width: 32px; height: 32px; border: none; border-radius: 8px; background: #000; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; }
+    .v01-send.off { background: #e0e0e0; cursor: not-allowed; }
+    .v01-send svg { width: 15px; height: 15px; fill: #fff; }
+    .v01-send.off svg { fill: #bbb; }
+  </style>
+
+  <div class="v01-grid">
+
+    <!-- Mockup A: mid conversation -->
+    <div>
+      <div class="v01-label">mid conversation — header + input stay fixed</div>
+      <div class="v01-frame">
+        <div class="v01-widget">
+          <div class="v01-header">
+            <div class="v01-av">C</div>
+            <span class="v01-hname">contextus</span>
+            <span class="v01-dot"></span>
+            <span class="v01-powered">powered by contextus</span>
+          </div>
+          <div class="v01-messages" id="vm1">
+            <div class="v01-msg"><div class="v01-av">C</div><div class="v01-bbl"><p>Hi! How can I help you today?</p></div></div>
+            <div class="v01-msg vis"><div class="v01-vbbl">halo</div></div>
+            <div class="v01-msg"><div class="v01-av">C</div><div class="v01-bbl"><p>Hello! How can I assist you? By the way, who am I speaking with?</p></div></div>
+            <div class="v01-msg vis"><div class="v01-vbbl">nama saya bondan</div></div>
+            <div class="v01-msg"><div class="v01-av">C</div><div class="v01-bbl"><p>Nice to meet you, Bondan! What brings you here today?</p></div></div>
+            <div class="v01-msg vis"><div class="v01-vbbl">saya cari solusi lapor pajak</div></div>
+            <div class="v01-msg"><div class="v01-av">C</div><div class="v01-bbl"><p>Great! We offer efficient tax reporting services. What kind of business do you run?</p></div></div>
+            <div class="v01-msg vis"><div class="v01-vbbl">saya punya bisnis rumah makan</div></div>
+            <div class="v01-msg"><div class="v01-av">C</div><div class="v01-bbl"><p>Thanks Bondan! We support F&B businesses with tax reporting. What challenges are you facing?</p></div></div>
+            <div class="v01-fab">
+              <button id="vfab1" onclick="vSnap('vm1')" title="Jump to latest">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#555" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,6 8,10 12,6"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="v01-input-area">
+            <div class="v01-input-wrap">
+              <input class="v01-input" type="text" placeholder="Start a new conversation..." />
+              <button class="v01-send"><svg viewBox="0 0 16 16"><path d="M2 8L14 2L10 8L14 14L2 8Z"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mockup B: agent typing -->
+    <div>
+      <div class="v01-label">agent typing — dots auto-scroll into view</div>
+      <div class="v01-frame">
+        <div class="v01-widget">
+          <div class="v01-header">
+            <div class="v01-av">F</div>
+            <span class="v01-hname">finfloo</span>
+            <span class="v01-dot"></span>
+            <span class="v01-powered">powered by contextus</span>
+          </div>
+          <div class="v01-messages" id="vm2">
+            <div class="v01-msg"><div class="v01-av">F</div><div class="v01-bbl"><p>Hi! I'm here to help with your accounting needs. What can I do for you?</p></div></div>
+            <div class="v01-msg vis"><div class="v01-vbbl">saya mau tanya soal laporan keuangan</div></div>
+            <div class="v01-msg"><div class="v01-av">F</div><div class="v01-bbl"><p>Tentu! Kami bisa bantu laporan keuangan usaha Anda. Who am I speaking with?</p></div></div>
+            <div class="v01-msg vis"><div class="v01-vbbl">andi, saya punya toko online</div></div>
+            <div class="v01-msg"><div class="v01-av">F</div><div class="v01-bbl"><p>Senang berkenalan, Andi! Untuk toko online, arus kas dan rekonsiliasi penjualan paling penting. Apa tantangan terbesar kamu saat ini?</p></div></div>
+            <div class="v01-msg vis"><div class="v01-vbbl">saya bingung rekonsiliasi marketplace</div></div>
+            <div class="v01-msg"><div class="v01-av">F</div><div class="v01-bbl"><div class="v01-dots"><span></span><span></span><span></span></div></div></div>
+            <div class="v01-fab">
+              <button id="vfab2" style="opacity:0;pointer-events:none">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#555" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,6 8,10 12,6"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="v01-input-area">
+            <div class="v01-input-wrap">
+              <input class="v01-input" type="text" placeholder="Start a new conversation..." disabled />
+              <button class="v01-send off"><svg viewBox="0 0 16 16"><path d="M2 8L14 2L10 8L14 14L2 8Z"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function vSnap(id) {
+      var el = document.getElementById(id);
+      if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'instant' });
+    }
+    function vNearBottom(el) {
+      return el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    }
+    var vm1 = document.getElementById('vm1');
+    var vf1 = document.getElementById('vfab1');
+    if (vm1 && vf1) {
+      setTimeout(function() { vm1.scrollTop = vm1.scrollHeight; }, 60);
+      vf1.style.opacity = '0'; vf1.style.pointerEvents = 'none';
+      vm1.addEventListener('scroll', function() {
+        var near = vNearBottom(vm1);
+        vf1.style.opacity = near ? '0' : '1';
+        vf1.style.pointerEvents = near ? 'none' : 'all';
+      });
+    }
+    var vm2 = document.getElementById('vm2');
+    if (vm2) setTimeout(function() { vm2.scrollTop = vm2.scrollHeight; }, 60);
+  </script>
+
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- 08. TWO-PHASE EMBED -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="two-phase">
+  <div class="section-label">08</div>
+  <h2>Two-phase embed (compact → expanded)</h2>
+  <p>A fixed 520px iframe shows a large empty box before any conversation starts. Instead, the widget loads compact (~180px) showing only the header, pills, and input. On first message send, it expands to full height (~480px) via <code>postMessage</code> to the parent page.</p>
+
+  <h3>How it works</h3>
+  <div class="code-block">Phase 1 — idle (auto height)
+  iframe loads → widget renders header + pills + input only
+  No empty message space. Looks intentional.
+
+Phase 2 — conversation (480px)
+  Visitor sends first message →
+  widget.js fires: window.parent.postMessage({ type: 'contextus:expand' }, '*')
+  Parent script receives it → adds .expanded class to wrapper
+  CSS transition: max-height 0.35s ease → smooth animation
+  scrollIntoView ensures input stays visible</div>
+
+  <h3>Embed snippet (paste both)</h3>
+  <div class="code-block">&lt;style&gt;
+  #contextus-wrapper {
+    max-width: 600px;
+    max-height: 250px;
+    border-radius: 12px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.09);
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+  }
+  #contextus-wrapper.expanded { max-height: 520px; }
+  #contextus-iframe {
+    border: none; display: block; width: 100%; height: 480px;
+  }
+&lt;/style&gt;
+
+&lt;div id="contextus-container"&gt;
+  &lt;div id="contextus-wrapper"&gt;
+    &lt;iframe id="contextus-iframe"
+      src="https://getcontextus.dev/widget/widget.html?knowledgeBaseId=YOUR_KB_ID&amp;apiUrl=https://contextus-2d16.onrender.com"
+      frameborder="0"
+    &gt;&lt;/iframe&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+  window.addEventListener('message', function(e) {
+    if (e.data.type === 'contextus:expand') {
+      var wrapper = document.getElementById('contextus-wrapper');
+      if (wrapper) {
+        wrapper.classList.add('expanded');
+        setTimeout(function() {
+          wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50);
+      }
+    }
+  });
+&lt;/script&gt;</div>
+
+  <table class="spec-table">
+    <tr><th>PROPERTY</th><th>VALUE</th><th>NOTE</th></tr>
+    <tr><td>Idle height</td><td>auto</td><td>Sizes to content — header + pills + input. Pills may wrap to multiple lines so no fixed height is set.</td></tr>
+    <tr><td>Expanded height</td><td>480px</td><td>Customer can adjust — 420–560px works well</td></tr>
+    <tr><td>Transition</td><td>0.35s ease</td><td>Uses max-height technique — customer can adjust timing</td></tr>
+    <tr><td>Expand trigger</td><td>First message sent</td><td>Fires once, never collapses back</td></tr>
+    <tr><td>postMessage type</td><td><code>contextus:expand</code></td><td>Already implemented in widget.js</td></tr>
+  </table>
+
+  <h3>Live demo</h3>
+  <p>Click "Send" (or press Enter) to trigger the expand. The iframe controller script is simulated inline.</p>
+
+  <style>
+    .phase-demo { margin: 1.25rem 0; }
+    .phase-demo-frame-wrapper {
+      max-width: 420px;
+      max-height: 250px;
+      border-radius: 12px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.09);
+      overflow: hidden;
+      transition: max-height 0.35s ease;
+    }
+    .phase-demo-frame-wrapper.expanded {
+      max-height: 520px;
+    }
+    .phase-demo-frame {
+      width: 100%;
+    }
+    .phase-demo-frame-wrapper.expanded .phase-demo-frame {
+      height: 480px;
+    }
+    .pd-widget {
+      width: 100%;
+      height: 100%;        /* fills frame when expanded; auto-sizes in idle */
+      display: flex; flex-direction: column;
+      background: #fff;
+      font-family: 'DM Sans', sans-serif; font-size: 15px; color: #222;
+      -webkit-font-smoothing: antialiased;
+    }
+    .pd-header {
+      display: flex; align-items: center; gap: 6px;
+      padding: 10px 14px; border-bottom: 0.5px solid #e0e0e0;
+      background: #fff; flex-shrink: 0;
+    }
+    .pd-av {
+      width: 24px; height: 24px; border-radius: 6px; background: #000;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; color: #fff; font-weight: 600; flex-shrink: 0;
+    }
+    .pd-hname { font-size: 13px; font-weight: 500; color: #000; }
+    .pd-status { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; margin-left:1px; }
+    .pd-powered { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 10px; color: #bbb; }
+    .pd-messages {
+      flex: 1;
+      min-height: 0;        /* critical — allows flex child to shrink + scroll */
+      overflow-y: auto;
+      padding: 14px;
+      scroll-behavior: smooth;
+      display: none;
+    }
+    .pd-msg { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 10px; }
+    .pd-msg.vis { justify-content: flex-end; }
+    .pd-bbl { max-width: 80%; font-size: 13px; line-height: 1.55; padding: 2px 0; }
+    .pd-bbl p { margin: 0 0 0.5em; } .pd-bbl p:last-child { margin-bottom: 0; }
+    .pd-vbbl { max-width: 80%; font-size: 13px; background: #111; color: #fff; padding: 8px 13px; border-radius: 12px; border-bottom-right-radius: 3px; }
+    .pd-dots { display: flex; gap: 3px; padding: 6px 0; }
+    .pd-dots span { width: 5px; height: 5px; background: #bbb; border-radius: 50%; animation: pdd 1.2s infinite; }
+    .pd-dots span:nth-child(2) { animation-delay: 0.2s; } .pd-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pdd { 0%,60%,100%{opacity:.3;transform:scale(.85);} 30%{opacity:1;transform:scale(1);} }
+    .pd-input-area { padding: 10px 14px 14px; background: #fff; border-top: 0.5px solid #e0e0e0; flex-shrink: 0; }
+    .pd-input-wrap { background: #f0f0f0; border: 0.5px solid #e0e0e0; border-radius: 16px; padding: 10px 10px 10px 16px; display: flex; align-items: center; gap: 10px; }
+    .pd-input { flex: 1; border: none; background: transparent; font-size: 14px; font-family: 'DM Sans', sans-serif; color: #000; outline: none; min-width: 0; }
+    .pd-input::placeholder { color: #bbb; }
+    .pd-send { width: 32px; height: 32px; border: none; border-radius: 8px; background: #e0e0e0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: default; }
+    .pd-send.active { background: #000; cursor: pointer; }
+    .pd-send svg { width: 15px; height: 15px; fill: #999; }
+    .pd-send.active svg { fill: #fff; }
+    .pd-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    .pd-pill { font-size: 11px; color: #666; padding: 5px 11px; border: 0.5px solid #e0e0e0; border-radius: 14px; background: #fff; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+    .pd-pill:hover { background: #f0f0f0; color: #000; }
+    .phase-indicator {
+      margin-top: 10px; font-family: 'DM Mono', monospace; font-size: 11px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .phase-badge {
+      padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 500;
+      letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    .phase-badge.idle { background: #f0f0f0; color: #888; }
+    .phase-badge.expanded { background: #e1f5ee; color: #0f6e56; }
+    .phase-note { color: #aaa; font-size: 10px; }
+  </style>
+
+  <div class="phase-demo">
+    <div class="phase-demo-frame-wrapper" id="pd-frame">
+      <div class="phase-demo-frame">
+        <div class="pd-widget">
+        <div class="pd-header">
+          <div class="pd-av">C</div>
+          <span class="pd-hname">contextus</span>
+          <span class="pd-status"></span>
+          <span class="pd-powered">powered by contextus</span>
+        </div>
+        <div class="pd-messages" id="pd-messages"></div>
+        <div class="pd-input-area">
+          <div class="pd-input-wrap">
+            <input class="pd-input" id="pd-input" type="text" placeholder="Ask us anything..." />
+            <button class="pd-send" id="pd-send">
+              <svg viewBox="0 0 16 16"><path d="M2 8L14 2L10 8L14 14L2 8Z"/></svg>
+            </button>
+          </div>
+          <div class="pd-pills" id="pd-pills">
+            <div class="pd-pill" onclick="pdSend('How can contextus help me?')">How can contextus help?</div>
+            <div class="pd-pill" onclick="pdSend('What does it cost?')">Pricing</div>
+            <div class="pd-pill" onclick="pdSend('How do I embed this?')">How to embed?</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+    <div class="phase-indicator">
+      <span class="phase-badge idle" id="pd-badge">PHASE 1 — IDLE</span>
+      <span class="phase-note" id="pd-note">180px — compact, no empty space</span>
+    </div>
+  </div>
+
+  <script>
+    var pdExpanded = false;
+    var pdInput = document.getElementById('pd-input');
+    var pdSendBtn = document.getElementById('pd-send');
+    var pdPills = document.getElementById('pd-pills');
+    var pdMessages = document.getElementById('pd-messages');
+    var pdFrame = document.getElementById('pd-frame');
+    var pdBadge = document.getElementById('pd-badge');
+    var pdNote = document.getElementById('pd-note');
+
+    pdInput.addEventListener('input', function() {
+      if (pdInput.value.trim()) {
+        pdSendBtn.className = 'pd-send active';
+      } else {
+        pdSendBtn.className = 'pd-send';
+      }
+    });
+
+    pdInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && pdInput.value.trim()) {
+        e.preventDefault();
+        pdSend(pdInput.value);
+      }
+    });
+
+    pdSendBtn.addEventListener('click', function() {
+      if (pdInput.value.trim()) pdSend(pdInput.value);
+    });
+
+    function pdSend(text) {
+      if (!text || !text.trim()) return;
+      var msg = text.trim();
+      pdInput.value = '';
+      pdSendBtn.className = 'pd-send';
+      pdPills.style.display = 'none';
+
+      // Simulate contextus:expand postMessage on first message
+      if (!pdExpanded) {
+        pdExpanded = true;
+        // This is what the parent script does when it receives contextus:expand
+        pdFrame.classList.add('expanded');
+        pdMessages.style.display = 'block';
+        pdBadge.className = 'phase-badge expanded';
+        pdBadge.textContent = 'PHASE 2 — EXPANDED';
+        pdNote.textContent = '480px — full conversation height';
+        // Scroll input into view after expand starts
+        setTimeout(function() {
+          pdInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50);
+      }
+
+      // Add greeting on first message
+      if (!pdMessages.children.length) {
+        pdAddMsg('agent', 'Hi! How can I help you today?');
+      }
+
+      pdAddMsg('visitor', msg);
+      pdAddThinking();
+
+      setTimeout(function() {
+        pdRemoveThinking();
+        pdAddMsg('agent', 'Thanks for reaching out! contextus is an AI chat widget that turns website visitors into qualified leads for your business.');
+        pdMessages.scrollTop = pdMessages.scrollHeight;
+      }, 1500);
+    }
+
+    function pdAddMsg(role, text) {
+      var row = document.createElement('div');
+      row.className = 'pd-msg' + (role === 'visitor' ? ' vis' : '');
+      if (role === 'agent') {
+        var av = document.createElement('div');
+        av.className = 'pd-av'; av.textContent = 'C';
+        row.appendChild(av);
+      }
+      var bbl = document.createElement('div');
+      if (role === 'agent') {
+        bbl.className = 'pd-bbl';
+        bbl.innerHTML = '<p>' + text + '</p>';
+      } else {
+        bbl.className = 'pd-vbbl';
+        bbl.textContent = text;
+      }
+      row.appendChild(bbl);
+      pdMessages.appendChild(row);
+      pdMessages.scrollTop = pdMessages.scrollHeight;
+    }
+
+    function pdAddThinking() {
+      var row = document.createElement('div');
+      row.className = 'pd-msg'; row.id = 'pd-thinking';
+      var av = document.createElement('div');
+      av.className = 'pd-av'; av.textContent = 'C';
+      row.appendChild(av);
+      var bbl = document.createElement('div');
+      bbl.className = 'pd-bbl';
+      bbl.innerHTML = '<div class="pd-dots"><span></span><span></span><span></span></div>';
+      row.appendChild(bbl);
+      pdMessages.appendChild(row);
+      pdMessages.scrollTop = pdMessages.scrollHeight;
+    }
+
+    function pdRemoveThinking() {
+      var t = document.getElementById('pd-thinking');
+      if (t) t.remove();
+    }
+  </script>
+
+</div>
+
 <div style="text-align:center;padding:2rem 0;border-top:0.5px solid #e0e0e0;margin-top:2rem;">
   <p style="font-family:'DM Mono',monospace;font-size:11px;color:#bbb;letter-spacing:1px;">FROM CONTACT US TO CONTEXTUS</p>
 </div>
