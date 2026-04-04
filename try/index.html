@@ -916,6 +916,14 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     if (ts) ts.style.display = 'block';
     if (uf) uf.style.display = 'none';
     if (typeof turnstile !== 'undefined') turnstile.reset('#cf-turnstile');
+    const urlInput = document.getElementById('url-input');
+    const submitBtn = document.getElementById('url-submit');
+    const urlErr = document.getElementById('url-err');
+    const urlWrap = document.getElementById('url-wrap');
+    if (urlInput) { urlInput.value = ''; urlInput.disabled = false; }
+    if (submitBtn) submitBtn.classList.remove('loading');
+    if (urlErr) { urlErr.textContent = 'Please enter a valid URL — e.g. https://yoursite.com'; urlErr.classList.remove('show'); }
+    if (urlWrap) urlWrap.classList.remove('err');
     bindIdleInputs();
     show('idle');
   }
