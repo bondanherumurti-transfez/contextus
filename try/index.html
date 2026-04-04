@@ -147,7 +147,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
 /* Widget wrapper with animation */
 #widget-wrapper{max-height:250px;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,.09);overflow:hidden;transition:max-height .35s ease}
 #widget-wrapper.expanded{max-height:520px}
-#widget-wrapper iframe{border:none;display:block;width:100%;height:480px}
+#widget-wrapper iframe{border:none;display:block;width:100%}
+#widget-wrapper.expanded iframe{height:480px}
 
 /* Widget mock — identical visual tokens to real widget */
 .widget-shell{border:.5px solid var(--g300);border-radius:12px;overflow:hidden;background:#fff;margin-bottom:1rem}
