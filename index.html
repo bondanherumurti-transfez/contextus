@@ -249,14 +249,28 @@ footer .fr{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spaci
   <span class="tg">&lt;iframe</span> <span class="at">id</span>=<span class="vl">"contextus-iframe"</span>
     <span class="at">src</span>=<span class="vl">"https://getcontextus.dev/widget/widget.html</span>
 <span class="vl">         ?knowledgeBaseId=YOUR_KB_ID</span>
-<span class="vl">         &amp;apiUrl=https://contextus-2d16.onrender.com"</span>
+<span class="vl">         &amp;apiUrl=https://contextus-2d16.onrender.com</span>
+<span class="vl">         &amp;dynamicHeight=1"</span>
     <span class="at">frameborder</span>=<span class="vl">"0"</span><span class="tg">&gt;&lt;/iframe&gt;</span>
 <span class="tg">&lt;/div&gt;</span>
 <span class="tg">&lt;script&gt;</span>
   <span class="at">window</span>.<span class="tg">addEventListener</span>(<span class="vl">'message'</span>, <span class="at">function</span>(e) {
-    <span class="at">if</span> (e.data.type === <span class="vl">'contextus:expand'</span>)
-      <span class="at">document</span>.<span class="tg">getElementById</span>(<span class="vl">'contextus-wrapper'</span>)
-        .<span class="tg">classList</span>.<span class="at">add</span>(<span class="vl">'expanded'</span>);
+    <span class="at">if</span> (e.data.type === <span class="vl">'contextus:resize'</span>) {
+      <span class="at">var</span> iframe = <span class="at">document</span>.<span class="tg">getElementById</span>(<span class="vl">'contextus-iframe'</span>);
+      <span class="at">if</span> (iframe && !iframe.dataset.expanded && e.data.height)
+        iframe.style.height = e.data.height + <span class="vl">'px'</span>;
+    }
+    <span class="at">if</span> (e.data.type === <span class="vl">'contextus:expand'</span>) {
+      <span class="at">var</span> wrapper = <span class="at">document</span>.<span class="tg">getElementById</span>(<span class="vl">'contextus-wrapper'</span>);
+      <span class="at">if</span> (wrapper) {
+        wrapper.classList.<span class="at">add</span>(<span class="vl">'expanded'</span>);
+        <span class="at">var</span> iframe = wrapper.querySelector(<span class="vl">'iframe'</span>);
+        <span class="at">if</span> (iframe) { iframe.dataset.expanded = <span class="vl">'1'</span>; iframe.style.height = <span class="vl">''</span>; }
+        <span class="at">setTimeout</span>(<span class="at">function</span>() {
+          wrapper.<span class="tg">scrollIntoView</span>({ behavior: <span class="vl">'smooth'</span>, block: <span class="vl">'center'</span> });
+        }, 50);
+      }
+    }
   });
 <span class="tg">&lt;/script&gt;</span></div>
     </div>

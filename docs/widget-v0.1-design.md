@@ -72,15 +72,28 @@ Two-element pattern — wrapper handles animation, iframe handles layout:
 <div id="contextus-wrapper">
   <iframe
     id="contextus-iframe"
-    src="https://getcontextus.dev/widget/widget.html?knowledgeBaseId=YOUR_KB_ID&apiUrl=https://contextus-2d16.onrender.com"
+    src="https://getcontextus.dev/widget/widget.html?knowledgeBaseId=YOUR_KB_ID&apiUrl=https://contextus-2d16.onrender.com&dynamicHeight=1"
     frameborder="0"
   ></iframe>
 </div>
 
 <script>
   window.addEventListener('message', function(e) {
+    if (e.data.type === 'contextus:resize') {
+      var iframe = document.getElementById('contextus-iframe');
+      if (iframe && !iframe.dataset.expanded && e.data.height)
+        iframe.style.height = e.data.height + 'px';
+    }
     if (e.data.type === 'contextus:expand') {
-      document.getElementById('contextus-wrapper').classList.add('expanded');
+      var wrapper = document.getElementById('contextus-wrapper');
+      if (wrapper) {
+        wrapper.classList.add('expanded');
+        var iframe = wrapper.querySelector('iframe');
+        if (iframe) { iframe.dataset.expanded = '1'; iframe.style.height = ''; }
+        setTimeout(function() {
+          wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50);
+      }
     }
   });
 </script>
