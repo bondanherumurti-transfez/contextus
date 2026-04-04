@@ -74,8 +74,13 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
 .field input.err{border-color:#a32d2d;box-shadow:0 0 0 3px rgba(163,45,45,.06)}
 .form-err{font-size:12px;color:#a32d2d;margin-top:-.25rem;display:none}
 .form-err.show{display:block}
-.form-footer{display:flex;justify-content:space-between;align-items:center}
+.form-footer{display:flex;justify-content:space-between;align-items:center;margin-top:.25rem}
 .form-note{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spacing:.3px}
+@media(max-width:480px){
+  .form-footer{flex-direction:column;align-items:stretch;gap:.75rem}
+  .form-footer .btn-p{width:100%;justify-content:center}
+  .form-note{text-align:center}
+}
 
 /* ════════════════════
    STATE 2 — CHAT
@@ -127,7 +132,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
         <div id="cf-turnstile" class="cf-turnstile" data-sitekey="0x4AAAAAAC0ov0LoH7wYM2-F" data-callback="onTurnstileSuccess"></div>
       </div>
 
-      <div id="join-form" class="fu fd3" style="display:none">
+      <div id="join-form" class="join-form fu fd3" style="display:none">
         <div class="field">
           <label for="j-name">Your name</label>
           <input id="j-name" type="text" placeholder="Jane Smith" autocomplete="name">
@@ -224,11 +229,21 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
     const errEl   = document.getElementById('form-err');
     const btn     = document.getElementById('j-continue');
 
-    if (!name || !email || !website) {
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const urlValid   = /^https?:\/\/.+\..+/.test(website);
+
+    if (!name || !email || !emailValid || !website || !urlValid) {
+      const missing = [];
+      if (!name)                missing.push('your name');
+      if (!email)               missing.push('your email');
+      else if (!emailValid)     missing.push('a valid email address');
+      if (!website)             missing.push('your website');
+      else if (!urlValid)       missing.push('a valid website URL (include https://)');
+      errEl.textContent = 'Please enter ' + missing.join(', ') + '.';
       errEl.classList.add('show');
-      if (!name)    document.getElementById('j-name').classList.add('err');
-      if (!email)   document.getElementById('j-email').classList.add('err');
-      if (!website) document.getElementById('j-website').classList.add('err');
+      if (!name)                document.getElementById('j-name').classList.add('err');
+      if (!email || !emailValid) document.getElementById('j-email').classList.add('err');
+      if (!website || !urlValid) document.getElementById('j-website').classList.add('err');
       return;
     }
     errEl.classList.remove('show');
@@ -338,6 +353,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
       const iframe = document.getElementById('join-widget');
       if (iframe && !iframe.dataset.expanded && e.data.height) {
         iframe.style.height = e.data.height + 'px';
+        const frame = document.getElementById('join-widget-frame');
+        if (frame) frame.style.maxHeight = e.data.height + 'px';
       }
     }
 
@@ -345,6 +362,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
     if (e.data.type === 'contextus:expand') {
       const frame = document.getElementById('join-widget-frame');
       if (frame) {
+        frame.style.maxHeight = '';
         frame.classList.add('expanded');
         const iframe = frame.querySelector('iframe');
         if (iframe) {

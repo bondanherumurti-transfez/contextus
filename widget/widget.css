@@ -62,6 +62,10 @@ html.ctx-expanded .ctx-input-area {
   font-size: 13px;
   font-weight: 500;
   color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .ctx-header-powered {
@@ -323,6 +327,7 @@ html.ctx-expanded .ctx-input-area {
   cursor: pointer;
   font-family: 'DM Sans', sans-serif;
   transition: background 0.12s, color 0.12s;
+  text-align: left;
 }
 
 .ctx-pill:hover {
