@@ -7,6 +7,7 @@
 <title>Join the waitlist — contextus</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 button{outline:none;-webkit-tap-highlight-color:transparent}
@@ -121,7 +122,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
       <h1 class="page-h1 fu fd2">Let's get you set up.</h1>
       <p class="page-sub fu fd3">We'll reach out when your slot is ready — usually within a day or two.</p>
 
-      <div class="join-form fu fd3">
+      <div id="turnstile-step" class="fu fd3" style="text-align:center;margin-top:.5rem">
+        <p style="font-size:14px;color:var(--g600);margin-bottom:1rem">Verify you're human to continue</p>
+        <div id="cf-turnstile" class="cf-turnstile" data-sitekey="0x4AAAAAAC0ov0LoH7wYM2-F" data-callback="onTurnstileSuccess"></div>
+      </div>
+
+      <div id="join-form" class="fu fd3" style="display:none">
         <div class="field">
           <label for="j-name">Your name</label>
           <input id="j-name" type="text" placeholder="Jane Smith" autocomplete="name">
@@ -139,11 +145,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
           <input id="j-phone" type="tel" placeholder="+62 812 3456 7890" autocomplete="tel">
         </div>
         <p id="form-err" class="form-err">Please fill in your name, email, and website.</p>
-      </div>
-
-      <div class="form-footer fu fd3">
-        <button id="j-continue" class="btn-p" onclick="submitForm()">Continue →</button>
-        <span class="form-note">no credit card needed</span>
+        <div class="form-footer">
+          <button id="j-continue" class="btn-p" onclick="submitForm()">Continue →</button>
+          <span class="form-note">no credit card needed</span>
+        </div>
       </div>
     </div>
 
@@ -190,6 +195,15 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
 
   let sessionId = null;
   let submitting = false;
+  let cfToken = '';
+
+  window.onTurnstileSuccess = function(token) {
+    cfToken = token;
+    const ts = document.getElementById('turnstile-step');
+    const jf = document.getElementById('join-form');
+    if (ts) ts.style.display = 'none';
+    if (jf) jf.style.display = 'block';
+  };
 
   // Pre-fill website from URL param
   (function () {
@@ -210,7 +224,6 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
     const errEl   = document.getElementById('form-err');
     const btn     = document.getElementById('j-continue');
 
-    // Validate
     if (!name || !email || !website) {
       errEl.classList.add('show');
       if (!name)    document.getElementById('j-name').classList.add('err');
@@ -220,6 +233,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
     }
     errEl.classList.remove('show');
 
+    if (!cfToken) {
+      errEl.textContent = 'Please complete the verification first.';
+      errEl.classList.add('show');
+      return;
+    }
+
     btn.classList.add('loading');
     btn.disabled = true;
 
@@ -227,10 +246,15 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
       const res = await fetch(API_URL + '/api/waitlist/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, website, phone: phone || null }),
+        body: JSON.stringify({ name, email, website, phone: phone || null, cf_turnstile_response: cfToken }),
       });
 
+      if (res.status === 403) {
+        const data = await res.json();
+        throw new Error(data.detail || 'forbidden');
+      }
       if (!res.ok) throw new Error('start failed');
+      
       const data = await res.json();
       sessionId = data.session_id;
 
@@ -244,8 +268,17 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
     } catch (e) {
       btn.classList.remove('loading');
       btn.disabled = false;
-      errEl.textContent = 'Something went wrong. Please try again.';
+      errEl.textContent = e.message.includes('Turnstile') || e.message.includes('verification')
+        ? 'Verification failed. Please try again.'
+        : 'Something went wrong. Please try again.';
       errEl.classList.add('show');
+    } finally {
+      cfToken = '';
+      if (typeof turnstile !== 'undefined') turnstile.reset('#cf-turnstile');
+      const ts = document.getElementById('turnstile-step');
+      const jf = document.getElementById('join-form');
+      if (ts) ts.style.display = 'block';
+      if (jf) jf.style.display = 'none';
     }
   }
 

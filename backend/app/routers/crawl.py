@@ -15,6 +15,7 @@ from app.services.database import save_customer_config
 from app.services.crawler import crawl_site, validate_url
 from app.services.chunker import chunk_pages
 from app.services.llm import generate_company_profile, assess_quality_tier, select_pills
+from app.services.turnstile import verify_turnstile
 
 router = APIRouter(tags=["crawl"])
 
@@ -140,7 +141,9 @@ async def start_crawl(
 ):
     client_ip = request.client.host if request.client else "unknown"
 
-    # Validate URL first — don't count invalid/malicious requests against the rate limit
+    if not await verify_turnstile(body.cf_turnstile_response or "", client_ip):
+        raise HTTPException(status_code=403, detail="Turnstile verification failed")
+
     if not validate_url(body.url):
         raise HTTPException(
             status_code=400,

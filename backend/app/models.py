@@ -69,6 +69,7 @@ class LeadBrief(BaseModel):
 
 class CrawlRequest(BaseModel):
     url: str
+    cf_turnstile_response: str | None = None
 
 
 class CrawlResponse(BaseModel):

@@ -7,6 +7,7 @@
 <title>Try contextus — See it work on your website</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 button{outline:none;-webkit-tap-highlight-color:transparent}
@@ -266,8 +267,14 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     <p class="eyebrow fu">Live demo</p>
     <h1 class="page-h1 fu fd1">See it work on<br>your website.</h1>
     <p class="page-sub fu fd2">Paste your URL — contextus crawls your site, builds a knowledge base, and shows you a live AI assistant in ~30 seconds.</p>
-    <p class="page-sub-id fu fd3">Tempel URL Anda — contextus membangun asisten AI untuk bisnis Anda dalam ~30 detik.</p>
-    <div class="fu fd4">
+    <p class="page-sub-id fu fd3">Tempel URL anda — contextus membangun asisten AI untuk bisnis Anda dalam ~30 detik.</p>
+    
+    <div id="turnstile-step" class="fu fd4" style="text-align:center;margin-top:.5rem">
+      <p style="font-size:14px;color:var(--g600);margin-bottom:1rem">Verify you're human to continue</p>
+      <div id="cf-turnstile" class="cf-turnstile" data-sitekey="0x4AAAAAAC0ov0LoH7wYM2-F" data-callback="onTurnstileSuccess"></div>
+    </div>
+    
+    <div id="url-form" class="fu fd4" style="display:none">
       <div class="url-wrap" id="url-wrap">
         <div class="url-row">
           <input type="url" id="url-input" placeholder="https://your-site.com" autocomplete="off" spellcheck="false">
@@ -277,7 +284,7 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
         </div>
       </div>
       <p class="url-err-msg" id="url-err">Please enter a valid URL — e.g. https://yoursite.com</p>
-      <p class="idle-note fu fd5">No signup required &middot; Works on any website &middot; ~30 seconds</p>
+      <p class="idle-note">No signup required &middot; Works on any website &middot; ~30 seconds</p>
       <p id="wake-banner" style="display:none;font-size:13px;color:#999;margin-top:8px;text-align:center;">⚡ Server warming up — ready in ~30s</p>
     </div>
   </div>
@@ -512,6 +519,15 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
   let crawledUrl = '';
   let serverReady = false;
   let wakeUpTimer = null;
+  let cfToken = '';
+
+  window.onTurnstileSuccess = function(token) {
+    cfToken = token;
+    const ts = document.getElementById('turnstile-step');
+    const uf = document.getElementById('url-form');
+    if (ts) ts.style.display = 'none';
+    if (uf) uf.style.display = 'block';
+  };
 
   // ── State machine ──────────────────────────────────────────────────────────
 
@@ -527,29 +543,18 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
 
   // ── State 1: Idle ──────────────────────────────────────────────────────────
 
-  const idleInputContainer = document.getElementById('s-idle').querySelector('.fu.fd4');
-  const idleInputHTML = idleInputContainer.innerHTML;
-
   function bindIdleInputs() {
     const urlInput = document.getElementById('url-input');
     const urlWrap  = document.getElementById('url-wrap');
     const urlErr   = document.getElementById('url-err');
-    document.getElementById('url-submit').addEventListener('click', submitUrl);
+    const submitBtn = document.getElementById('url-submit');
+    if (!submitBtn) return;
+    submitBtn.addEventListener('click', submitUrl);
     urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitUrl(); });
     urlInput.addEventListener('input', () => {
       urlWrap.classList.remove('err');
       urlErr.classList.remove('show');
     });
-  }
-
-  function removeIdleInputs() {
-    const c = document.getElementById('s-idle').querySelector('.fu.fd4');
-    if (c) c.innerHTML = '';
-  }
-
-  function restoreIdleInputs() {
-    const c = document.getElementById('s-idle').querySelector('.fu.fd4');
-    if (c) { c.innerHTML = idleInputHTML; bindIdleInputs(); }
   }
 
   bindIdleInputs();
@@ -564,8 +569,13 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
       urlErr.classList.add('show');
       return;
     }
-    // Prepend https:// if no scheme given (e.g. user typed "stripe.com")
     if (!/^https?:\/\//i.test(val)) val = 'https://' + val;
+
+    if (!cfToken) {
+      urlErr.textContent = 'Please complete the verification first.';
+      urlErr.classList.add('show');
+      return;
+    }
 
     const submitBtn = document.getElementById('url-submit');
     submitBtn.classList.add('loading');
@@ -574,27 +584,40 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     fetch(API_URL + '/api/crawl', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: val }),
+      body: JSON.stringify({ url: val, cf_turnstile_response: cfToken }),
     })
     .then(r => {
-      if (r.status === 429) { const e = new Error('rate_limit'); throw e; }
+      if (r.status === 403) {
+        return r.json().then(data => { throw new Error(data.detail || 'forbidden'); });
+      }
+      if (r.status === 429) throw new Error('rate_limit');
       if (!r.ok) throw new Error('crawl_failed');
       return r.json();
     })
     .then(data => {
       jobId = data.job_id;
-      removeIdleInputs();
       startCrawl(val);
     })
     .catch(err => {
       submitBtn.classList.remove('loading');
       urlInput.disabled = false;
-      const msg = err.message === 'rate_limit'
-        ? 'Too many requests — please wait an hour before trying again.'
-        : 'Could not start crawl. Please check the URL and try again.';
+      let msg = 'Could not start crawl. Please check the URL and try again.';
+      if (err.message === 'rate_limit') {
+        msg = 'Too many requests — please wait an hour before trying again.';
+      } else if (err.message.includes('Turnstile') || err.message.includes('verification')) {
+        msg = 'Verification failed. Please try again.';
+      }
       const urlErr = document.getElementById('url-err');
       urlErr.textContent = msg;
       urlErr.classList.add('show');
+    })
+    .finally(() => {
+      cfToken = '';
+      if (typeof turnstile !== 'undefined') turnstile.reset('#cf-turnstile');
+      const ts = document.getElementById('turnstile-step');
+      const uf = document.getElementById('url-form');
+      if (ts) ts.style.display = 'block';
+      if (uf) uf.style.display = 'none';
     });
   }
 
@@ -879,6 +902,7 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     sessionId = null;
     msgCount = 0;
     currentKb = null;
+    cfToken = '';
     document.getElementById('widget-wrapper').innerHTML = '';
     document.getElementById('widget-wrapper').classList.remove('expanded');
     document.getElementById('brief-hint').classList.remove('show');
@@ -887,7 +911,12 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     document.getElementById('crawl-error').style.display = 'none';
     hideWakeUpBanner();
     resetSteps();
-    restoreIdleInputs();
+    const ts = document.getElementById('turnstile-step');
+    const uf = document.getElementById('url-form');
+    if (ts) ts.style.display = 'block';
+    if (uf) uf.style.display = 'none';
+    if (typeof turnstile !== 'undefined') turnstile.reset('#cf-turnstile');
+    bindIdleInputs();
     show('idle');
   }
 
