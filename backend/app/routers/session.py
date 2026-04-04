@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException
 from nanoid import generate
 import time
@@ -6,15 +7,22 @@ from app.models import Session, SessionRequest, SessionResponse
 from app.services.redis import get_knowledge_base, save_session, get_session
 
 router = APIRouter(tags=["session"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("/session", response_model=SessionResponse)
 async def create_session(body: SessionRequest):
     kb = await get_knowledge_base(body.knowledge_base_id)
     if not kb:
+        logger.warning("create_session: KB not found, kb_id=%s", body.knowledge_base_id)
         raise HTTPException(status_code=404, detail="Knowledge base not found")
 
     if kb.status != "complete":
+        logger.warning(
+            "create_session: KB not ready, kb_id=%s, status=%s",
+            body.knowledge_base_id,
+            kb.status,
+        )
         raise HTTPException(status_code=400, detail="Knowledge base not ready")
 
     session_id = generate(size=10)
@@ -28,6 +36,11 @@ async def create_session(body: SessionRequest):
     )
 
     await save_session(session_id, session)
+    logger.info(
+        "create_session: created session_id=%s, kb_id=%s",
+        session_id,
+        body.knowledge_base_id,
+    )
 
     pills = kb.suggested_pills if kb.suggested_pills else []
     return SessionResponse(session_id=session_id, pills=pills)

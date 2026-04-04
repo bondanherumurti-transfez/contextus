@@ -1,4 +1,4 @@
-from openai import OpenAI
+from openai import AsyncOpenAI
 import os
 import json
 import re
@@ -7,6 +7,7 @@ import logging
 from dotenv import load_dotenv
 from typing import AsyncIterator
 from pydantic import ValidationError
+from tenacity import retry, stop_after_attempt, wait_exponential
 from app.models import CompanyProfile, PillSuggestions, Session, LeadBrief, Chunk
 from app.services.retrieval import retrieve_chunks
 
@@ -24,15 +25,17 @@ def extract_json(text: str) -> dict:
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        match = re.search(r'\{.*\}', text, re.DOTALL)
+        match = re.search(r"\{.*\}", text, re.DOTALL)
         if match:
             return json.loads(match.group())
         raise
 
 
-client = OpenAI(
+client = AsyncOpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=os.getenv("OPENROUTER_API_KEY", ""),
+    timeout=60.0,
+    max_retries=3,
     default_headers={
         "HTTP-Referer": os.getenv("SITE_URL", "http://localhost:8000"),
         "X-OpenRouter-Title": "contextus",
@@ -140,12 +143,18 @@ Rules:
 {lead_qual}"""
 
 
-def _call_profile_model(chunks_text: str, site_url: str, temperature: float = 0.3) -> dict:
-    response = client.chat.completions.create(
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+async def _call_profile_model(
+    chunks_text: str, site_url: str, temperature: float = 0.3
+) -> dict:
+    response = await client.chat.completions.create(
         model=MODEL_PROFILE,
         messages=[
             {"role": "system", "content": PROFILE_SYSTEM_PROMPT},
-            {"role": "user", "content": f"Website URL: {site_url}\n\nContent:\n{chunks_text}"},
+            {
+                "role": "user",
+                "content": f"Website URL: {site_url}\n\nContent:\n{chunks_text}",
+            },
         ],
         response_format={"type": "json_object"},
         temperature=temperature,
@@ -157,7 +166,9 @@ def _profile_from_partial(data: dict, site_url: str) -> CompanyProfile:
     """Build a valid CompanyProfile from whatever partial data the model returned."""
     raw_contact = data.get("contact")
     if isinstance(raw_contact, str):
-        raw_contact = {"email": raw_contact} if "@" in raw_contact else {"phone": raw_contact}
+        raw_contact = (
+            {"email": raw_contact} if "@" in raw_contact else {"phone": raw_contact}
+        )
 
     services = data.get("services") or []
     if isinstance(services, str):
@@ -179,57 +190,64 @@ def _profile_from_partial(data: dict, site_url: str) -> CompanyProfile:
     )
 
 
-def generate_company_profile(chunks: list[Chunk], site_url: str) -> CompanyProfile:
+async def generate_company_profile(
+    chunks: list[Chunk], site_url: str
+) -> CompanyProfile:
     chunks_text = "\n\n".join([f"[{c.source}]\n{c.text}" for c in chunks[:20]])
     data = {}
 
     for attempt in range(2):
         try:
-            data = _call_profile_model(chunks_text, site_url, temperature=0.3 if attempt == 0 else 0.1)
+            data = await _call_profile_model(
+                chunks_text, site_url, temperature=0.3 if attempt == 0 else 0.1
+            )
             return CompanyProfile(**data)
         except (ValidationError, json.JSONDecodeError, KeyError, TypeError) as e:
-            logger.warning("generate_company_profile attempt %d failed: %s", attempt + 1, e)
+            logger.warning(
+                "generate_company_profile attempt %d failed: %s", attempt + 1, e
+            )
             if attempt == 1:
-                # Both attempts failed — build from whatever partial data we have
                 return _profile_from_partial(data, site_url)
 
     return _profile_from_partial(data, site_url)
 
 
-def stream_chat_response(
+async def stream_chat_response(
     messages: list[dict],
     company_profile: CompanyProfile,
     chunks: list[Chunk],
     user_message: str,
     system_prompt_override: str | None = None,
     kb_id: str = "",
-) -> tuple[AsyncIterator[str], str]:
+) -> AsyncIterator[str]:
     retrieved = retrieve_chunks(user_message, chunks, top_k=5)
-    system_prompt = system_prompt_override if system_prompt_override else build_chat_system_prompt(company_profile, retrieved, kb_id=kb_id)
+    system_prompt = (
+        system_prompt_override
+        if system_prompt_override
+        else build_chat_system_prompt(company_profile, retrieved, kb_id=kb_id)
+    )
 
     chat_messages = [{"role": "system", "content": system_prompt}]
     for msg in messages:
         chat_messages.append({"role": msg["role"], "content": msg["content"]})
     chat_messages.append({"role": "user", "content": user_message})
 
-    stream = client.chat.completions.create(
+    stream = await client.chat.completions.create(
         model=MODEL_CHAT, messages=chat_messages, stream=True, temperature=0.7
     )
 
-    full_text = ""
-    for chunk in stream:
+    async for chunk in stream:
         if chunk.choices[0].delta.content:
             text = chunk.choices[0].delta.content
-            full_text += text
             yield text
 
 
-def generate_lead_brief(session: Session) -> LeadBrief:
+async def generate_lead_brief(session: Session) -> LeadBrief:
     transcript = "\n".join(
         [f"{msg.role.upper()}: {msg.text}" for msg in session.messages]
     )
 
-    response = client.chat.completions.create(
+    response = await client.chat.completions.create(
         model=MODEL_BRIEF,
         messages=[
             {"role": "system", "content": BRIEF_SYSTEM_PROMPT},
@@ -320,16 +338,16 @@ When you have gathered all 4 points (or the visitor has skipped all), send your 
 Then on a new line append exactly this token (do not explain it): WAITLIST_COMPLETE"""
 
 
-def extract_waitlist_context(transcript: str) -> dict:
-    response = client.chat.completions.create(
+async def extract_waitlist_context(transcript: str) -> dict:
+    response = await client.chat.completions.create(
         model=MODEL_PROFILE,
         messages=[
             {
                 "role": "system",
                 "content": (
-                    'Extract from this conversation as JSON: '
+                    "Extract from this conversation as JSON: "
                     '{"business_type": "...", "goal": "...", "agent_behavior": "...", "timeline": "..."}. '
-                    'Empty string if not mentioned. Return JSON only.'
+                    "Empty string if not mentioned. Return JSON only."
                 ),
             },
             {"role": "user", "content": transcript},

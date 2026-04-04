@@ -7,6 +7,30 @@
   box-sizing: border-box;
 }
 
+/* ── Expanded state: full-height chain (activated by JS on first message) ── */
+html.ctx-expanded body {
+  overflow: hidden;
+}
+
+html.ctx-expanded #contextus-root {
+  height: 100%;
+}
+
+html.ctx-expanded #contextus-widget {
+  height: 100%;
+}
+
+html.ctx-expanded .ctx-messages-wrap {
+  display: block;
+  flex: 1;
+  min-height: 0;
+}
+
+html.ctx-expanded .ctx-input-area {
+  padding-top: 10px;
+  border-top: 0.5px solid #e0e0e0;
+}
+
 #contextus-widget {
   color-scheme: light;
   font-family: 'DM Sans', sans-serif;
@@ -19,7 +43,6 @@
   max-width: 600px;
   border: 0.5px solid #e0e0e0;
   border-radius: 12px;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -48,15 +71,45 @@
   color: #bbbbbb;
 }
 
+/* ── Message area wrapper ── */
+.ctx-messages-wrap {
+  display: none;
+  /* hidden in idle phase — shown via html.ctx-expanded */
+  position: relative;
+}
+
 /* ── Message area ── */
 .ctx-messages {
+  height: 100%;
   padding: 14px;
   background: #ffffff;
   overflow-y: auto;
-  flex-grow: 1;
-  max-height: 400px;
+  scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: #dddddd transparent;
+}
+
+/* ── Scroll-to-bottom FAB ── */
+.ctx-scroll-fab {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #000000;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
 }
 
 .ctx-messages::-webkit-scrollbar {
@@ -125,12 +178,27 @@
   animation: ctx-dot-pulse 1.2s infinite;
 }
 
-.ctx-dots span:nth-child(2) { animation-delay: 0.2s; }
-.ctx-dots span:nth-child(3) { animation-delay: 0.4s; }
+.ctx-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.ctx-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
 
 @keyframes ctx-dot-pulse {
-  0%, 60%, 100% { opacity: 0.3; transform: scale(0.85); }
-  30%           { opacity: 1;   transform: scale(1); }
+
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.85);
+  }
+
+  30% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* ── System banners ── */
@@ -198,7 +266,7 @@
 
 /* ── Input area ── */
 .ctx-input-area {
-  padding: 0 14px 14px;
+  padding: 14px;
   background: #ffffff;
   flex-shrink: 0;
 }
@@ -286,6 +354,7 @@
   background: #e0e0e0;
   cursor: default;
 }
+
 .ctx-send.ctx-send-empty svg {
   fill: #999999;
 }
@@ -295,6 +364,7 @@
   background: #000000;
   cursor: pointer;
 }
+
 .ctx-send.ctx-send-active svg {
   fill: #ffffff;
 }
@@ -304,18 +374,16 @@
   background: #e0e0e0;
   cursor: not-allowed;
 }
+
 .ctx-send.ctx-send-disabled svg {
   fill: #bbbbbb;
 }
 
 /* ── Responsive ── */
 @media (max-width: 480px) {
-  .ctx-messages {
-    max-height: 50vh;
-  }
-
   .ctx-input {
-    font-size: 16px; /* prevents iOS auto-zoom */
+    font-size: 16px;
+    /* prevents iOS auto-zoom */
   }
 
   #contextus-widget {
@@ -328,28 +396,35 @@
 .ctx-bubble-agent p {
   margin: 0 0 0.5em 0;
 }
+
 .ctx-bubble-agent p:last-child {
   margin-bottom: 0;
 }
+
 .ctx-bubble-agent ol,
 .ctx-bubble-agent ul {
   margin: 0.25em 0 0.5em 0;
   padding-left: 1.25em;
 }
+
 .ctx-bubble-agent ol:last-child,
 .ctx-bubble-agent ul:last-child {
   margin-bottom: 0;
 }
+
 .ctx-bubble-agent li {
   margin-bottom: 0.25em;
   line-height: 1.45;
 }
+
 .ctx-bubble-agent li:last-child {
   margin-bottom: 0;
 }
+
 .ctx-bubble-agent strong {
   font-weight: 600;
 }
+
 .ctx-bubble-agent em {
   font-style: italic;
 }

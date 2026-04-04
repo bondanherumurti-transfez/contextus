@@ -96,6 +96,7 @@
       errorMessage: null,
       returningHistory: null, // messages from previous session (in-memory only)
       sessionId: null,        // assigned after POST /api/session
+      expanded: false,        // two-phase: fires contextus:expand once on first message
 
       // Timers
       idleTimer: null,
@@ -116,9 +117,14 @@
     header.innerHTML = LOGO_SVG_SMALL + `<span class="ctx-header-name">${esc(cfg.name)}</span><span class="ctx-header-powered">powered by contextus</span>`;
     widget.appendChild(header);
 
-    // Messages
+    // Messages (wrapped so FAB can overlay)
+    const msgsWrap = el('div', { className: 'ctx-messages-wrap' });
     const msgArea = el('div', { className: 'ctx-messages' });
-    widget.appendChild(msgArea);
+    const fab = el('button', { className: 'ctx-scroll-fab', type: 'button', 'aria-label': 'Scroll to bottom' });
+    fab.textContent = '↓';
+    msgsWrap.appendChild(msgArea);
+    msgsWrap.appendChild(fab);
+    widget.appendChild(msgsWrap);
 
     // Input area
     const inputArea = el('div', { className: 'ctx-input-area' });
@@ -139,6 +145,26 @@
     });
     inputArea.appendChild(pillsContainer);
     widget.appendChild(inputArea);
+
+    // ── Scroll helpers ───────────────────────────────────────────────────────
+
+    function scrollToBottom(instant) {
+      msgArea.scrollTo({ top: msgArea.scrollHeight, behavior: instant ? 'instant' : 'smooth' });
+    }
+
+    function isNearBottom() {
+      return msgArea.scrollHeight - msgArea.scrollTop - msgArea.clientHeight < 80;
+    }
+
+    msgArea.addEventListener('scroll', function () {
+      const near = isNearBottom();
+      fab.style.opacity = near ? '0' : '1';
+      fab.style.pointerEvents = near ? 'none' : 'all';
+    });
+
+    fab.addEventListener('click', function () {
+      scrollToBottom(true);
+    });
 
     // ── Render helpers ───────────────────────────────────────────────────────
 
@@ -170,12 +196,7 @@
         msgArea.appendChild(nudge);
       }
 
-      // Only scroll internally if content exceeds the visible messages area.
-      // When content fits, leave scrollTop at 0 so everything is visible.
-      if (msgArea.scrollHeight > msgArea.clientHeight) {
-        msgArea.scrollTop = msgArea.scrollHeight;
-      }
-
+      scrollToBottom(true);
       notifyResize();
     }
 
@@ -234,9 +255,7 @@
         msgArea.appendChild(completeBanner);
       }
 
-      if (msgArea.scrollHeight > msgArea.clientHeight) {
-        msgArea.scrollTop = msgArea.scrollHeight;
-      }
+      scrollToBottom(true);
       notifyResize();
     }
 
@@ -295,10 +314,6 @@
     }
 
     if (cfg.dynamicHeight) {
-      // Remove max-height cap so msgArea grows freely and the iframe expands to fit.
-      // In fixed-height mode, max-height is needed for internal scroll; in dynamic mode it
-      // creates artificial overflow that forces scrollTop to bottom on every render.
-      msgArea.style.maxHeight = 'none';
       new ResizeObserver(() => notifyResize()).observe(widget);
     }
 
@@ -314,6 +329,23 @@
       state.pillsVisible = false;
       state.phase = 'active';
       state.nudgeSent = false;
+
+      // Two-phase expand: activate full-height CSS chain + notify parent on first message
+      if (!state.expanded) {
+        state.expanded = true;
+        document.documentElement.classList.add('ctx-expanded');
+        window.parent.postMessage({ type: 'contextus:expand' }, '*');
+        // scrollToBottom() called below runs before the parent resizes the iframe,
+        // so msgArea has no height yet. ResizeObserver fires once the iframe is
+        // expanded and msgArea reaches its real height, then scrolls to bottom.
+        const obs = new ResizeObserver(function() {
+          if (msgArea.clientHeight > 50) {
+            scrollToBottom(true);
+            obs.disconnect();
+          }
+        });
+        obs.observe(msgArea);
+      }
 
       // Prepend greeting on first message
       if (state.messages.length === 0) {
@@ -403,9 +435,7 @@
                   agentMsg.text += payload.token;
                   if (streamBubble) {
                     streamBubble.innerHTML = markdownToHtml(agentMsg.text);
-                    if (msgArea.scrollHeight > msgArea.clientHeight) {
-                      msgArea.scrollTop = msgArea.scrollHeight;
-                    }
+                    if (isNearBottom()) scrollToBottom();
                     notifyResize();
                   }
                 }
@@ -427,6 +457,7 @@
 
             // Notify parent — send raw text (may contain WAITLIST_COMPLETE signal)
             window.parent.postMessage({ type: 'contextus:message_sent', text: rawText }, '*');
+            scrollToBottom(true);
 
             break;
           } catch (err) {

@@ -161,9 +161,28 @@ footer .fr{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spaci
   <p class="sub fu fd1">Your contact form captures names. contextus captures context. Every lead comes with a full story.</p>
   <p class="sub-id fu fd2">Form kontak hanya menangkap nama. contextus menangkap konteks lengkap.</p>
 
-  <div class="ci fu fd3" id="widget-container">
-    <div id="widget-placeholder" style="display:flex;align-items:center;justify-content:center;height:200px;color:#aaa;font-size:14px;font-family:'DM Sans',sans-serif;">
-      Warming up server<span id="wp-dots">...</span>
+  <div class="ci fu fd3">
+    <div class="ci-wrap" id="hw">
+      <div class="ci-row">
+        <input type="text" placeholder="Ask anything about contextus..." id="hi">
+        <button type="button" class="send-btn" id="hs"><svg viewBox="0 0 24 24"><path d="M5.694 12 2.299 3.272c-.236-.607.356-1.188.942-.982l.093.04 18 9a.75.75 0 0 1 .097 1.283l-.097.058-18 9c-.619.31-1.263-.277-1.035-.916l.035-.084L5.694 12 2.3 3.272 5.694 12ZM4.402 4.54l2.61 6.71h6.627a.75.75 0 0 1 .102 1.493l-.102.007H7.01l-2.609 6.71L19.322 12 4.401 4.54Z"/></svg></button>
+      </div>
+    </div>
+    <div class="pills" id="sp">
+      <button type="button" class="pill" data-q="How does contextus work?">How does it work?</button>
+      <button type="button" class="pill" data-q="What makes this different from Intercom?">Different from chatbots?</button>
+      <button type="button" class="pill" data-q="How much does it cost?">Pricing</button>
+      <button type="button" class="pill" data-q="Can it speak Bahasa Indonesia?">Bahasa support?</button>
+    </div>
+  </div>
+
+  <div class="cp" id="cp">
+    <div class="cm" id="cms"></div>
+    <div class="ai-wrap" id="aw">
+      <div class="ci-row">
+        <input type="text" placeholder="Ask a follow-up..." id="ai">
+        <button type="button" class="send-btn" id="as"><svg viewBox="0 0 24 24"><path d="M5.694 12 2.299 3.272c-.236-.607.356-1.188.942-.982l.093.04 18 9a.75.75 0 0 1 .097 1.283l-.097.058-18 9c-.619.31-1.263-.277-1.035-.916l.035-.084L5.694 12 2.3 3.272 5.694 12ZM4.402 4.54l2.61 6.71h6.627a.75.75 0 0 1 .102 1.493l-.102.007H7.01l-2.609 6.71L19.322 12 4.401 4.54Z"/></svg></button>
+      </div>
     </div>
   </div>
 
@@ -215,29 +234,49 @@ footer .fr{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spaci
   <p class="desc" style="font-size:.85rem;color:var(--g500);font-style:italic;margin-top:-1rem">Satu baris kode. Tidak perlu framework atau proses build apapun.</p>
   <div class="impl-grid">
     <div class="impl-card">
-      <div class="impl-card-h"><span class="dot"></span>SCRIPT TAG</div>
-      <div class="impl-card-b"><span class="cm">&lt;!-- Add before &lt;/head&gt; --&gt;</span>
-<span class="tg">&lt;script</span>
-  <span class="at">src</span>=<span class="vl">"https://cdn.contextus.ai/w.js"</span>
-  <span class="at">data-id</span>=<span class="vl">"your-site-id"</span>
-  <span class="at">async</span>
-<span class="tg">&gt;&lt;/script&gt;</span></div>
+      <div class="impl-card-h"><span class="dot"></span>EMBED SNIPPET</div>
+      <div class="impl-card-b"><span class="tg">&lt;style&gt;</span>
+  <span class="at">#contextus-wrapper</span> <span class="tg">{</span>
+    <span class="at">max-height:</span> <span class="vl">250px;</span>
+    <span class="at">overflow:</span>   <span class="vl">hidden;</span>
+    <span class="at">transition:</span> <span class="vl">max-height 0.35s ease;</span>
+  <span class="tg">}</span>
+  <span class="at">#contextus-wrapper.expanded</span> <span class="tg">{</span> <span class="at">max-height:</span> <span class="vl">520px;</span> <span class="tg">}</span>
+  <span class="at">#contextus-iframe</span> <span class="tg">{</span> <span class="at">border:</span> <span class="vl">none;</span> <span class="at">display:</span> <span class="vl">block;</span> <span class="at">width:</span> <span class="vl">100%;</span> <span class="tg">}</span>
+  <span class="at">#contextus-wrapper.expanded #contextus-iframe</span> <span class="tg">{</span> <span class="at">height:</span> <span class="vl">480px;</span> <span class="tg">}</span>
+<span class="tg">&lt;/style&gt;</span>
+<span class="tg">&lt;div</span> <span class="at">id</span>=<span class="vl">"contextus-wrapper"</span><span class="tg">&gt;</span>
+  <span class="tg">&lt;iframe</span> <span class="at">id</span>=<span class="vl">"contextus-iframe"</span>
+    <span class="at">src</span>=<span class="vl">"https://getcontextus.dev/widget/widget.html</span>
+<span class="vl">         ?knowledgeBaseId=YOUR_KB_ID</span>
+<span class="vl">         &amp;apiUrl=https://contextus-2d16.onrender.com"</span>
+    <span class="at">frameborder</span>=<span class="vl">"0"</span><span class="tg">&gt;&lt;/iframe&gt;</span>
+<span class="tg">&lt;/div&gt;</span>
+<span class="tg">&lt;script&gt;</span>
+  <span class="at">window</span>.<span class="tg">addEventListener</span>(<span class="vl">'message'</span>, <span class="at">function</span>(e) {
+    <span class="at">if</span> (e.data.type === <span class="vl">'contextus:expand'</span>)
+      <span class="at">document</span>.<span class="tg">getElementById</span>(<span class="vl">'contextus-wrapper'</span>)
+        .<span class="tg">classList</span>.<span class="at">add</span>(<span class="vl">'expanded'</span>);
+  });
+<span class="tg">&lt;/script&gt;</span></div>
     </div>
     <div class="impl-card">
       <div class="impl-card-h"><span class="dot"></span>WHAT RENDERS</div>
-      <div class="impl-card-b"><span class="cm">// A conversational interface</span>
-<span class="cm">// appears on your site —</span>
-<span class="cm">// matching your brand,</span>
-<span class="cm">// greeting visitors,</span>
-<span class="cm">// capturing full context.</span>
+      <div class="impl-card-b"><span class="cm">// Idle (auto height)</span>
+<span class="cm">// Header + quick-reply pills</span>
 
-<span class="tg">placement:</span> <span class="vl">inline | floating | page</span>
+<span class="cm">// First message sent:</span>
+<span class="cm">// Widget expands to 480px</span>
+<span class="cm">// Three-zone layout:</span>
+<span class="cm">//   header   (fixed, ~42px)</span>
+<span class="cm">//   messages (scrollable)</span>
+<span class="cm">//   input    (fixed, ~70px)</span>
+
 <span class="tg">language:</span>  <span class="vl">auto-detected</span>
 <span class="tg">knowledge:</span> <span class="vl">your-business-profile</span>
-<span class="tg">output:</span>    <span class="vl">lead brief → WhatsApp</span></div>
+<span class="tg">output:</span>    <span class="vl">lead brief → Notion</span></div>
     </div>
   </div>
-  <div class="impl-note"><strong>Implementation is still being finalized.</strong> We're exploring multiple form factors — the interface could render as an inline element that replaces your contact form, a floating panel, a full-page experience, or an embeddable iframe. The right form depends on your site. During early access, we'll work with you to find the best fit.</div>
   <div class="impl-options">
     <div class="impl-opt"><div class="impl-opt-icon">&#9645;</div><div class="impl-opt-name">Inline</div><div class="impl-opt-desc">Replaces your existing contact form section</div></div>
     <div class="impl-opt"><div class="impl-opt-icon">&#9701;</div><div class="impl-opt-name">Floating</div><div class="impl-opt-desc">Appears as a panel from the corner</div></div>
@@ -276,59 +315,31 @@ footer .fr{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spaci
 </div></footer>
 
 <script>
-window.addEventListener('message', function(e) {
-  if (e.data && e.data.type === 'contextus:resize') {
-    var iframe = document.getElementById('contextus-iframe');
-    if (iframe) {
-      var scrollY = window.scrollY;
-      iframe.style.height = e.data.height + 'px';
-      window.scrollTo(0, scrollY);
-    }
-  }
-});
-
-(function wakeUpWidget() {
-  var WIDGET_SRC = '/widget/widget.html?transparent=1&dynamicHeight=1&name=contextus'
-    + '&greeting=Ask%20anything%20about%20contextus...'
-    + '&apiUrl=https://contextus-2d16.onrender.com&knowledgeBaseId=demo';
-
-  var dots = 0;
-  var dotTimer = setInterval(function() {
-    dots = (dots + 1) % 4;
-    var el = document.getElementById('wp-dots');
-    if (el) el.textContent = '.'.repeat(dots + 1);
-  }, 500);
-
-  function injectIframe() {
-    clearInterval(dotTimer);
-    var container = document.getElementById('widget-container');
-    if (!container) return;
-    var iframe = document.createElement('iframe');
-    iframe.id = 'contextus-iframe';
-    iframe.src = WIDGET_SRC;
-    iframe.width = '100%';
-    iframe.height = '420';
-    iframe.frameBorder = '0';
-    iframe.scrolling = 'no';
-    iframe.title = 'contextus chat';
-    iframe.style.cssText = 'border:none;display:block;min-width:320px;';
-    container.innerHTML = '';
-    container.appendChild(iframe);
-  }
-
-  function ping(attempt) {
-    fetch('https://contextus-2d16.onrender.com/api/health', { cache: 'no-store' })
-      .then(function(r) { if (r.ok) injectIframe(); else retry(attempt); })
-      .catch(function() { retry(attempt); });
-  }
-
-  function retry(attempt) {
-    if (attempt >= 10) { injectIframe(); return; }
-    setTimeout(function() { ping(attempt + 1); }, 3000);
-  }
-
-  ping(0);
-})();
+const R=[
+{k:['price','pricing','cost','harga','berapa','murah'],r:"We're in early access — completely free for founding users. Post-beta pricing will be flat monthly, designed for SMBs (around Rp 300–500K/month). No per-lead or per-message charges."},
+{k:['how','work','cara','gimana','bagaimana'],r:"Three steps: paste your website URL (we crawl it to build a knowledge base), embed one script tag, and you're live. Visitors chat with an AI that knows your business. Every conversation becomes a structured lead brief delivered to your Notion or WhatsApp."},
+{k:['whatsapp','wa','notif'],r:"Yes! Every conversation produces a lead brief delivered to your WhatsApp — who they are, what they need, qualification signals, and a suggested approach. Not a transcript. An intelligence card you can act on immediately."},
+{k:['bahasa','indonesi','language','english'],r:"contextus auto-detects language from the visitor's first message. Full support for Bahasa Indonesia and English. Your knowledge base can be in either or both."},
+{k:['different','competitor','intercom','tidio','chatbot','beda','vs'],r:"Most chat tools are rigid FAQ bots or expensive enterprise platforms. contextus is different: real conversations (not scripts), structured lead briefs (not transcripts), and verified real inquiries (not spam). Built for SMBs, not enterprise."},
+{k:['embed','install','pasang','script','code','technical','wordpress','wix'],r:"Paste a short HTML snippet — a wrapper div and iframe — into your page. If you can add a Google Analytics tag, you can add contextus. Works with WordPress, Wix, Squarespace, Webflow, or any custom site."},
+{k:['lead','brief','ringkasan'],r:"Every conversation produces a brief: who the visitor is, what they need, qualification signals, unanswered questions (your follow-up hooks), and a suggested approach. Like a sales assistant summarising every inquiry."},
+{k:['spam','bot','fake','security','verify'],r:"Because we have real conversations — not form submissions — we naturally filter low-quality contacts. Every brief includes a quality score. No CAPTCHA needed. The conversation itself is the verification."},
+{k:['try','demo','test','coba'],r:"You're using it right now! This conversation is contextus in action. Imagine this on your website, trained on your services. Click 'Try with your URL →' below to see it live on your own site."},
+{k:['knowledge','crawl','train','data'],r:"We crawl your website to build an initial knowledge base. For minimal sites, we ask guided questions. The system generates a Company Profile you review before going live."},
+];
+function fR(t){const l=t.toLowerCase();for(const r of R)if(r.k.some(k=>l.includes(k)))return r.r;return "Great question! Ask me about pricing, how it works, what makes us different, or Bahasa support. Or click 'Try with your URL →' below to build a live demo on your site."}
+const hi=document.getElementById('hi'),hs=document.getElementById('hs'),hw=document.getElementById('hw'),sp=document.getElementById('sp'),cp=document.getElementById('cp'),cms=document.getElementById('cms'),aw=document.getElementById('aw'),ai=document.getElementById('ai'),as=document.getElementById('as');
+let started=false;
+const LOGO='<svg width="28" height="28" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="DM Sans,sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg>';
+function addM(t,v){const d=document.createElement('div');d.className='m ma'+(v?' mv':'');d.innerHTML=v?`<div class="b bv">${t}</div>`:`<div class="av">${LOGO}</div><div class="b ba">${t}</div>`;cms.appendChild(d);cms.scrollTop=cms.scrollHeight}
+function sT(){const d=document.createElement('div');d.className='m';d.id='typ';d.innerHTML=`<div class="av">${LOGO}</div><div class="b ba"><div class="td"><span></span><span></span><span></span></div></div>`;cms.appendChild(d);cms.scrollTop=cms.scrollHeight}
+function rT(){const e=document.getElementById('typ');if(e)e.remove()}
+function go(t){if(!started){started=true;hw.style.display='none';sp.style.display='none';cp.classList.add('open');aw.classList.add('open')}addM(t,true);sT();setTimeout(()=>{rT();addM(fR(t),false);ai.focus()},600+Math.random()*600)}
+function hS(){const t=hi.value.trim();if(!t)return;hi.value='';go(t)}
+function aS(){const t=ai.value.trim();if(!t)return;ai.value='';go(t)}
+hs.addEventListener('click',hS);hi.addEventListener('keydown',e=>{if(e.key==='Enter')hS()});
+as.addEventListener('click',aS);ai.addEventListener('keydown',e=>{if(e.key==='Enter')aS()});
+document.querySelectorAll('.pill').forEach(b=>b.addEventListener('click',()=>go(b.dataset.q)));
 </script>
 </body>
 </html>
