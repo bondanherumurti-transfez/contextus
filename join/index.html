@@ -338,6 +338,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
       const iframe = document.getElementById('join-widget');
       if (iframe && !iframe.dataset.expanded && e.data.height) {
         iframe.style.height = e.data.height + 'px';
+        const frame = document.getElementById('join-widget-frame');
+        if (frame) frame.style.maxHeight = e.data.height + 'px';
       }
     }
 
