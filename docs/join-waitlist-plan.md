@@ -4,12 +4,7 @@
 
 The brief card on `/try` has "Add this to my site →" currently linking to a dead anchor. This plan wires it to a dedicated `/join` page — the highest-intent moment in the product.
 
-The page collects name, email, website (pre-filled from /try), and phone, then surfaces the contextus widget to gather goal, agent behavior, business type, and timeline through natural conversation. Everything posts to a Notion database.
-
-**What the user confirmed:**
-- CTA placement: after brief on /try only
-- Storage: Notion
-- Widget asks: goal, agent behavior, business type, timeline
+The page collects name, email, website (pre-filled from /try), and phone, then surfaces the contextus widget to gather business type, goal, agent behavior, and timeline through natural conversation. The **agent drives the submission** — when it has gathered all needed info, it closes the chat and automatically posts everything to Notion. No manual submit button required (a skip fallback exists).
 
 ---
 
@@ -30,13 +25,16 @@ The page collects name, email, website (pre-filled from /try), and phone, then s
   ↓
 [Step 2 — Chat]
   contextus widget loads with session pre-loaded
-  Widget knows: name + website, asks about:
-    1. Business type
-    2. Goal for placing widget
-    3. How agent should behave
-    4. Timeline / urgency
-  "Submit →" button always visible — can skip chat
-  ↓ POST /api/waitlist/submit → Notion
+  Agent knows their name + website already
+  Agent asks in order:
+    1. What kind of business do you run?
+    2. What's your goal for placing contextus?
+    3. How do you want the agent to behave?
+    4. When do you want this live?
+  Can answer questions about contextus too
+  When all info gathered → agent says closing phrase → /join page
+  auto-detects it → POST /api/waitlist/submit → show done state
+  "Skip →" button visible as fallback only
   ↓
 [Step 3 — Done]
   "You're on the list."
@@ -51,12 +49,46 @@ The page collects name, email, website (pre-filled from /try), and phone, then s
 |------|--------|
 | `join/index.html` | Create — full waitlist page |
 | `try/index.html` | Modify — wire "Add this to my site →" to `/join?website={url}` |
+| `widget/widget.js` | Modify — include agent response text in `contextus:message_sent` postMessage |
 | `widget/widget.html` | Modify — accept `sessionId` URL param to skip session creation |
 | `backend/app/routers/waitlist.py` | Create — `/api/waitlist/start` + `/api/waitlist/submit` |
 | `backend/app/main.py` | Modify — include waitlist router |
 | `backend/app/services/notion.py` | Create — Notion API client |
 | `backend/app/services/llm.py` | Modify — add waitlist system prompt + extract_waitlist_context() |
 | `backend/.env.example` | Modify — add NOTION_TOKEN, NOTION_DB_WAITLIST |
+
+---
+
+## Key mechanism: agent-driven submission
+
+The widget agent closes the conversation when it has gathered all 4 pieces of info. The `/join` page detects this and auto-submits.
+
+**How it works:**
+
+1. `widget.js` currently sends `contextus:message_sent` with no payload. Add the agent's full response text:
+   ```js
+   window.parent.postMessage({ type: 'contextus:message_sent', text: fullText }, '*');
+   ```
+
+2. The `/join` page listens for this event. If the text contains the closing signal (`WAITLIST_COMPLETE`), it triggers submission:
+   ```js
+   if (e.data.type === 'contextus:message_sent' && e.data.text?.includes('WAITLIST_COMPLETE')) {
+     submitWaitlist();
+   }
+   ```
+
+3. The waitlist system prompt instructs the agent to end its final message with `WAITLIST_COMPLETE` (hidden signal, not shown to user):
+   ```
+   When you have gathered all 4 pieces of info (or after the visitor has skipped),
+   send your closing message and append exactly: WAITLIST_COMPLETE
+   The /join page will detect this and handle the rest silently.
+   ```
+
+4. The `/join` page strips `WAITLIST_COMPLETE` before rendering — the user never sees it. (Widget.js renders the full text via SSE tokens, so stripping happens in the postMessage listener on the parent, not in the widget itself. The widget renders normally; the `/join` page just uses the signal from the postMessage.)
+
+   Actually: since widget.js renders token-by-token via SSE, `WAITLIST_COMPLETE` will appear in the chat bubble. Fix: instruct the agent to put it on a new line as the very last token, and in the widget's `callBackend` function, strip any trailing `WAITLIST_COMPLETE` from rendered text.
+
+   Cleaner fix: strip it in `widget.js` before rendering. After SSE stream ends, if `fullText` ends with `WAITLIST_COMPLETE`, remove it from the displayed message and send it in the postMessage.
 
 ---
 
@@ -71,8 +103,8 @@ The page collects name, email, website (pre-filled from /try), and phone, then s
 
 **What it does:**
 1. Creates a `Session` against `kb_id = "demo"` with `contact_captured = True`
-2. Stores prefill data in Redis at `waitlist:{session_id}` with 1hr TTL
-3. Returns `{ "session_id": "..." }`
+2. Stores prefill in Redis at `waitlist:{session_id}` (1hr TTL)
+3. Returns `{ "session_id": "abc123" }`
 
 ### `POST /api/waitlist/submit`
 
@@ -83,8 +115,8 @@ The page collects name, email, website (pre-filled from /try), and phone, then s
 
 **What it does:**
 1. Reads prefill from `waitlist:{session_id}` Redis key
-2. Loads session messages (if any conversation happened)
-3. Runs `extract_waitlist_context(transcript)` — LLM extracts goal, agent_behavior, business_type, timeline from conversation
+2. Loads session messages
+3. Calls `extract_waitlist_context(transcript)` — LLM extracts business_type, goal, agent_behavior, timeline
 4. Posts full record to Notion
 5. Returns `{ "status": "ok" }`
 
@@ -101,7 +133,7 @@ NOTION_VERSION = "2022-06-28"
 async def post_waitlist_to_notion(data: dict):
     database_id = os.getenv("NOTION_DB_WAITLIST", "")
     if not NOTION_TOKEN or not database_id:
-        return  # silently skip if not configured
+        return
 
     def txt(val):
         return [{"text": {"content": str(val or "—")}}]
@@ -134,7 +166,7 @@ async def post_waitlist_to_notion(data: dict):
         )
 ```
 
-**Notion database properties to create manually:**
+**Notion database properties:**
 | Property | Type |
 |----------|------|
 | Name | Title |
@@ -155,42 +187,45 @@ async def post_waitlist_to_notion(data: dict):
 
 ```python
 def build_waitlist_system_prompt(name: str, website: str) -> str:
-    return f"""You are the onboarding assistant for contextus — an AI widget that qualifies leads automatically for businesses.
+    first = name.split()[0] if name else name
+    return f"""You are the onboarding assistant for contextus — an AI widget that automatically qualifies leads for businesses.
 
 You already know:
 - Visitor name: {name}
 - Their website: {website}
 
-Your job is to warmly learn about their situation through natural conversation. Gather these four things in order:
-1. What kind of business they run (industry, size, what they sell)
-2. What their goal is for placing contextus on their site (lead gen, customer support, sales qualification, etc.)
-3. How they'd like their agent to behave (formal/casual, topics to focus on, what to do when visitors ask about pricing, etc.)
-4. Their timeline — when do they want this live?
+Your job: gather these 4 things through warm, natural conversation (one question at a time):
+1. What kind of business they run (industry, what they sell)
+2. Their goal for placing contextus (lead gen, support, sales qualification, etc.)
+3. How they want the agent to behave (tone, topics to focus on, what to do when asked about pricing)
+4. Their timeline (when do they want this live?)
 
 Rules:
-- Address them by first name
-- Ask one question per turn, weave naturally into conversation
-- If they say "I don't know" or skip a question, move on gracefully
-- Answer questions about contextus if they ask
-- After gathering the 4 points (or after they've skipped), say:
-  "Perfect, {name} — you're all set. We'll be in touch soon to get contextus live on {website}. Keep an eye on {name.split()[0] if name else 'your'} inbox!"
-- Keep responses short, warm, and human"""
+- Address them by first name ({first})
+- Ask ONE question per turn
+- If they skip or say "I don't know" — accept it and move on
+- You can answer questions about contextus if they ask, then return to gathering info
+- Keep responses short and warm
+
+When you have gathered all 4 points (or the visitor has skipped all), send your closing message:
+"Perfect, {first} — you're all set! We'll be in touch at your email to get contextus live on {website} soon. Looking forward to working with you."
+
+Then on a new line append exactly this token (do not explain it): WAITLIST_COMPLETE"""
 ```
 
 ### Context extraction
 
 ```python
 def extract_waitlist_context(transcript: str) -> dict:
-    """Extract business_type, goal, agent_behavior, timeline from conversation."""
     response = client.chat.completions.create(
         model=MODEL_PROFILE,
         messages=[
             {
                 "role": "system",
                 "content": (
-                    'Extract from this conversation transcript as JSON: '
+                    'Extract from this conversation as JSON: '
                     '{"business_type": "...", "goal": "...", "agent_behavior": "...", "timeline": "..."}. '
-                    'Use empty string for anything not mentioned. Return JSON only.'
+                    'Empty string if not mentioned. Return JSON only.'
                 ),
             },
             {"role": "user", "content": transcript},
@@ -206,25 +241,42 @@ def extract_waitlist_context(transcript: str) -> dict:
 
 ---
 
+## `widget/widget.js` modification
+
+In `callBackend()`, after the SSE stream ends and `fullText` is complete, before sending the postMessage:
+
+```js
+// Strip WAITLIST_COMPLETE signal from rendered text
+let displayText = fullText;
+const SIGNAL = 'WAITLIST_COMPLETE';
+if (displayText.includes(SIGNAL)) {
+  displayText = displayText.replace(SIGNAL, '').trimEnd();
+  // Update the rendered message bubble to remove the signal
+  // (update the last assistant message in the DOM)
+}
+
+window.parent.postMessage({
+  type: 'contextus:message_sent',
+  text: fullText  // send original (with signal) so parent can detect it
+}, '*');
+```
+
+---
+
 ## `widget/widget.html` modification
 
-In the init IIFE, check for `sessionId` URL param. If present, skip `POST /api/session` and use it directly — the session was pre-created by `/api/waitlist/start`.
+In the init IIFE, check for `sessionId` URL param. If present, skip `POST /api/session`:
 
 ```js
 var providedSessionId = params.get('sessionId') || '';
 
-if (apiUrl && knowledgeBaseId && !providedSessionId) {
-  // existing session creation flow
-  var sr = await fetch(apiUrl + '/api/session', { ... });
-  if (sr.ok) {
-    var data = await sr.json();
-    window.__ctxSessionId = data.session_id;
-    if (data.pills && data.pills.length) pills = data.pills;
-    window.parent.postMessage({ type: 'contextus:session_ready', session_id: data.session_id }, '*');
-  }
-} else if (providedSessionId) {
+if (providedSessionId) {
   window.__ctxSessionId = providedSessionId;
   window.parent.postMessage({ type: 'contextus:session_ready', session_id: providedSessionId }, '*');
+} else if (apiUrl && knowledgeBaseId) {
+  // existing session creation flow
+  var sr = await fetch(apiUrl + '/api/session', { ... });
+  ...
 }
 ```
 
@@ -232,142 +284,39 @@ if (apiUrl && knowledgeBaseId && !providedSessionId) {
 
 ## `join/index.html`
 
-### Structure
+### States: `form` → `chat` → `done`
 
-```
-join/
-└── index.html   (self-contained, same style as try/index.html)
-```
+### Form state
+- Inputs: name, email, website (pre-filled from `?website=`), phone
+- Validation: name + email + website required
+- Button shows spinner while POST /api/waitlist/start is in flight
+- On success → show chat state
 
-Three states: `form` → `chat` → `done`
-
-### Form state HTML
-
-```html
-<div id="s-form" class="state active">
-  <p class="eyebrow">You saw it work.</p>
-  <h1>Now let's get it on your site.</h1>
-  <p class="sub">Leave your details — we'll set it up for you.</p>
-  <div class="join-form">
-    <input id="j-name"    type="text"  placeholder="Your name" autocomplete="name" />
-    <input id="j-email"   type="email" placeholder="Email address" autocomplete="email" />
-    <input id="j-website" type="url"   placeholder="https://your-site.com" />
-    <input id="j-phone"   type="tel"   placeholder="Phone / WhatsApp (optional)" />
-    <p id="j-err" class="err-msg" style="display:none"></p>
-    <button id="j-submit" class="btn-p">Continue →</button>
-  </div>
-</div>
-```
-
-Pre-fill website on load:
-```js
-const ws = new URLSearchParams(location.search).get('website');
-if (ws) document.getElementById('j-website').value = ws;
-```
-
-### Submit handler
-
-```js
-async function submitForm() {
-  const name    = document.getElementById('j-name').value.trim();
-  const email   = document.getElementById('j-email').value.trim();
-  const website = document.getElementById('j-website').value.trim();
-  const phone   = document.getElementById('j-phone').value.trim();
-
-  if (!name || !email || !website) { showErr('Name, email, and website are required.'); return; }
-
-  const btn = document.getElementById('j-submit');
-  btn.textContent = 'Setting up...';
-  btn.disabled = true;
-
-  const res = await fetch(API_URL + '/api/waitlist/start', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email, website, phone }),
+### Chat state
+- Widget iframe built with: `sessionId`, `knowledgeBaseId=demo`, `apiUrl`, `greeting=Hi {name}...`, `dynamicHeight=1`
+- postMessage listener:
+  ```js
+  window.addEventListener('message', e => {
+    if (e.data?.type === 'contextus:message_sent' && e.data.text?.includes('WAITLIST_COMPLETE')) {
+      submitWaitlist();  // auto-trigger
+    }
+    if (e.data?.type === 'contextus:resize') {
+      // resize iframe
+    }
   });
+  ```
+- "Skip →" link at bottom — calls `submitWaitlist()` manually
 
-  if (!res.ok) { btn.textContent = 'Continue →'; btn.disabled = false; showErr('Something went wrong. Please try again.'); return; }
-
-  const { session_id } = await res.json();
-  currentSessionId = session_id;
-  currentEmail = email;
-
-  loadWidget(session_id, name, website);
-  show('chat');
-}
-```
-
-### Chat state HTML
-
-```html
-<div id="s-chat" class="state">
-  <div id="join-widget-container"></div>
-  <div class="join-chat-footer">
-    <button id="j-done" class="btn-p" onclick="submitWaitlist()">Submit →</button>
-    <p class="join-note">Skip the chat and just submit your details.</p>
-  </div>
-</div>
-```
-
-### loadWidget()
-
-```js
-function loadWidget(session_id, name, website) {
-  const greeting = encodeURIComponent('Hi ' + name + '! Tell me about your business — I have a few quick questions.');
-  const src = '/widget/widget.html'
-    + '?apiUrl=' + encodeURIComponent(API_URL)
-    + '&knowledgeBaseId=demo'
-    + '&sessionId=' + encodeURIComponent(session_id)
-    + '&greeting=' + greeting
-    + '&transparent=0&dynamicHeight=1';
-
-  const container = document.getElementById('join-widget-container');
-  container.innerHTML = '<iframe src="' + src + '" width="100%" height="480" frameborder="0" scrolling="no" style="border:none;display:block;border-radius:12px"></iframe>';
-}
-```
-
-### submitWaitlist()
-
-```js
-async function submitWaitlist() {
-  const btn = document.getElementById('j-done');
-  btn.textContent = 'Submitting...';
-  btn.disabled = true;
-
-  await fetch(API_URL + '/api/waitlist/submit', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ session_id: currentSessionId }),
-  });
-
-  document.getElementById('done-email').textContent = currentEmail;
-  show('done');
-}
-```
-
-### Done state HTML
-
-```html
-<div id="s-done" class="state">
-  <h1>You're on the list.</h1>
-  <p class="sub">We'll reach out at <strong id="done-email"></strong> when your slot is ready.</p>
-  <a href="/" class="btn-s">Back to contextus →</a>
-</div>
-```
+### Done state
+- "You're on the list."
+- "We'll reach out at {email} when your slot is ready."
+- "← Back to contextus" link
 
 ---
 
 ## `try/index.html` modification
 
-In `renderBrief()`, update the CTA link to pass the crawled URL:
-
-```js
-// Change static <a href="/#ea"> to dynamic
-const addBtn = document.getElementById('add-to-site-btn');
-if (addBtn) addBtn.href = '/join?website=' + encodeURIComponent(currentUrl);
-```
-
-Change the HTML from:
+In the brief HTML, change:
 ```html
 <a href="/#ea" class="btn-p">Add this to my site →</a>
 ```
@@ -376,37 +325,39 @@ To:
 <a id="add-to-site-btn" href="/join" class="btn-p">Add this to my site →</a>
 ```
 
-`currentUrl` is already tracked in state (the URL the user originally submitted).
+In `renderBrief()`:
+```js
+const btn = document.getElementById('add-to-site-btn');
+if (btn) btn.href = '/join?website=' + encodeURIComponent(currentUrl);
+```
 
 ---
 
 ## Environment variables
 
-Add to Render dashboard and `.env.example`:
 ```
 NOTION_TOKEN=secret_xxxx
-NOTION_DB_WAITLIST=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx   # 32-char database ID from Notion URL
+NOTION_DB_WAITLIST=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 ---
 
-## Notion setup (manual, one-time)
+## Notion setup (one-time manual)
 
-1. Create a new database in Notion called "contextus waitlist"
-2. Add properties: Name (title), Email (email), Website (url), Phone, Business Type, Goal, Agent Behavior, Timeline, Session (all text except the typed ones)
-3. Go to notion.so/my-integrations → create integration → copy token → `NOTION_TOKEN`
-4. Open the database → Share → Invite integration
-5. Copy database ID from URL (32-char string after the workspace name) → `NOTION_DB_WAITLIST`
+1. Create database "contextus waitlist" with the properties listed above
+2. Go to notion.so/my-integrations → create integration → copy token → `NOTION_TOKEN`
+3. Share the database with the integration
+4. Copy database ID from URL (32-char string) → `NOTION_DB_WAITLIST`
 
 ---
 
 ## Verification
 
-1. Go to `/try`, crawl a URL, complete the chat, see the brief
-2. Click "Add this to my site →" — should open `/join?website=https://...`
-3. Website field is pre-filled; fill name, email, phone → Continue
-4. Widget loads, greets by name, asks questions
-5. Answer 1–2 questions then click Submit
-6. Check Notion — row appears with name, email, website, phone + extracted goal/business type/behavior/timeline
-7. Try skipping chat entirely — click Submit immediately after form → Notion row with form fields populated, context fields empty
-8. Try going directly to `/join` without `?website=` — website field is blank, everything else works
+1. `/try` → crawl → brief → click "Add this to my site →"
+2. `/join?website=...` opens with website pre-filled
+3. Fill name, email, phone → Continue
+4. Widget loads, greets by name, asks 4 questions naturally
+5. After last answer: agent sends closing message → `WAITLIST_COMPLETE` detected → done state shows automatically
+6. Check Notion — row with all fields populated
+7. Test skip path: click "Skip →" immediately → Notion row with form fields only, context fields empty
+8. Test direct `/join` (no `?website=`) → blank website field, everything else works
