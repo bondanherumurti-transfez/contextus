@@ -197,13 +197,13 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
   let submitting = false;
   let cfToken = '';
 
-  function onTurnstileSuccess(token) {
+  window.onTurnstileSuccess = function(token) {
     cfToken = token;
     const ts = document.getElementById('turnstile-step');
     const jf = document.getElementById('join-form');
     if (ts) ts.style.display = 'none';
     if (jf) jf.style.display = 'block';
-  }
+  };
 
   // Pre-fill website from URL param
   (function () {

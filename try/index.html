@@ -521,13 +521,13 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
   let wakeUpTimer = null;
   let cfToken = '';
 
-  function onTurnstileSuccess(token) {
+  window.onTurnstileSuccess = function(token) {
     cfToken = token;
     const ts = document.getElementById('turnstile-step');
     const uf = document.getElementById('url-form');
     if (ts) ts.style.display = 'none';
     if (uf) uf.style.display = 'block';
-  }
+  };
 
   // ── State machine ──────────────────────────────────────────────────────────
 
