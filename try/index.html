@@ -246,6 +246,9 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
   .brief-hint{flex-direction:column}
   .chat-cta{flex-direction:column;align-items:flex-start}
 }
+/* ── Language toggle ── */
+.lang-id{display:none!important}body.id .lang-id{display:revert!important}
+body.id .lang-en{display:none!important}
 </style>
 </head>
 <body>
@@ -266,8 +269,8 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
   <div class="state active" id="s-idle">
     <p class="eyebrow fu">Live demo</p>
     <h1 class="page-h1 fu fd1">See it work on<br>your website.</h1>
-    <p class="page-sub fu fd2">Paste your URL — contextus crawls your site, builds a knowledge base, and shows you a live AI assistant in ~30 seconds.</p>
-    <p class="page-sub-id fu fd3">Tempel URL anda — contextus membangun asisten AI untuk bisnis Anda dalam ~30 detik.</p>
+    <p class="page-sub fu fd2 lang-en">Paste your URL — contextus crawls your site, builds a knowledge base, and shows you a live AI assistant in ~30 seconds.</p>
+    <p class="page-sub-id fu fd3 lang-id">Tempel URL anda — contextus membangun asisten AI untuk bisnis Anda dalam ~30 detik.</p>
     
     <div id="turnstile-step" class="fu fd4" style="text-align:center;margin-top:.5rem">
       <p style="font-size:14px;color:var(--g600);margin-bottom:1rem">Verify you're human to continue</p>
@@ -416,8 +419,8 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     </div>
     <p class="eyebrow fu fd1">Limited access</p>
     <h2 class="page-h1 fu fd2" style="font-size:clamp(1.5rem,4vw,2rem);margin-bottom:.5rem">We couldn't read<br>this site.</h2>
-    <p class="page-sub fu fd3" style="margin-bottom:.3rem">This happens when a site blocks automated access, requires a login, or has very little public content.</p>
-    <p class="page-sub-id fu fd3">Situs ini mungkin memblokir akses otomatis atau kontennya sangat terbatas.</p>
+    <p class="page-sub fu fd3 lang-en" style="margin-bottom:.3rem">This happens when a site blocks automated access, requires a login, or has very little public content.</p>
+    <p class="page-sub-id fu fd3 lang-id">Situs ini mungkin memblokir akses otomatis atau kontennya sangat terbatas.</p>
 
     <div class="empty-actions fu fd4">
       <button class="btn-s" id="try-another-btn" type="button">Try a different URL</button>
@@ -961,6 +964,15 @@ footer{padding:2rem var(--px);border-top:.5px solid var(--g300);width:100%}
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+})();
+
+// ── Language toggle ──────────────────────────────────────────────────────────
+(function () {
+  if (new URLSearchParams(location.search).get('lang') === 'id') {
+    document.body.classList.add('id');
+    var addBtn = document.getElementById('add-to-site-btn');
+    if (addBtn) addBtn.href = '/join?lang=id';
+  }
 })();
 </script>
 </body>

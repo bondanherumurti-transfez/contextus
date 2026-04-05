@@ -81,6 +81,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
   .form-footer .btn-p{width:100%;justify-content:center}
   .form-note{text-align:center}
 }
+/* ── Language toggle ── */
+.lang-id{display:none!important}body.id .lang-id{display:revert!important}
+body.id .lang-en{display:none!important}
 
 /* ════════════════════
    STATE 2 — CHAT
@@ -124,8 +127,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
     <!-- STATE 1: FORM -->
     <div id="s-form" class="state active">
       <p class="eyebrow fu fd1">Get started</p>
-      <h1 class="page-h1 fu fd2">Let's get you set up.</h1>
-      <p class="page-sub fu fd3">We'll reach out when your slot is ready — usually within a day or two.</p>
+      <h1 class="page-h1 fu fd2 lang-en">Let's get you set up.</h1>
+      <h1 class="page-h1 fu fd2 lang-id">Daftarkan bisnis Anda.</h1>
+      <p class="page-sub fu fd3 lang-en">We'll reach out when your slot is ready — usually within a day or two.</p>
+      <p class="page-sub fu fd3 lang-id">Kami akan menghubungi Anda saat slot siap — biasanya dalam satu atau dua hari.</p>
 
       <div id="turnstile-step" class="fu fd3" style="text-align:center;margin-top:.5rem">
         <p style="font-size:14px;color:var(--g600);margin-bottom:1rem">Verify you're human to continue</p>
@@ -212,8 +217,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,
 
   // Pre-fill website from URL param
   (function () {
-    var ws = new URLSearchParams(location.search).get('website');
+    var params = new URLSearchParams(location.search);
+    var ws = params.get('website');
     if (ws) document.getElementById('j-website').value = ws;
+    if (params.get('lang') === 'id') document.body.classList.add('id');
   })();
 
   function show(state) {
