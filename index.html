@@ -141,7 +141,9 @@ body.id .lang-en{display:none!important}
 .impl-note{margin-top:1.5rem;padding:1rem 1.25rem;background:var(--g100);border-radius:8px;font-size:.875rem;color:var(--g600);line-height:1.6}
 .impl-note strong{color:var(--black);font-weight:500}
 .impl-options{margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap}
-.impl-opt{flex:1;min-width:140px;padding:1rem;border:.5px solid var(--g300);border-radius:8px;text-align:center}
+.impl-opt{flex:1;min-width:140px;padding:1rem;border:.5px solid var(--g300);border-radius:8px;text-align:center;position:relative}
+.impl-opt.soon{opacity:.5}
+.impl-opt.soon::after{content:'soon';position:absolute;top:6px;right:8px;font-size:9px;font-family:var(--mono);color:var(--g500);letter-spacing:.5px;text-transform:uppercase}
 .impl-opt-icon{font-size:20px;margin-bottom:.5rem;filter:grayscale(1);opacity:.6}
 .impl-opt-name{font-size:13px;font-weight:500;margin-bottom:.2rem}
 .impl-opt-desc{font-size:11px;color:var(--g500);line-height:1.5}
@@ -295,9 +297,9 @@ body.id .lang-en{display:none!important}
     </div>
   </div>
   <div class="impl-options">
-    <div class="impl-opt"><div class="impl-opt-icon">&#9645;</div><div class="impl-opt-name">Inline</div><div class="impl-opt-desc">Replaces your existing contact form section</div></div>
-    <div class="impl-opt"><div class="impl-opt-icon">&#9701;</div><div class="impl-opt-name">Floating</div><div class="impl-opt-desc">Appears as a panel from the corner</div></div>
-    <div class="impl-opt"><div class="impl-opt-icon">&#9634;</div><div class="impl-opt-name">Full page</div><div class="impl-opt-desc">Dedicated /contact page experience</div></div>
+    <div class="impl-opt soon"><div class="impl-opt-icon">&#9645;</div><div class="impl-opt-name">Inline</div><div class="impl-opt-desc">Replaces your existing contact form section</div></div>
+    <div class="impl-opt soon"><div class="impl-opt-icon">&#9701;</div><div class="impl-opt-name">Floating</div><div class="impl-opt-desc">Appears as a panel from the corner</div></div>
+    <div class="impl-opt soon"><div class="impl-opt-icon">&#9634;</div><div class="impl-opt-name">Full page</div><div class="impl-opt-desc">Dedicated /contact page experience</div></div>
     <div class="impl-opt"><div class="impl-opt-icon">&#8644;</div><div class="impl-opt-name">iframe</div><div class="impl-opt-desc">Embed anywhere with a simple URL</div></div>
   </div>
 </div></section>
