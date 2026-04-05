@@ -4,7 +4,7 @@
 
 An embeddable AI chat widget that replaces traditional contact forms with intelligent, lead-qualifying conversations. Every chat becomes a structured lead brief — who the visitor is, what they need, their urgency signals, and a suggested follow-up.
 
-Live: [project-b0yme.vercel.app](https://project-b0yme.vercel.app)
+Live: [www.getcontextus.dev](https://www.getcontextus.dev)
 Backend API: [contextus-2d16.onrender.com](https://contextus-2d16.onrender.com)
 
 ---
@@ -19,6 +19,9 @@ FastAPI backend with OpenRouter LLM integration, web crawler (httpx + Firecrawl 
 
 **Phase 3 — /try page: complete.**
 Interactive demo page — paste any URL, crawl it in real time, chat with the resulting AI assistant, and generate a lead brief. Fully wired to the real backend.
+
+**Phase 3.5 — Observability: complete.**
+Distributed tracing with OpenTelemetry + Honeycomb. Traces LLM calls, crawler performance, and end-to-end chat latency.
 
 ---
 
@@ -55,7 +58,8 @@ contextus/
 │   │       ├── crawler.py              # Web crawler (httpx + Firecrawl fallback)
 │   │       ├── chunker.py              # Text chunking
 │   │       ├── retrieval.py            # Keyword-based retrieval
-│   │       └── llm.py                  # OpenRouter LLM wrapper
+│   │       ├── llm.py                  # OpenRouter LLM wrapper
+│   │       └── telemetry.py            # OpenTelemetry + Honeycomb tracing
 │   ├── requirements.txt
 │   ├── render.yaml
 │   └── .env.example
@@ -84,6 +88,7 @@ The `/try` page at `/try/index.html` is a full end-to-end demo:
 | `contextus:session_ready` | widget → parent | `{ session_id }` |
 | `contextus:message_sent` | widget → parent | `{}` |
 | `contextus:resize` | widget → parent | `{ height }` |
+| `contextus:expand` | widget → parent | `{}` — triggers wrapper expansion and scroll |
 
 ---
 
@@ -92,23 +97,39 @@ The `/try` page at `/try/index.html` is a full end-to-end demo:
 ### Embedding (Tier 1 — iframe)
 
 ```html
-<iframe
-  src="https://project-b0yme.vercel.app/widget/widget.html?apiUrl=https://contextus-2d16.onrender.com&knowledgeBaseId=YOUR_JOB_ID&name=Your+Company&greeting=Ask+us+anything...&transparent=0&dynamicHeight=1"
-  width="100%"
-  height="420"
-  frameborder="0"
-  scrolling="no"
-  style="border: none; display: block;"
-></iframe>
+<style>
+  #contextus-wrapper {
+    max-height: 250px;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+  }
+  #contextus-wrapper.expanded { max-height: 520px; }
+  #contextus-iframe { border: none; display: block; width: 100%; }
+  #contextus-wrapper.expanded #contextus-iframe { height: 480px; }
+</style>
+
+<div id="contextus-wrapper">
+  <iframe id="contextus-iframe"
+    src="https://www.getcontextus.dev/widget/widget.html?knowledgeBaseId=YOUR_KB_ID&apiUrl=https://contextus-2d16.onrender.com&dynamicHeight=1"
+    frameborder="0"></iframe>
+</div>
 
 <script>
   window.addEventListener('message', function(e) {
-    if (e.data && e.data.type === 'contextus:resize') {
-      var iframe = document.getElementById('your-iframe-id');
-      if (iframe) {
-        var scrollY = window.scrollY;
+    if (e.data.type === 'contextus:resize') {
+      var iframe = document.getElementById('contextus-iframe');
+      if (iframe && !iframe.dataset.expanded && e.data.height)
         iframe.style.height = e.data.height + 'px';
-        window.scrollTo(0, scrollY);
+    }
+    if (e.data.type === 'contextus:expand') {
+      var wrapper = document.getElementById('contextus-wrapper');
+      if (wrapper) {
+        wrapper.classList.add('expanded');
+        var iframe = wrapper.querySelector('iframe');
+        if (iframe) { iframe.dataset.expanded = '1'; iframe.style.height = ''; }
+        setTimeout(function() {
+          wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50);
       }
     }
   });
@@ -151,7 +172,7 @@ The `/try` page at `/try/index.html` is a full end-to-end demo:
 
 ```
 FRONTEND (Vercel)
-  index.html + try/ + widget/ → project-b0yme.vercel.app
+  index.html + try/ + widget/ → www.getcontextus.dev
 
 BACKEND (Render — free tier, sleeps on inactivity)
   Python + FastAPI → contextus-2d16.onrender.com
@@ -205,7 +226,40 @@ The crawler runs in two stages with automatic fallback:
 | Storage | Upstash Redis (TTL-based) |
 | Streaming | SSE (Server-Sent Events) |
 | Crawler | httpx + BeautifulSoup → Firecrawl fallback |
+| Observability | OpenTelemetry + Honeycomb |
 | Deployment | Render (free tier) |
+
+### Observability
+
+Distributed tracing via OpenTelemetry with Honeycomb backend (free tier: 20M events/month). 100% sampling rate for all traces.
+
+**Instrumented spans:**
+
+| Span name | Description | Key attributes |
+|-----------|-------------|----------------|
+| `chat.request` | End-to-end chat request | `session_id`, `kb_id`, `message_count`, `response_length`, `total_duration_ms` |
+| `llm.stream_chat` | OpenRouter streaming response | `model`, `input_tokens`, `output_tokens`, `duration_ms` |
+| `llm.generate_profile` | Company profile extraction | `model`, `input_tokens`, `output_tokens` |
+| `llm.generate_brief` | Lead brief generation | `model`, `input_tokens`, `output_tokens` |
+| `crawl.httpx` | HTTP-based web crawling | `url`, `pages_found`, `total_words`, `duration_ms` |
+| `crawl.firecrawl` | JS rendering fallback | `url`, `pages_found`, `duration_ms` |
+| `crawl.site` | Parent crawl span | `url`, `total_pages`, `total_words`, `fallback_triggered` |
+
+**Useful Honeycomb queries:**
+
+```sql
+-- Average latency by span
+AVG(duration_ms) GROUP BY name
+
+-- Slow chat requests (>5s)
+SELECT * WHERE name = 'chat.request' AND total_duration_ms > 5000
+
+-- LLM token usage by model
+SUM(output_tokens) GROUP BY model
+
+-- Crawl fallback rate
+COUNT() GROUP BY fallback_triggered
+```
 
 ### API endpoints
 
@@ -246,6 +300,8 @@ uvicorn app.main:app --reload
 | `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL | Yes |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token | Yes |
 | `FIRECRAWL_API_KEY` | Firecrawl API key (free tier: 500 pages/mo) | No — fallback disabled if unset |
+| `HONEYCOMB_API_KEY` | Honeycomb API key for observability | No — telemetry disabled if unset |
+| `OTEL_SERVICE_NAME` | Service name for traces | No (default: `contextus-backend`) |
 | `MODEL_PROFILE` | Model for company profile generation | No (default: `anthropic/claude-3-haiku`) |
 | `MODEL_CHAT` | Model for chat responses | No (default: `anthropic/claude-sonnet-4`) |
 | `MODEL_BRIEF` | Model for lead brief generation | No (default: `anthropic/claude-sonnet-4`) |
@@ -321,6 +377,7 @@ Set these environment variables in the Render dashboard:
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`
 - `FIRECRAWL_API_KEY` (optional but recommended)
+- `HONEYCOMB_API_KEY` (optional, enables observability)
 
 ### Branch strategy
 
@@ -357,6 +414,7 @@ Fonts: **DM Sans** (400, 500, 700) + **DM Mono** (400, 500) — Google Fonts.
 | 1 — Widget frontend | **Done** | Vanilla JS widget, 11 states, iframe embed |
 | 2 — Backend API | **Done** | FastAPI, OpenRouter LLM, Redis, SSE, Firecrawl fallback |
 | 3 — /try demo page | **Done** | Full crawl → chat → brief flow, real backend wired |
+| 3.5 — Observability | **Done** | OpenTelemetry + Honeycomb distributed tracing |
 | 4 — Lead delivery | Not started | WhatsApp/email delivery of lead briefs |
 | 5 — Platform plugins | Not started | WordPress, Wix (build at traction) |
 

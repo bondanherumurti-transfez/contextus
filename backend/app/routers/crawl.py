@@ -9,6 +9,7 @@ from app.models import (
     CrawlRequest,
     CrawlResponse,
     EnrichRequest,
+    Chunk,
 )
 from app.services.redis import save_knowledge_base, get_knowledge_base, check_rate_limit
 from app.services.database import save_customer_config
@@ -187,21 +188,16 @@ async def enrich_knowledge_base(job_id: str, body: EnrichRequest):
     if kb.status != "complete":
         raise HTTPException(status_code=400, detail="Job not complete yet")
 
-    from app.services.chunker import chunk_text
     from nanoid import generate as gen_id
 
     for question, answer in body.answers.items():
         if answer.strip():
-            chunk = type(
-                "Chunk",
-                (),
-                {
-                    "id": gen_id(size=10),
-                    "source": f"interview:{question}",
-                    "text": answer,
-                    "word_count": len(answer.split()),
-                },
-            )()
+            chunk = Chunk(
+                id=gen_id(size=10),
+                source=f"interview:{question}",
+                text=answer,
+                word_count=len(answer.split()),
+            )
             kb.chunks.append(chunk)
 
     if kb.chunks:
