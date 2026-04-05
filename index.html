@@ -128,6 +128,8 @@ footer .fr{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spaci
 .impl-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
 @media(max-width:600px){.impl-grid{grid-template-columns:1fr}}
 @media(max-width:768px){.ci-row input,.ai-wrap .ci-row input,.sf input{font-size:16px}}
+.lang-id{display:none!important}body.id .lang-id{display:revert!important}
+body.id .lang-en{display:none!important}
 .impl-card{border:.5px solid var(--g300);border-radius:10px;overflow:hidden;background:var(--g50)}
 .impl-card-h{padding:.625rem 1rem;border-bottom:.5px solid var(--g300);font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:.5px;display:flex;align-items:center;gap:6px}
 .impl-card-h .dot{width:8px;height:8px;border-radius:50%;background:var(--g300)}
@@ -160,7 +162,7 @@ footer .fr{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spaci
 <section class="hero"><div class="container">
   <h1 class="fu">From Contact Us<br>to <span class="hl">contextus</span>.</h1>
   <p class="sub fu fd1">Your contact form captures names. contextus captures context. Every lead comes with a full story.</p>
-  <p class="sub-id fu fd2">Form kontak hanya menangkap nama. contextus menangkap konteks lengkap.</p>
+  <p class="sub-id fu fd2 lang-id">Form kontak hanya menangkap nama. contextus menangkap konteks lengkap.</p>
 
   <div class="ci fu fd3">
     <div class="ci-wrap" id="hw">
@@ -200,20 +202,20 @@ footer .fr{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spaci
   <div class="lbl">The problem</div>
   <h2>Contact forms are a dead end.</h2>
   <p class="desc">97% of visitors leave without submitting. The 3% who do give you almost nothing to work with.</p>
-  <p class="desc" style="font-size:.85rem;color:var(--g500);font-style:italic;margin-top:-1rem">97% pengunjung pergi tanpa mengisi. 3% yang mengisi hanya memberikan informasi minim.</p>
+  <p class="desc lang-id" style="font-size:.85rem;color:var(--g500);font-style:italic;margin-top:-1rem">97% pengunjung pergi tanpa mengisi. 3% yang mengisi hanya memberikan informasi minim.</p>
   <div class="cmp">
     <div class="cc"><div class="cc-h">BEFORE — Contact form</div><div class="cc-b">
       <div class="ff"><label>Name</label><div class="im"></div></div>
       <div class="ff"><label>Email</label><div class="im"></div></div>
       <div class="ff"><label>Message</label><div class="tm"></div></div>
       <div class="fsm">Submit</div>
-      <div class="fo"><div><span class="ol">what you get:</span></div><div>Name: Budi</div><div>Email: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="375542535e77505a565e5b1954585a">[email&#160;protected]</a></div><div>Message: "Butuh bantuan pajak"</div></div>
+      <div class="fo"><div><span class="ol">what you get:</span></div><div>Name: Budi</div><div>Email: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="375542535e77505a565e5b1954585a">[email&#160;protected]</a></div><div>Message: <span class="lang-id">"Butuh bantuan pajak"</span><span class="lang-en">"Need tax help"</span></div></div>
     </div></div>
     <div class="cc"><div class="cc-h">AFTER — contextus</div><div class="cc-b">
       <div class="mcm"><div class="mb ag">Hi! How can I help you with our tax services?</div></div>
-      <div class="mcm v"><div class="mb vb">Saya punya PT baru di F&B, perlu bantuan lapor SPT</div></div>
+      <div class="mcm v"><div class="mb vb lang-id">Saya punya PT baru di F&B, perlu bantuan lapor SPT</div><div class="mb vb lang-en">I have a new PT in F&B, need help filing SPT</div></div>
       <div class="mcm"><div class="mb ag">Congrats on the new PT! How many employees?</div></div>
-      <div class="mcm v"><div class="mb vb">5 orang, deadline April ini</div></div>
+      <div class="mcm v"><div class="mb vb lang-id">5 orang, deadline April ini</div><div class="mb vb lang-en">5 people, deadline this April</div></div>
       <div class="bc"><div class="bt">WHAT YOU GET:</div><div class="bl"><strong>New PT in F&B, 5 employees.</strong> Needs SPT filing urgently (April deadline). Price-sensitive. Lead with setup package + deadline urgency.</div></div>
     </div></div>
   </div>
@@ -223,16 +225,16 @@ footer .fr{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spaci
   <h2>How it works</h2>
   <p class="desc">Three steps. Under fifteen minutes. No code.</p>
   <div class="steps">
-    <div class="step"><div class="sn">01</div><div><h3>Paste your website URL</h3><p>contextus crawls your site and builds a knowledge base automatically. Answer a few quick questions to fill any gaps.</p><p class="sid">Tempel URL website Anda. contextus membangun basis pengetahuan secara otomatis.</p></div></div>
-    <div class="step"><div class="sn">02</div><div><h3>Embed one line of code</h3><p>Copy a single script tag into your website. The conversational interface appears — greeting visitors, answering questions, qualifying leads naturally.</p><p class="sid">Salin satu baris kode. Interface percakapan langsung muncul dan siap melayani.</p></div></div>
-    <div class="step"><div class="sn">03</div><div><h3>Get lead briefs, not form dumps</h3><p>Every conversation becomes a structured lead brief delivered to your WhatsApp or email. Who they are, what they need, how to approach them.</p><p class="sid">Setiap percakapan menjadi ringkasan lead yang dikirim ke WhatsApp atau email Anda.</p></div></div>
+    <div class="step"><div class="sn">01</div><div><h3>Paste your website URL</h3><p>contextus crawls your site and builds a knowledge base automatically. Answer a few quick questions to fill any gaps.</p><p class="sid lang-id">Tempel URL website Anda. contextus membangun basis pengetahuan secara otomatis.</p></div></div>
+    <div class="step"><div class="sn">02</div><div><h3>Embed one line of code</h3><p>Copy a single script tag into your website. The conversational interface appears — greeting visitors, answering questions, qualifying leads naturally.</p><p class="sid lang-id">Salin satu baris kode. Interface percakapan langsung muncul dan siap melayani.</p></div></div>
+    <div class="step"><div class="sn">03</div><div><h3>Get lead briefs, not form dumps</h3><p>Every conversation becomes a structured lead brief delivered to your WhatsApp or email. Who they are, what they need, how to approach them.</p><p class="sid lang-id">Setiap percakapan menjadi ringkasan lead yang dikirim ke WhatsApp atau email Anda.</p></div></div>
   </div>
 </div></section>
 
 <section class="impl"><div class="container">
   <h2>Drop it into any website</h2>
   <p class="desc">One line of code. The interface adapts to your site. No build step, no SDK, no framework dependency.</p>
-  <p class="desc" style="font-size:.85rem;color:var(--g500);font-style:italic;margin-top:-1rem">Satu baris kode. Tidak perlu framework atau proses build apapun.</p>
+  <p class="desc lang-id" style="font-size:.85rem;color:var(--g500);font-style:italic;margin-top:-1rem">Satu baris kode. Tidak perlu framework atau proses build apapun.</p>
   <div class="impl-grid">
     <div class="impl-card">
       <div class="impl-card-h"><span class="dot"></span>EMBED SNIPPET</div>
@@ -303,7 +305,7 @@ footer .fr{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spaci
 <section class="bs"><div class="container">
   <h2>What a lead brief looks like</h2>
   <p class="desc">Not a chat transcript. An actionable intelligence card.</p>
-  <p class="desc" style="font-size:.85rem;color:var(--g500);font-style:italic;margin-top:-1rem">Bukan transkrip chat. Kartu intelijen yang bisa langsung ditindaklanjuti.</p>
+  <p class="desc lang-id" style="font-size:.85rem;color:var(--g500);font-style:italic;margin-top:-1rem">Bukan transkrip chat. Kartu intelijen yang bisa langsung ditindaklanjuti.</p>
   <div class="be">
     <div class="beh"><span class="beh-t">New lead — PT Alamii Food</span><span class="beh-m">via website · 26 Mar 2026</span></div>
     <div class="beb">
@@ -355,6 +357,7 @@ function aS(){const t=ai.value.trim();if(!t)return;ai.value='';go(t)}
 hs.addEventListener('click',hS);hi.addEventListener('keydown',e=>{if(e.key==='Enter')hS()});
 as.addEventListener('click',aS);ai.addEventListener('keydown',e=>{if(e.key==='Enter')aS()});
 document.querySelectorAll('.pill').forEach(b=>b.addEventListener('click',()=>go(b.dataset.q)));
+if(new URLSearchParams(location.search).get('lang')==='id')document.body.classList.add('id');
 </script>
 </body>
 </html>
