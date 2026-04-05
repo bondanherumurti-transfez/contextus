@@ -91,13 +91,13 @@ LEAD_QUAL_DEMO = """Lead qualification — weave naturally into every response:
 - Assume the visitor has never heard of contextus — always explain briefly what it is when relevant
 - Answer the visitor's question first, then ask one qualifying question which relates to their question
 - Pick the highest-priority unknown from this list (skip anything already answered):
-  1. Visitor's name — always ask "By the way, who am I speaking with?" — never use "What's your name?". On first or second reply if they haven't introduced themselves. Address them by name throughout after.
+  1. Visitor's name — always ask with phrase "By the way, who am I speaking with?" — never use "What's your name?". On first or second reply if they haven't introduced themselves. Address them by name throughout after.
   2. Do they have a website? Ask for the URL — this is critical, contextus lives on their website. Without a website there is nowhere to place contextus.
   3. What kind of business do you run / what is your role? — understand their context
   4. How do customers currently reach them or engage through their website? — uncover the pain with their current method
   5. Would contextus solve that problem for them? — gauge openness and fit
   6. Only if they show openness — ask when they're looking to have this in place
-  7. Only ask for contact (email or WhatsApp) when buying intent is clear — never on the first message
+  7. Only ask for contact (email or WhatsApp) when buying intent is clear — never on the first message - dont missed to ask email or whatsapp if they show clear buying intent, otherwise you might lose the lead
 - Never ask more than one question per message
 - Make the question feel like natural curiosity, not a form — tie it to what the visitor just said"""
 
@@ -110,18 +110,23 @@ LEAD_QUAL_GENERIC = """Lead qualification — weave naturally into every respons
   4. What specific problem are they trying to solve?
   5. What are they currently doing about it — uncover pain and urgency
   6. Only if they show clear interest — ask when they're looking to get started
-  7. Only ask for contact (email or WhatsApp) when buying intent is clear — never on the first message
+  7. Contact capture (email or WhatsApp number):
+     - Ask naturally once you sense genuine interest — don't wait for "perfect" buying signals
+     - MANDATORY: if this is exchange 4 or later and contact has not been shared yet, you MUST ask — phrase it warmly, e.g. "What's the best way to reach you — email or WhatsApp?" or "I'd love for the team to follow up — mind sharing your email or WhatsApp?"
+     - Never ask on the first message
+     - Never ask twice if already captured
 - Never ask more than one question per message
 - Make the question feel like natural curiosity, not a form — tie it to what the visitor just said"""
 
 
 def build_chat_system_prompt(
-    company_profile: CompanyProfile, retrieved_chunks: list[Chunk], kb_id: str = ""
+    company_profile: CompanyProfile, retrieved_chunks: list[Chunk], kb_id: str = "", message_count: int = 0
 ) -> str:
     chunks_text = "\n\n".join([f"[{c.source}]\n{c.text}" for c in retrieved_chunks])
     lead_qual = LEAD_QUAL_DEMO if kb_id == "demo" else LEAD_QUAL_GENERIC
 
     return f"""You are the AI assistant for {company_profile.name}, a {company_profile.industry} business.
+[Exchange count: {message_count // 2}]
 
 About this business:
 {company_profile.summary}
@@ -224,7 +229,7 @@ async def stream_chat_response(
     system_prompt = (
         system_prompt_override
         if system_prompt_override
-        else build_chat_system_prompt(company_profile, retrieved, kb_id=kb_id)
+        else build_chat_system_prompt(company_profile, retrieved, kb_id=kb_id, message_count=len(messages))
     )
 
     chat_messages = [{"role": "system", "content": system_prompt}]
