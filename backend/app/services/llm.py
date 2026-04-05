@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from tenacity import retry, stop_after_attempt, wait_exponential
 from app.models import CompanyProfile, PillSuggestions, Session, LeadBrief, Chunk
 from app.services.retrieval import retrieve_chunks
+from app.services.telemetry import tracer
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +121,10 @@ LEAD_QUAL_GENERIC = """Lead qualification — weave naturally into every respons
 
 
 def build_chat_system_prompt(
-    company_profile: CompanyProfile, retrieved_chunks: list[Chunk], kb_id: str = "", message_count: int = 0
+    company_profile: CompanyProfile,
+    retrieved_chunks: list[Chunk],
+    kb_id: str = "",
+    message_count: int = 0,
 ) -> str:
     chunks_text = "\n\n".join([f"[{c.source}]\n{c.text}" for c in retrieved_chunks])
     lead_qual = LEAD_QUAL_DEMO if kb_id == "demo" else LEAD_QUAL_GENERIC
@@ -152,19 +156,27 @@ Rules:
 async def _call_profile_model(
     chunks_text: str, site_url: str, temperature: float = 0.3
 ) -> dict:
-    response = await client.chat.completions.create(
-        model=MODEL_PROFILE,
-        messages=[
-            {"role": "system", "content": PROFILE_SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": f"Website URL: {site_url}\n\nContent:\n{chunks_text}",
-            },
-        ],
-        response_format={"type": "json_object"},
-        temperature=temperature,
-    )
-    return extract_json(response.choices[0].message.content)
+    with tracer.start_as_current_span("llm.generate_profile") as span:
+        span.set_attribute("model", MODEL_PROFILE)
+        span.set_attribute("temperature", temperature)
+        span.set_attribute("site_url", site_url)
+
+        response = await client.chat.completions.create(
+            model=MODEL_PROFILE,
+            messages=[
+                {"role": "system", "content": PROFILE_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": f"Website URL: {site_url}\n\nContent:\n{chunks_text}",
+                },
+            ],
+            response_format={"type": "json_object"},
+            temperature=temperature,
+        )
+
+        content = response.choices[0].message.content
+        span.set_attribute("response_length", len(content))
+        return extract_json(content)
 
 
 def _profile_from_partial(data: dict, site_url: str) -> CompanyProfile:
@@ -225,62 +237,81 @@ async def stream_chat_response(
     system_prompt_override: str | None = None,
     kb_id: str = "",
 ) -> AsyncIterator[str]:
-    retrieved = retrieve_chunks(user_message, chunks, top_k=5)
-    system_prompt = (
-        system_prompt_override
-        if system_prompt_override
-        else build_chat_system_prompt(company_profile, retrieved, kb_id=kb_id, message_count=len(messages))
-    )
+    with tracer.start_as_current_span("llm.stream_chat") as span:
+        span.set_attribute("model", MODEL_CHAT)
+        span.set_attribute("kb_id", kb_id)
+        span.set_attribute("message_length", len(user_message))
 
-    chat_messages = [{"role": "system", "content": system_prompt}]
-    for msg in messages:
-        chat_messages.append({"role": msg["role"], "content": msg["content"]})
-    chat_messages.append({"role": "user", "content": user_message})
+        retrieved = retrieve_chunks(user_message, chunks, top_k=5)
+        span.set_attribute("chunks_retrieved", len(retrieved))
 
-    stream = await client.chat.completions.create(
-        model=MODEL_CHAT, messages=chat_messages, stream=True, temperature=0.7
-    )
+        system_prompt = (
+            system_prompt_override
+            if system_prompt_override
+            else build_chat_system_prompt(
+                company_profile, retrieved, kb_id=kb_id, message_count=len(messages)
+            )
+        )
 
-    async for chunk in stream:
-        if chunk.choices[0].delta.content:
-            text = chunk.choices[0].delta.content
-            yield text
+        chat_messages = [{"role": "system", "content": system_prompt}]
+        for msg in messages:
+            chat_messages.append({"role": msg["role"], "content": msg["content"]})
+        chat_messages.append({"role": "user", "content": user_message})
+
+        stream = await client.chat.completions.create(
+            model=MODEL_CHAT, messages=chat_messages, stream=True, temperature=0.7
+        )
+
+        token_count = 0
+        async for chunk in stream:
+            if chunk.choices[0].delta.content:
+                text = chunk.choices[0].delta.content
+                token_count += 1
+                yield text
+
+        span.set_attribute("tokens_generated", token_count)
 
 
 async def generate_lead_brief(session: Session) -> LeadBrief:
-    transcript = "\n".join(
-        [f"{msg.role.upper()}: {msg.text}" for msg in session.messages]
-    )
+    with tracer.start_as_current_span("llm.generate_brief") as span:
+        span.set_attribute("model", MODEL_BRIEF)
+        span.set_attribute("message_count", len(session.messages))
 
-    response = await client.chat.completions.create(
-        model=MODEL_BRIEF,
-        messages=[
-            {"role": "system", "content": BRIEF_SYSTEM_PROMPT},
-            {"role": "user", "content": f"Transcript:\n{transcript}"},
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.3,
-    )
+        transcript = "\n".join(
+            [f"{msg.role.upper()}: {msg.text}" for msg in session.messages]
+        )
 
-    content = response.choices[0].message.content
-    data = extract_json(content)
+        response = await client.chat.completions.create(
+            model=MODEL_BRIEF,
+            messages=[
+                {"role": "system", "content": BRIEF_SYSTEM_PROMPT},
+                {"role": "user", "content": f"Transcript:\n{transcript}"},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+        )
 
-    quality_score = data.get("quality_score", "medium")
-    if quality_score not in ("high", "medium", "low"):
-        quality_score = "medium"
+        content = response.choices[0].message.content
+        data = extract_json(content)
 
-    return LeadBrief(
-        session_id=session.session_id,
-        created_at=str(int(time.time())),
-        who=data.get("who", ""),
-        need=data.get("need", ""),
-        signals=data.get("signals", ""),
-        open_questions=data.get("open_questions", ""),
-        suggested_approach=data.get("suggested_approach", ""),
-        quality_score=quality_score,
-        contact=data.get("contact"),
-        metadata={"model": MODEL_BRIEF},
-    )
+        quality_score = data.get("quality_score", "medium")
+        if quality_score not in ("high", "medium", "low"):
+            quality_score = "medium"
+
+        span.set_attribute("quality_score", quality_score)
+
+        return LeadBrief(
+            session_id=session.session_id,
+            created_at=str(int(time.time())),
+            who=data.get("who", ""),
+            need=data.get("need", ""),
+            signals=data.get("signals", ""),
+            open_questions=data.get("open_questions", ""),
+            suggested_approach=data.get("suggested_approach", ""),
+            quality_score=quality_score,
+            contact=data.get("contact"),
+            metadata={"model": MODEL_BRIEF},
+        )
 
 
 def generate_fallback_pills() -> list[str]:

@@ -1,4 +1,5 @@
 import truststore
+
 truststore.inject_into_ssl()
 
 from contextlib import asynccontextmanager
@@ -10,6 +11,7 @@ import os
 
 from app.routers import crawl, session, chat, brief, waitlist, jobs
 from app.services.database import init_db
+from app.services.telemetry import init_telemetry, instrument_app
 
 load_dotenv()
 
@@ -19,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    init_telemetry()
     logger.info("[startup] Running init_db...")
     try:
         await init_db()
@@ -57,6 +60,8 @@ app.include_router(chat.router, prefix="/api")
 app.include_router(brief.router, prefix="/api")
 app.include_router(waitlist.router, prefix="/api")
 app.include_router(jobs.router, prefix="/api")
+
+instrument_app(app)
 
 
 @app.get("/api/health")
