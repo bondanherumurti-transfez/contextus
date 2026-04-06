@@ -23,6 +23,9 @@ Interactive demo page — paste any URL, crawl it in real time, chat with the re
 **Phase 3.5 — Observability: complete.**
 Distributed tracing with OpenTelemetry + Honeycomb. Traces LLM calls, crawler performance, and end-to-end chat latency.
 
+**Phase 3.6 — Widget tests + Analytics: complete.**
+Playwright end-to-end tests covering phase transitions, animation behavior, and dynamic sizing. Vercel Web Analytics added to all frontend pages. GitHub Actions CI runs on every `widget/**` change.
+
 ---
 
 ## Project structure
@@ -30,13 +33,19 @@ Distributed tracing with OpenTelemetry + Honeycomb. Traces LLM calls, crawler pe
 ```
 contextus/
 ├── index.html                          # Landing page (Vercel)
+├── join/
+│   └── index.html                      # /join waitlist page
 ├── try/
 │   └── index.html                      # /try demo page — real backend wired
 ├── widget/
 │   ├── widget.html                     # Standalone iframe shell
 │   ├── widget.js                       # Widget component (vanilla JS, 11-state machine)
 │   ├── widget.css                      # Widget styles
-│   └── embed.js                        # Tier 2 inject script (placeholder)
+│   ├── embed.js                        # Tier 2 inject script (placeholder)
+│   └── tests/
+│       ├── widget.spec.ts              # Playwright e2e tests (22 tests)
+│       └── helpers/
+│           └── mock-api.ts             # Route mock helpers (session, chat, hang, complete)
 ├── assets/
 │   ├── contextus-logo-dark.svg
 │   ├── contextus-logo-light.svg
@@ -63,6 +72,11 @@ contextus/
 │   ├── requirements.txt
 │   ├── render.yaml
 │   └── .env.example
+├── package.json                        # Playwright test runner (devDependency only)
+├── playwright.config.ts                # Playwright config — Chromium, serves repo root
+├── .github/
+│   └── workflows/
+│       └── widget-tests.yml            # CI: runs on push/PR to widget/**
 └── vercel.json                         # Vercel headers config (iframe embedding)
 ```
 
@@ -163,6 +177,46 @@ The `/try` page at `/try/index.html` is a full end-to-end demo:
 | 9 | error | Network/LLM timeout. Red banner. Auto-retries once after 2s. |
 | 10 | returning | Previous conversation shown at 55% opacity with label. |
 | 11 | complete | Sign-off message. Soft-reset after 30s. |
+
+---
+
+## Widget Tests
+
+End-to-end tests with [Playwright](https://playwright.dev/) — runs against a local static file server (`serve .`), all API calls mocked. No backend required.
+
+### Run locally
+
+```bash
+npm install
+npx playwright install chromium
+npm test
+```
+
+### Test coverage (22 tests)
+
+| Group | Tests |
+|-------|-------|
+| Phase 1 — idle state | Pills visible, max-width ≤600px, send button states |
+| Phase 1 → Phase 2 transition | `ctx-expanded` class, `contextus:expand` postMessage, pills hidden, messages visible |
+| Animation behavior | Typing dots visible, `ctx-dot-pulse` animation, staggered delays, send button disabled during stream |
+| Dynamic sizing | Height expands after transition, dynamicHeight param works |
+| Complete phase | Banner shown + input disabled after conversation ends, WAITLIST_COMPLETE stripped |
+| Pill interaction | Clicking pill triggers phase transition |
+
+### CI
+
+GitHub Actions runs the full suite on every push or PR that touches `widget/**`. Playwright report uploaded as artifact on failure.
+
+### Mock strategy
+
+All API calls are intercepted by Playwright's `page.route()` — nothing hits the real backend:
+
+| Helper | Intercepts | Behavior |
+|--------|-----------|---------|
+| `mockSession` | `POST /api/session` | Returns `{ session_id: 'test-session-123' }` |
+| `mockChat` | `POST /api/chat/**` | Returns SSE stream with reply token |
+| `mockChatHang` | `POST /api/chat/**` | Never responds — keeps thinking state visible |
+| `mockChatComplete` | `POST /api/chat/**` | Returns `WAITLIST_COMPLETE` signal |
 
 ---
 
@@ -415,6 +469,7 @@ Fonts: **DM Sans** (400, 500, 700) + **DM Mono** (400, 500) — Google Fonts.
 | 2 — Backend API | **Done** | FastAPI, OpenRouter LLM, Redis, SSE, Firecrawl fallback |
 | 3 — /try demo page | **Done** | Full crawl → chat → brief flow, real backend wired |
 | 3.5 — Observability | **Done** | OpenTelemetry + Honeycomb distributed tracing |
+| 3.6 — Widget tests + Analytics | **Done** | Playwright e2e tests, Vercel Web Analytics, GitHub Actions CI |
 | 4 — Lead delivery | Not started | WhatsApp/email delivery of lead briefs |
 | 5 — Platform plugins | Not started | WordPress, Wix (build at traction) |
 
