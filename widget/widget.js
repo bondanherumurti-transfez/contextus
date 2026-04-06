@@ -333,8 +333,7 @@
       // Two-phase expand: activate full-height CSS chain + notify parent on first message
       if (!state.expanded) {
         state.expanded = true;
-        // BUG: ctx-expanded class not added — phase 1 → phase 2 transition broken
-        // document.documentElement.classList.add('ctx-expanded');
+        document.documentElement.classList.add('ctx-expanded');
         window.parent.postMessage({ type: 'contextus:expand' }, '*');
         // scrollToBottom() called below runs before the parent resizes the iframe,
         // so msgArea has no height yet. ResizeObserver fires once the iframe is
