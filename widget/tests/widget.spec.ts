@@ -2,8 +2,10 @@ import { test, expect } from '@playwright/test';
 import { mockChat, mockChatComplete, mockChatHang, mockSession } from './helpers/mock-api';
 
 // Widget URL with pre-set session ID to skip /api/session call
-const WIDGET_URL = '/widget/widget.html?sessionId=test-session-123';
-const WIDGET_URL_DH = '/widget/widget.html?sessionId=test-session-123&dynamicHeight=1';
+// Note: use clean URLs (no .html) — serve 14.x redirects .html and drops query params
+const WIDGET_URL = '/widget/widget?sessionId=test-session-123';
+const WIDGET_URL_DH = '/widget/widget?sessionId=test-session-123&dynamicHeight=1';
+const WIDGET_URL_ID = '/widget/widget?sessionId=test-session-123&lang=id';
 
 // ── Phase 1: Idle state ────────────────────────────────────────────────────────
 
@@ -219,8 +221,8 @@ test.describe('Animation behavior', () => {
     await page.locator('.ctx-input').fill('Hello');
     await page.locator('.ctx-send').click();
 
-    // Wait for agent bubble with real text
-    await expect(page.locator('.ctx-bubble-agent')).not.toBeEmpty();
+    // Wait for agent bubble with real text (greeting + response = 2 bubbles, check last)
+    await expect(page.locator('.ctx-bubble-agent').last()).not.toBeEmpty();
     await expect(page.locator('.ctx-dots')).not.toBeAttached();
   });
 
@@ -321,5 +323,61 @@ test.describe('Pill interaction', () => {
 
     await expect(page.locator('html')).toHaveClass(/ctx-expanded/);
     await expect(page.locator('.ctx-bubble-visitor')).toBeVisible();
+  });
+});
+
+// ── Localization (lang=id) ─────────────────────────────────────────────────────
+
+test.describe('Localization — lang=id', () => {
+  test('input placeholder is in Indonesian on idle', async ({ page }) => {
+    await page.goto(WIDGET_URL_ID);
+    const placeholder = await page.locator('.ctx-input').getAttribute('placeholder');
+    expect(placeholder).toBe('Tanya apa saja...');
+  });
+
+  test('fallback pills are in Indonesian when no KB pills provided', async ({ page }) => {
+    await page.goto(WIDGET_URL_ID);
+    const pills = await page.locator('.ctx-pill').allTextContents();
+    expect(pills).toEqual(['Apa layanan Anda?', 'Bagaimana Anda membantu?', 'Cara menghubungi?']);
+  });
+
+  test('thinking placeholder is in Indonesian while waiting', async ({ page }) => {
+    await mockSession(page);
+    await mockChatHang(page);
+    await page.goto(WIDGET_URL_ID);
+    await page.locator('.ctx-input').fill('Halo');
+    await page.locator('.ctx-send').click();
+
+    await expect(page.locator('html')).toHaveClass(/ctx-expanded/);
+    const placeholder = await page.locator('.ctx-input').getAttribute('placeholder');
+    expect(placeholder).toBe('Menunggu balasan...');
+  });
+
+  test('active placeholder is in Indonesian after response', async ({ page }) => {
+    await mockChat(page, 'Halo! Ada yang bisa kami bantu?');
+    await page.goto(WIDGET_URL_ID);
+    await page.locator('.ctx-input').fill('Halo');
+    await page.locator('.ctx-send').click();
+
+    await expect(page.locator('.ctx-bubble-agent').last()).not.toBeEmpty();
+    const placeholder = await page.locator('.ctx-input').getAttribute('placeholder');
+    expect(placeholder).toBe('Ketik pesan...');
+  });
+
+  test('complete banner is in Indonesian', async ({ page }) => {
+    await mockChatComplete(page);
+    await page.goto(WIDGET_URL_ID);
+    await page.locator('.ctx-input').fill('daftar');
+    await page.locator('.ctx-send').click();
+
+    await expect(page.locator('.ctx-bubble-agent').last()).not.toContainText('WAITLIST_COMPLETE');
+  });
+
+  test('English widget is unaffected (lang=en still shows English)', async ({ page }) => {
+    await page.goto(WIDGET_URL);
+    const placeholder = await page.locator('.ctx-input').getAttribute('placeholder');
+    expect(placeholder).toBe('Ask us anything...');
+    const pills = await page.locator('.ctx-pill').allTextContents();
+    expect(pills).toEqual(['What services do you offer?', 'How can you help me?', 'How do I contact you?']);
   });
 });
