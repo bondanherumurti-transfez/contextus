@@ -29,6 +29,7 @@
       var knowledgeBaseId = params.get('knowledgeBaseId') || '';
       var providedSessionId = params.get('sessionId') || '';
       var pills = null;
+      var sessionLang = 'en';
 
       var autoMessage = params.get('autoMessage') || '';
 
@@ -46,21 +47,26 @@
             var data = await sr.json();
             window.__ctxSessionId = data.session_id;
             if (data.pills && data.pills.length) pills = data.pills;
+            if (data.language) sessionLang = data.language;
             window.parent.postMessage({ type: 'contextus:session_ready', session_id: data.session_id }, '*');
           }
         } catch (e) { /* fall through to defaults */ }
       }
 
+      // Explicit lang param takes priority; otherwise use language detected from KB
+      var langParam = params.get('lang') || 'auto';
+      var effectiveLang = (langParam && langParam !== 'auto') ? langParam : sessionLang;
+
       var widget = ContextusWidget.init({
         root: document.getElementById('contextus-root'),
         name: params.get('name') || 'contextus',
-        greeting: params.get('greeting') || 'Ask us anything...',
-        lang: params.get('lang') || 'auto',
+        greeting: params.get('greeting') || '',
+        lang: effectiveLang,
         transparent: transparent,
         dynamicHeight: params.get('dynamicHeight') === '1',
         apiUrl: apiUrl,
         knowledgeBaseId: knowledgeBaseId,
-        pills: pills || ['What services do you offer?', 'How can you help me?', 'How do I contact you?'],
+        pills: pills || [],
         autoMessage: autoMessage,
       });
     })();

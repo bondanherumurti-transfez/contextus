@@ -43,7 +43,7 @@ async def create_session(body: SessionRequest):
     )
 
     pills = kb.suggested_pills if kb.suggested_pills else []
-    return SessionResponse(session_id=session_id, pills=pills)
+    return SessionResponse(session_id=session_id, pills=pills, language=kb.language)
 
 
 @router.get("/session/{session_id}")
