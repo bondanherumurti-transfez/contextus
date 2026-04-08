@@ -96,6 +96,16 @@
     '.ctxf-badge.ctxf-hidden{display:none}',
     '@keyframes ctxf-badge-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}',
 
+    // Pulse rings (hidden on desktop, shown on mobile via media query)
+    '.ctxf-pulse-ring{display:none;position:absolute;inset:0;border-radius:16px;background:#000;pointer-events:none}',
+    '.ctxf-pulse-ring:nth-child(1){animation:ctxf-pulse-ring 2s ease-out infinite}',
+    '.ctxf-pulse-ring:nth-child(2){animation:ctxf-pulse-ring 2s ease-out infinite 1s}',
+    '@keyframes ctxf-pulse-ring{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.6);opacity:0}}',
+
+    // Back button (hidden on desktop, shown on mobile via media query)
+    '.ctxf-back-btn{width:44px;height:44px;border:none;background:transparent;cursor:pointer;display:none;align-items:center;justify-content:center;border-radius:8px;flex-shrink:0;-webkit-tap-highlight-color:transparent;outline:none;margin-left:-6px}',
+    '.ctxf-back-btn svg{width:20px;height:20px;fill:#fff}',
+
     // ── Panel ──
     '.ctxf-panel{position:absolute;width:380px;max-width:calc(100vw - 40px);max-height:min(600px,80vh);background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.12),0 2px 8px rgba(0,0,0,.08);overflow:hidden;display:flex;flex-direction:column;opacity:0;transform:translateY(20px) scale(.95);transform-origin:bottom right;transition:opacity .25s ease,transform .25s ease;pointer-events:none}',
     '.ctxf-panel.ctxf-open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}',
@@ -156,9 +166,59 @@
 
     // ── Mobile: full-screen takeover (<480px) ──
     '@media(max-width:479px){',
-      '.ctxf-panel{inset:0;width:100%;max-width:100%;max-height:100%;border-radius:0;transform-origin:bottom center;padding-bottom:env(safe-area-inset-bottom,0px)}',
-      '.ctxf-fab.ctxf-open{opacity:0;pointer-events:none;transition:transform .2s ease,box-shadow .2s ease,opacity .2s ease}',
-      '.ctxf-input-area{padding-bottom:max(16px,env(safe-area-inset-bottom,16px))}',
+
+      // Panel: slide up from bottom (replaces desktop scale+fade)
+      '.ctxf-panel{inset:0;width:100%;max-width:100%;max-height:100%;border-radius:0;opacity:1;transform:translateY(100%);transition:transform .3s ease-out;z-index:2147483647}',
+      '.ctxf-panel.ctxf-open{transform:translateY(0)}',
+
+      // FAB: scale down + fade out when panel opens
+      '.ctxf-fab.ctxf-open{opacity:0;transform:scale(.8);pointer-events:none;transition:transform .2s ease,opacity .2s ease,box-shadow .2s ease}',
+
+      // Pulse rings: show on mobile
+      '.ctxf-pulse-ring{display:block}',
+
+      // Back button: show on mobile
+      '.ctxf-back-btn{display:flex}',
+
+      // Dark header
+      '.ctxf-header{background:#1a1a1a;border-bottom:1px solid #333;padding:44px 12px 12px}',
+      '.ctxf-avatar{background:#333;border:1px solid #444}',
+      '.ctxf-hname{color:#fff}',
+      '.ctxf-hstatus{color:#888}',
+      '.ctxf-close-btn svg{fill:#fff}',
+      '.ctxf-close-btn:hover{background:#2a2a2a}',
+
+      // Dark messages area
+      '.ctxf-messages{background:#1a1a1a;scrollbar-color:#444 transparent}',
+      '.ctxf-messages::-webkit-scrollbar-thumb{background:#444}',
+
+      // Message avatar: dark
+      '.ctxf-msg-avatar{background:#333;border:1px solid #444}',
+
+      // Agent bubble: dark bg, white text, top-left corner
+      '.ctxf-bubble-agent{background:#2a2a2a;color:#fff;padding:12px 14px;border-radius:16px;border-top-left-radius:4px}',
+
+      // Visitor bubble: white bg, black text (inverted from desktop)
+      '.ctxf-bubble-visitor{background:#fff;color:#000;border-bottom-right-radius:14px;border-top-right-radius:14px;border-top-left-radius:14px}',
+
+      // Typing dots: lighter on dark bg
+      '.ctxf-dots span{background:#666}',
+
+      // Dark input area
+      '.ctxf-input-area{background:#1a1a1a;border-top:1px solid #333;padding-bottom:max(16px,env(safe-area-inset-bottom,16px))}',
+      '.ctxf-input-wrap{background:#2a2a2a;border:1px solid #333}',
+      '.ctxf-input{color:#fff;font-size:15px}',
+      '.ctxf-input::placeholder{color:#666}',
+      '.ctxf-send{background:#333;width:36px;height:36px}',
+      '.ctxf-send svg{fill:#666;width:18px;height:18px}',
+      '.ctxf-send.ctxf-active{background:#fff}',
+      '.ctxf-send.ctxf-active svg{fill:#000}',
+
+      // Dark footer
+      '.ctxf-footer{background:#1a1a1a;border-top:1px solid #333}',
+      '.ctxf-powered{color:#666}',
+      '.ctxf-powered a{color:#888}',
+      '.ctxf-powered a:hover{color:#fff}',
     '}',
   ].join('');
 
@@ -191,6 +251,8 @@
     fabEl.style[isLeft ? 'left' : 'right'] = offset + 'px';
     fabEl.style.bottom = offset + 'px';
     fabEl.innerHTML = [
+      '<span class="ctxf-pulse-ring"></span>',
+      '<span class="ctxf-pulse-ring"></span>',
       '<svg class="ctxf-icon-chat" viewBox="0 0 24 24"><path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H6L4 18V4H20V16Z"/></svg>',
       '<svg class="ctxf-icon-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"/></svg>',
       '<div id="ctxf-badge" class="ctxf-badge' + (cfg.badge ? '' : ' ctxf-hidden') + '">' + esc(cfg.badge || '1') + '</div>',
@@ -213,6 +275,9 @@
 
     panelEl.innerHTML = [
       '<div class="ctxf-header">',
+        '<button class="ctxf-back-btn" id="ctxf-back" aria-label="Go back">',
+          '<svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>',
+        '</button>',
         '<div class="ctxf-avatar">C</div>',
         '<div class="ctxf-header-info">',
           '<div class="ctxf-hname">' + esc(cfg.name) + '</div>',
@@ -242,6 +307,7 @@
 
     var badgeEl   = shadow.getElementById('ctxf-badge');
     var closeBtn  = shadow.getElementById('ctxf-close');
+    var backBtn   = shadow.getElementById('ctxf-back');
     var inputEl   = shadow.getElementById('ctxf-input');
     var sendBtn   = shadow.getElementById('ctxf-send');
     var messagesEl= shadow.getElementById('ctxf-messages');
@@ -370,6 +436,7 @@
     });
 
     closeBtn.addEventListener('click', closePanel);
+    backBtn.addEventListener('click', closePanel);
 
     // ── Pills ─────────────────────────────────────────────────────────────────────
 
