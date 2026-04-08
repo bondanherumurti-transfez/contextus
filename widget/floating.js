@@ -214,6 +214,14 @@
       '.ctxf-send.ctxf-active{background:#fff}',
       '.ctxf-send.ctxf-active svg{fill:#000}',
 
+      // Dark panel background (fixes overscroll/rubber-band white leak)
+      '.ctxf-panel{background:#1a1a1a!important}',
+
+      // Dark pills
+      '.ctxf-pills{margin-top:12px}',
+      '.ctxf-pill{background:#2a2a2a;color:#aaa;border:.5px solid #444}',
+      '.ctxf-pill:hover{background:#333;border-color:#555;color:#fff}',
+
       // Dark footer
       '.ctxf-footer{background:#1a1a1a;border-top:1px solid #333}',
       '.ctxf-powered{color:#666}',
