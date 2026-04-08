@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Floating Widget Demo — contextus</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #f8f8f8;
+      color: #222;
+      min-height: 100vh;
+      padding: 48px 24px;
+    }
+    .page { max-width: 680px; margin: 0 auto; }
+    h1 { font-size: 22px; font-weight: 500; letter-spacing: -0.4px; margin-bottom: 6px; }
+    .subtitle { font-size: 13px; color: #888; margin-bottom: 40px; }
+
+    /* ── Fake website skeleton ── */
+    .site-skeleton {
+      background: #fff;
+      border: 0.5px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+    .skeleton-bar {
+      height: 10px;
+      background: #f0f0f0;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+    .skeleton-bar:nth-child(1) { width: 55%; }
+    .skeleton-bar:nth-child(2) { width: 90%; }
+    .skeleton-bar:nth-child(3) { width: 70%; }
+    .skeleton-bar:nth-child(4) { width: 45%; }
+    .skeleton-bar:nth-child(5) { width: 80%; margin-bottom: 0; }
+    .skeleton-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: #bbb;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+    }
+
+    /* ── API controls ── */
+    .section-title {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: #888;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .ctrl-btn {
+      font-size: 12px;
+      font-family: 'DM Sans', sans-serif;
+      padding: 7px 14px;
+      border: 0.5px solid #ddd;
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      color: #333;
+    }
+    .ctrl-btn:hover { background: #f5f5f5; border-color: #bbb; }
+
+    /* ── Config panel ── */
+    .config-panel {
+      background: #fff;
+      border: 0.5px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+    .config-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      font-size: 12px;
+    }
+    .config-row:last-child { margin-bottom: 0; }
+    .config-row label {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: #888;
+      width: 90px;
+      flex-shrink: 0;
+    }
+    .config-row select,
+    .config-row input[type="text"],
+    .config-row input[type="number"] {
+      font-size: 12px;
+      font-family: 'DM Sans', sans-serif;
+      padding: 5px 9px;
+      border: 0.5px solid #ddd;
+      border-radius: 6px;
+      background: #fafafa;
+      color: #333;
+      outline: none;
+    }
+    .config-row input[type="color"] {
+      width: 36px;
+      height: 28px;
+      padding: 1px;
+      border: 0.5px solid #ddd;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #fafafa;
+    }
+    .apply-btn {
+      font-size: 11px;
+      font-family: 'DM Sans', sans-serif;
+      padding: 6px 14px;
+      background: #000;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+    .apply-note { font-size: 11px; color: #aaa; margin-top: 6px; }
+
+    /* ── Event log ── */
+    .event-log {
+      background: #fff;
+      border: 0.5px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      min-height: 100px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .log-entry { margin-bottom: 4px; color: #555; }
+    .log-entry .log-time { color: #bbb; margin-right: 8px; }
+    .log-entry.log-open .log-event { color: #0f6e56; }
+    .log-entry.log-close .log-event { color: #888; }
+    .log-entry.log-message .log-event { color: #1a6fcc; }
+    .log-empty { color: #bbb; font-size: 11px; }
+
+    /* ── Embed snippet ── */
+    .embed-snippet {
+      background: #111;
+      border-radius: 10px;
+      padding: 16px 18px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: #aaa;
+      line-height: 1.9;
+      overflow-x: auto;
+      white-space: pre;
+    }
+    .embed-snippet .attr-name  { color: #7ec8e3; }
+    .embed-snippet .attr-value { color: #c3e88d; }
+    .embed-snippet .tag        { color: #f78c6c; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Floating Widget — Demo</h1>
+  <p class="subtitle">The widget is embedded via a single &lt;script&gt; tag. Click the FAB (bottom-right) to try it.</p>
+
+  <!-- Fake website skeleton -->
+  <div class="site-skeleton">
+    <div class="skeleton-label">SIMULATED HOST WEBSITE</div>
+    <div class="skeleton-bar"></div>
+    <div class="skeleton-bar"></div>
+    <div class="skeleton-bar"></div>
+    <div class="skeleton-bar"></div>
+    <div class="skeleton-bar"></div>
+  </div>
+
+  <!-- JS API controls -->
+  <div class="section-title">JS API</div>
+  <div class="controls">
+    <button class="ctrl-btn" onclick="window.contextus.open()">open()</button>
+    <button class="ctrl-btn" onclick="window.contextus.close()">close()</button>
+    <button class="ctrl-btn" onclick="window.contextus.toggle()">toggle()</button>
+    <button class="ctrl-btn" onclick="window.contextus.setBadge('3')">setBadge('3')</button>
+    <button class="ctrl-btn" onclick="window.contextus.clearBadge()">clearBadge()</button>
+  </div>
+
+  <!-- Live config (reload widget) -->
+  <div class="section-title">Config (reloads widget)</div>
+  <div class="config-panel">
+    <div class="config-row">
+      <label>position</label>
+      <select id="cfg-position">
+        <option value="bottom-right" selected>bottom-right</option>
+        <option value="bottom-left">bottom-left</option>
+      </select>
+    </div>
+    <div class="config-row">
+      <label>offset</label>
+      <input type="number" id="cfg-offset" value="20" min="0" max="60" style="width:70px">
+    </div>
+    <div class="config-row">
+      <label>color</label>
+      <input type="color" id="cfg-color" value="#000000">
+    </div>
+    <div class="config-row">
+      <label>badge</label>
+      <input type="text" id="cfg-badge" value="1" style="width:60px" placeholder="empty = none">
+    </div>
+    <div class="config-row">
+      <label>lang</label>
+      <select id="cfg-lang">
+        <option value="en" selected>en</option>
+        <option value="id">id</option>
+      </select>
+    </div>
+    <div class="config-row">
+      <label>auto-open</label>
+      <select id="cfg-autoopen">
+        <option value="false" selected>false</option>
+        <option value="true">true</option>
+      </select>
+    </div>
+    <button class="apply-btn" onclick="reloadWidget()">Apply &amp; reload</button>
+    <div class="apply-note">Removes and re-injects floating.js with updated attributes.</div>
+  </div>
+
+  <!-- Event log -->
+  <div class="section-title">Event log</div>
+  <div class="event-log" id="event-log">
+    <div class="log-empty">Events will appear here...</div>
+  </div>
+
+  <br>
+
+  <!-- Embed snippet display -->
+  <div class="section-title">Embed snippet</div>
+  <div class="embed-snippet" id="embed-snippet"></div>
+
+</div>
+
+<!-- ── Floating widget embed ── -->
+<script
+  id="ctxf-script"
+  src="./floating.js"
+  data-contextus-id="demo-widget"
+  data-greeting="Hi! 👋 I'm a demo of the contextus floating widget."
+  data-badge="1"
+  data-position="bottom-right"
+  data-offset="20"
+  data-color="#000000"
+  data-lang="en"
+></script>
+
+<script>
+  // ── Event log ────────────────────────────────────────────────────────────────
+
+  var logEl = document.getElementById('event-log');
+
+  function addLog(type, text) {
+    if (logEl.querySelector('.log-empty')) logEl.innerHTML = '';
+    var entry = document.createElement('div');
+    entry.className = 'log-entry log-' + type;
+    var time = new Date().toLocaleTimeString('en-US', { hour12: false });
+    entry.innerHTML = '<span class="log-time">' + time + '</span><span class="log-event">' + text + '</span>';
+    logEl.appendChild(entry);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function bindEvents() {
+    window.contextus.on('open',    function ()    { addLog('open',    'open'); });
+    window.contextus.on('close',   function ()    { addLog('close',   'close'); });
+    window.contextus.on('message', function (d)   { addLog('message', d.role + ': ' + d.text.substring(0, 60)); });
+  }
+
+  // Give widget time to init before binding
+  setTimeout(bindEvents, 50);
+
+  // ── Config reload ─────────────────────────────────────────────────────────────
+
+  function reloadWidget() {
+    // Remove existing host + script
+    var oldHost = document.getElementById('ctxf-host');
+    if (oldHost) oldHost.remove();
+    var oldScript = document.getElementById('ctxf-script');
+    if (oldScript) oldScript.remove();
+    window.contextus = null;
+
+    // Build new script tag with updated config
+    var s = document.createElement('script');
+    s.id = 'ctxf-script';
+    s.src = './floating.js?t=' + Date.now(); // cache bust
+    s.setAttribute('data-contextus-id', 'demo-widget');
+    s.setAttribute('data-greeting', 'Hi! 👋 I\'m a demo of the contextus floating widget.');
+    s.setAttribute('data-badge',    document.getElementById('cfg-badge').value);
+    s.setAttribute('data-position', document.getElementById('cfg-position').value);
+    s.setAttribute('data-offset',   document.getElementById('cfg-offset').value);
+    s.setAttribute('data-color',    document.getElementById('cfg-color').value);
+    s.setAttribute('data-lang',     document.getElementById('cfg-lang').value);
+    s.setAttribute('data-open',     document.getElementById('cfg-autoopen').value);
+    s.onload = function() { setTimeout(bindEvents, 50); updateSnippet(); };
+    document.body.appendChild(s);
+    addLog('close', 'widget reloaded');
+    updateSnippet();
+  }
+
+  // ── Embed snippet display ─────────────────────────────────────────────────────
+
+  function updateSnippet() {
+    var position = document.getElementById('cfg-position').value;
+    var offset   = document.getElementById('cfg-offset').value;
+    var color    = document.getElementById('cfg-color').value;
+    var badge    = document.getElementById('cfg-badge').value;
+    var lang     = document.getElementById('cfg-lang').value;
+
+    var attrs = [
+      ['src',               'https://widget.getcontextus.dev/floating.js'],
+      ['data-contextus-id', 'YOUR_WIDGET_ID'],
+      ['data-position',     position],
+      ['data-offset',       offset],
+      ['data-color',        color],
+      badge ? ['data-badge', badge] : null,
+      lang !== 'en' ? ['data-lang', lang] : null,
+      ['async',             null],
+    ].filter(Boolean);
+
+    var lines = ['<span class="tag">&lt;script</span>'];
+    attrs.forEach(function(a) {
+      if (a[1] === null) {
+        lines.push('  <span class="attr-name">' + a[0] + '</span>');
+      } else {
+        lines.push('  <span class="attr-name">' + a[0] + '</span>=<span class="attr-value">"' + a[1] + '"</span>');
+      }
+    });
+    lines.push('<span class="tag">&gt;&lt;/script&gt;</span>');
+    document.getElementById('embed-snippet').innerHTML = lines.join('\n');
+  }
+
+  updateSnippet();
+</script>
+</body>
+</html>
