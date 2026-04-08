@@ -97,7 +97,7 @@
     '@keyframes ctxf-badge-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}',
 
     // Pulse rings (hidden on desktop, shown on mobile via media query)
-    '.ctxf-pulse-ring{display:none;position:absolute;inset:0;border-radius:16px;background:#000;pointer-events:none}',
+    '.ctxf-pulse-ring{display:none;position:absolute;inset:0;border-radius:16px;background:inherit;pointer-events:none}',
     '.ctxf-pulse-ring:nth-child(1){animation:ctxf-pulse-ring 2s ease-out infinite}',
     '.ctxf-pulse-ring:nth-child(2){animation:ctxf-pulse-ring 2s ease-out infinite 1s}',
     '@keyframes ctxf-pulse-ring{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.6);opacity:0}}',
@@ -122,7 +122,7 @@
     '.ctxf-close-btn svg{width:16px;height:16px;fill:#888}',
 
     // Messages area
-    '.ctxf-messages{flex:1;overflow-y:auto;padding:16px;min-height:0;scrollbar-width:thin;scrollbar-color:#e0e0e0 transparent}',
+    '.ctxf-messages{flex:1;overflow-y:auto;padding:16px;min-height:0;scrollbar-width:thin;scrollbar-color:#e0e0e0 transparent;overscroll-behavior:contain}',
     '.ctxf-messages::-webkit-scrollbar{width:4px}',
     '.ctxf-messages::-webkit-scrollbar-thumb{background:#e0e0e0;border-radius:2px}',
 
@@ -167,9 +167,9 @@
     // ── Mobile: full-screen takeover (<480px) ──
     '@media(max-width:479px){',
 
-      // Panel: slide up from bottom (replaces desktop scale+fade)
-      '.ctxf-panel{inset:0;width:100%;max-width:100%;max-height:100%;border-radius:0;opacity:1;transform:translateY(100%);transition:transform .3s ease-out;z-index:2147483647}',
-      '.ctxf-panel.ctxf-open{transform:translateY(0)}',
+      // Panel: slide up from bottom — !important overrides JS inline bottom/right styles
+      '.ctxf-panel{position:fixed!important;inset:0!important;width:100%!important;max-width:100%!important;max-height:100%!important;border-radius:0!important;opacity:1!important;transform:translateY(100%)!important;transition:transform .3s ease-out!important;z-index:2147483647!important}',
+      '.ctxf-panel.ctxf-open{transform:translateY(0)!important}',
 
       // FAB: scale down + fade out when panel opens
       '.ctxf-fab.ctxf-open{opacity:0;transform:scale(.8);pointer-events:none;transition:transform .2s ease,opacity .2s ease,box-shadow .2s ease}',
@@ -315,12 +315,23 @@
 
     // ── Open / close ──────────────────────────────────────────────────────────────
 
+    function isMobile() {
+      return window.innerWidth < 480;
+    }
+
     function openPanel() {
       if (state.open) return;
       state.open = true;
       fabEl.classList.add('ctxf-open');
       panelEl.classList.add('ctxf-open');
       badgeEl.classList.add('ctxf-hidden');
+
+      // Lock body scroll on mobile so background page can't scroll/bounce behind panel
+      if (isMobile()) {
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+      }
 
       if (!state.greeted) {
         state.greeted = true;
@@ -336,6 +347,14 @@
       state.open = false;
       fabEl.classList.remove('ctxf-open');
       panelEl.classList.remove('ctxf-open');
+
+      // Restore body scroll
+      if (isMobile()) {
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+      }
+
       emit('close', null);
     }
 
