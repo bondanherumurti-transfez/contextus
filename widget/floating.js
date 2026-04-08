@@ -9,15 +9,17 @@
   })();
 
   var cfg = {
-    id:       scriptEl && scriptEl.getAttribute('data-contextus-id')  || '',
-    position: scriptEl && scriptEl.getAttribute('data-position')       || 'bottom-right',
-    offset:   parseInt(scriptEl && scriptEl.getAttribute('data-offset') || '20', 10),
-    greeting: scriptEl && scriptEl.getAttribute('data-greeting')       || 'Hi! 👋 How can I help you today?',
-    badge:    scriptEl && scriptEl.getAttribute('data-badge')          || '',
-    color:    scriptEl && scriptEl.getAttribute('data-color')          || '#000000',
-    lang:     scriptEl && scriptEl.getAttribute('data-lang')           || 'en',
-    autoOpen: scriptEl && scriptEl.getAttribute('data-open') === 'true',
-    name:     scriptEl && scriptEl.getAttribute('data-name')           || 'contextus',
+    id:              scriptEl && scriptEl.getAttribute('data-contextus-id')      || '',
+    position:        scriptEl && scriptEl.getAttribute('data-position')           || 'bottom-right',
+    offset:          parseInt(scriptEl && scriptEl.getAttribute('data-offset') || '20', 10),
+    greeting:        scriptEl && scriptEl.getAttribute('data-greeting')           || 'Hi! 👋 How can I help you today?',
+    badge:           scriptEl && scriptEl.getAttribute('data-badge')              || '',
+    color:           scriptEl && scriptEl.getAttribute('data-color')              || '#000000',
+    lang:            scriptEl && scriptEl.getAttribute('data-lang')               || 'en',
+    autoOpen:        scriptEl && scriptEl.getAttribute('data-open') === 'true',
+    name:            scriptEl && scriptEl.getAttribute('data-name')               || 'contextus',
+    apiUrl:          scriptEl && scriptEl.getAttribute('data-api-url')            || 'https://contextus-2d16.onrender.com',
+    knowledgeBaseId: scriptEl && scriptEl.getAttribute('data-knowledge-base-id') || '',
   };
 
   // ── Translations / content ────────────────────────────────────────────────────
@@ -26,19 +28,6 @@
     en: ['What do you do?', 'Pricing', 'Get started'],
     id: ['Apa yang Anda lakukan?', 'Harga', 'Mulai sekarang'],
   };
-
-  var MOCK_RESPONSES = [
-    "Thanks for reaching out! I'd be happy to help you with that.",
-    "Great question! contextus is an AI-powered chat widget that captures leads and answers questions automatically.",
-    "We offer flexible pricing plans. Would you like to know more details?",
-    "I can definitely help with that. Could you tell me a bit more about your use case?",
-    "Of course! Let me explain how contextus works for your business needs.",
-  ];
-
-  var mockIndex = 0;
-  function getMockResponse() {
-    return MOCK_RESPONSES[mockIndex++ % MOCK_RESPONSES.length];
-  }
 
   function getPills() {
     return PILLS[cfg.lang] || PILLS.en;
@@ -51,6 +40,7 @@
     phase: 'idle',   // idle | active | thinking
     pillsVisible: true,
     greeted: false,
+    sessionId: null,
   };
 
   // ── Event emitter ─────────────────────────────────────────────────────────────
@@ -420,17 +410,98 @@
       inputEl.disabled = true;
       appendMessage({ role: 'agent', isThinking: true });
 
-      // Mock response
-      var delay = 800 + Math.random() * 1200;
-      setTimeout(function () {
-        removeThinking();
-        var response = getMockResponse();
-        appendMessage({ role: 'agent', text: response });
+      // Real backend call with SSE streaming
+      (async function callBackend() {
+        // Lazily create a session on the first message
+        if (!state.sessionId) {
+          try {
+            var sr = await fetch(cfg.apiUrl + '/api/session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ knowledge_base_id: cfg.knowledgeBaseId }),
+            });
+            if (!sr.ok) throw new Error(sr.status);
+            state.sessionId = (await sr.json()).session_id;
+          } catch (_) {
+            removeThinking();
+            appendMessage({ role: 'agent', text: 'Sorry, something went wrong. Please try again.' });
+            state.phase = 'active';
+            inputEl.disabled = false;
+            return;
+          }
+        }
+
+        var agentMsg   = { role: 'agent', text: '' };
+        var streamRow  = null;
+        var streamBubble = null;
+        var succeeded  = false;
+
+        for (var attempt = 0; attempt < 2; attempt++) {
+          try {
+            var res = await fetch(cfg.apiUrl + '/api/chat/' + state.sessionId, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ message: text }),
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+
+            var reader  = res.body.getReader();
+            var decoder = new TextDecoder();
+            var buf     = '';
+
+            while (true) {
+              var chunk = await reader.read();
+              if (chunk.done) break;
+              buf += decoder.decode(chunk.value, { stream: true });
+              var lines = buf.split('\n');
+              buf = lines.pop(); // hold incomplete line
+              for (var i = 0; i < lines.length; i++) {
+                var line = lines[i];
+                if (!line.startsWith('data: ')) continue;
+                var payload;
+                try { payload = JSON.parse(line.slice(6)); } catch (e) { continue; }
+                if (payload.token) {
+                  // First token: swap thinking dots → streaming bubble
+                  if (!streamBubble) {
+                    removeThinking();
+                    streamRow    = appendMessage(agentMsg);
+                    streamBubble = streamRow.querySelector('.ctxf-bubble-agent');
+                  }
+                  agentMsg.text += payload.token;
+                  if (streamBubble) {
+                    streamBubble.textContent = agentMsg.text;
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                  }
+                }
+              }
+            }
+
+            succeeded = true;
+            emit('message', { role: 'agent', text: agentMsg.text });
+            break;
+          } catch (_) {
+            if (attempt === 0) {
+              // Silent retry after 2 s — reset partial state, keep dots visible
+              agentMsg.text = '';
+              if (streamRow) { streamRow.remove(); streamRow = null; streamBubble = null; }
+              if (!messagesEl.querySelector('[data-thinking]')) {
+                appendMessage({ role: 'agent', isThinking: true });
+              }
+              await new Promise(function (r) { setTimeout(r, 2000); });
+            }
+          }
+        }
+
+        if (!succeeded) {
+          removeThinking();
+          if (streamRow) streamRow.remove();
+          appendMessage({ role: 'agent', text: 'Sorry, I couldn\'t connect. Please try again.' });
+        }
+
         state.phase = 'active';
         inputEl.disabled = false;
         inputEl.focus();
-        emit('message', { role: 'agent', text: response });
-      }, delay);
+      })();
     }
 
     // ── Input helpers ─────────────────────────────────────────────────────────────
