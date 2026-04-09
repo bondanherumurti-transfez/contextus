@@ -41,6 +41,7 @@
     pillsVisible: true,
     greeted: false,
     sessionId: null,
+    savedScrollY: 0,
   };
 
   // ── Event emitter ─────────────────────────────────────────────────────────────
@@ -157,8 +158,10 @@
     // ── Mobile: full-screen takeover (<480px) ──
     '@media(max-width:479px){',
 
-      // Panel: slide up from bottom — !important overrides JS inline bottom/right styles
-      '.ctxf-panel{position:fixed!important;inset:0!important;width:100%!important;max-width:100%!important;max-height:100%!important;border-radius:0!important;opacity:1!important;transform:translateY(100%)!important;transition:transform .3s ease-out!important;z-index:2147483647!important}',
+      // Panel: slide up from bottom.
+      // No bottom constraint — height is set by 100dvh (+ JS visualViewport override)
+      // so the keyboard shrinks the panel instead of hiding under it.
+      '.ctxf-panel{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:auto!important;width:100%!important;max-width:100%!important;height:100dvh!important;max-height:none!important;border-radius:0!important;opacity:1!important;transform:translateY(100%)!important;transition:transform .3s ease-out!important;z-index:2147483647!important}',
       '.ctxf-panel.ctxf-open{transform:translateY(0)!important}',
 
       // FAB: scale down + fade out when panel opens
@@ -324,11 +327,14 @@
       panelEl.classList.add('ctxf-open');
       badgeEl.classList.add('ctxf-hidden');
 
-      // Lock body scroll on mobile so background page can't scroll/bounce behind panel
+      // Lock body scroll on mobile — save scroll position first so page doesn't jump
       if (isMobile()) {
+        state.savedScrollY = window.scrollY;
         document.body.style.overflow = 'hidden';
         document.body.style.position = 'fixed';
+        document.body.style.top = '-' + state.savedScrollY + 'px';
         document.body.style.width = '100%';
+        adjustPanel();
       }
 
       if (!state.greeted) {
@@ -346,11 +352,15 @@
       fabEl.classList.remove('ctxf-open');
       panelEl.classList.remove('ctxf-open');
 
-      // Restore body scroll
+      // Restore body scroll and scroll position
       if (isMobile()) {
         document.body.style.overflow = '';
         document.body.style.position = '';
+        document.body.style.top = '';
         document.body.style.width = '';
+        window.scrollTo(0, state.savedScrollY || 0);
+        panelEl.style.removeProperty('top');
+        panelEl.style.removeProperty('height');
       }
 
       emit('close', null);
@@ -543,16 +553,24 @@
       if (pill) sendMessage(pill.dataset.msg);
     });
 
-    // ── Mobile: virtual keyboard adjustment ───────────────────────────────────────
+    // ── Mobile: visual viewport adjustment (keyboard show/hide) ──────────────────
+    // Sets panel top + height to exactly the visible area so the input always
+    // sits just above the keyboard and messages fill the remaining space.
+
+    function adjustPanel() {
+      if (!isMobile() || !state.open) return;
+      var vv = window.visualViewport;
+      if (vv) {
+        panelEl.style.setProperty('top',    Math.round(vv.offsetTop) + 'px', 'important');
+        panelEl.style.setProperty('height', Math.round(vv.height)    + 'px', 'important');
+      } else {
+        panelEl.style.setProperty('height', window.innerHeight + 'px', 'important');
+      }
+    }
 
     if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', function () {
-        if (window.innerWidth < 480 && state.open) {
-          panelEl.style.height = window.visualViewport.height + 'px';
-        } else {
-          panelEl.style.height = '';
-        }
-      });
+      window.visualViewport.addEventListener('resize', adjustPanel);
+      window.visualViewport.addEventListener('scroll', adjustPanel);
     }
 
     // ── Eager session init — fetch name + pills + lang from backend ───────────────
