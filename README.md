@@ -26,6 +26,9 @@ Distributed tracing with OpenTelemetry + Honeycomb. Traces LLM calls, crawler pe
 **Phase 3.6 — Widget tests + Analytics: complete.**
 Playwright end-to-end tests covering phase transitions, animation behavior, and dynamic sizing. Vercel Web Analytics added to all frontend pages. GitHub Actions CI runs on every `widget/**` change.
 
+**Phase 3.7 — Floating widget: complete.**
+New embeddable floating chat widget (FAB + panel) built in vanilla JS with Shadow DOM isolation. Wired to the real backend via SSE streaming. Mobile-first with dark theme, virtual keyboard handling, and iOS auto-zoom prevention. 54 Playwright tests.
+
 ---
 
 ## Project structure
@@ -41,9 +44,12 @@ contextus/
 │   ├── widget.html                     # Standalone iframe shell
 │   ├── widget.js                       # Widget component (vanilla JS, 11-state machine)
 │   ├── widget.css                      # Widget styles
+│   ├── floating.js                     # Floating chat widget (Shadow DOM, FAB + panel)
+│   ├── floating-demo.html              # Floating widget local demo page
 │   ├── embed.js                        # Tier 2 inject script (placeholder)
 │   └── tests/
-│       ├── widget.spec.ts              # Playwright e2e tests (22 tests)
+│       ├── widget.spec.ts              # Playwright e2e tests — iframe widget (22 tests)
+│       ├── floating.spec.ts            # Playwright e2e tests — floating widget (54 tests)
 │       └── helpers/
 │           └── mock-api.ts             # Route mock helpers (session, chat, hang, complete)
 ├── assets/
@@ -107,6 +113,54 @@ The `/try` page at `/try/index.html` is a full end-to-end demo:
 ---
 
 ## Widget
+
+### Floating widget (Tier 2 — script tag)
+
+A self-contained floating chat button (FAB) + slide-up panel, injected via a single `<script>` tag. Uses Shadow DOM for full CSS isolation from the host site.
+
+```html
+<script
+  src="https://www.getcontextus.dev/widget/floating.js"
+  data-contextus-id="my-widget"
+  data-knowledge-base-id="YOUR_KB_ID"
+></script>
+```
+
+**Features:**
+- Shadow DOM — host site styles cannot bleed in or out
+- Eager session init — fetches brand name and KB-specific pills on page load (no cold start on first message)
+- SSE streaming — token-by-token response from the backend
+- Mobile dark theme — full-screen panel with `#1a1a1a` background
+- Virtual keyboard handling — `ctxf-kbd` class hides header/messages so input covers the panel (Intercom-style) when keyboard opens; removed on blur
+- iOS auto-zoom prevention — input `font-size` pinned at 16px
+- Body scroll lock — saves/restores scroll position; no page jump on open/close
+- `window.visualViewport` adjustment — panel resizes to exact visible area when keyboard is open
+
+**Script tag attributes:**
+
+| Attribute | Description |
+|-----------|-------------|
+| `data-contextus-id` | Widget instance ID |
+| `data-knowledge-base-id` | KB ID from crawl, or `demo` |
+| `data-greeting` | Custom greeting message |
+| `data-name` | Widget header name (overridden by KB name from session API) |
+| `data-lang` | Language override (`en`, `id`) |
+| `data-auto-open` | Set to `"1"` to open on load |
+
+**JS API (via `window.contextus`):**
+
+```js
+window.contextus.open()
+window.contextus.close()
+window.contextus.toggle()
+window.contextus.setBadge(3)
+window.contextus.clearBadge()
+window.contextus.on('open',    () => {})
+window.contextus.on('close',   () => {})
+window.contextus.on('message', ({ role, text }) => {})
+```
+
+---
 
 ### Embedding (Tier 1 — iframe)
 
@@ -192,7 +246,9 @@ npx playwright install chromium
 npm test
 ```
 
-### Test coverage (22 tests)
+### Test coverage
+
+**Iframe widget — `widget.spec.ts` (22 tests)**
 
 | Group | Tests |
 |-------|-------|
@@ -202,6 +258,22 @@ npm test
 | Dynamic sizing | Height expands after transition, dynamicHeight param works |
 | Complete phase | Banner shown + input disabled after conversation ends, WAITLIST_COMPLETE stripped |
 | Pill interaction | Clicking pill triggers phase transition |
+
+**Floating widget — `floating.spec.ts` (54 tests)**
+
+| Group | Tests |
+|-------|-------|
+| FAB visibility & position | Visible on load, bottom-right position, 56×56px size |
+| Panel initial state | No `ctxf-open` on load, not visible before FAB click |
+| Open / close | FAB click opens, close button closes, `ctxf-open` class toggled |
+| JS API | `open()`, `close()`, `toggle()`, `setBadge()`, `clearBadge()`, badge hides on open, `on()` events |
+| Greeting & pills | Greeting appears on first open, not repeated on re-open, 3 pills visible, pills hidden after send, pill click sends message |
+| Messaging & streaming | Visitor bubble, input cleared, thinking dots, input disabled during stream, agent bubble replaces dots, input re-enabled, send button active state, `on("message")` events |
+| Desktop design | Panel width, back button hidden, white background |
+| Mobile design (<480px) | Full-width, full-height, dark background, dark header, back button visible and functional, dark pills, FAB fades on open |
+| Mobile keyboard cover | Panel open does not add `ctxf-kbd`, header visible after open, focus adds `ctxf-kbd`, blur removes it, `ctxf-kbd` gone after agent responds |
+| Input font-size | ≥16px on desktop and mobile (iOS auto-zoom prevention) |
+| Eager session init | Brand name from KB, KB pills from session API, session ID reused (no extra `/api/session` call), fallbacks for empty name/pills |
 
 ### CI
 
@@ -213,10 +285,10 @@ All API calls are intercepted by Playwright's `page.route()` — nothing hits th
 
 | Helper | Intercepts | Behavior |
 |--------|-----------|---------|
-| `mockSession` | `POST /api/session` | Returns `{ session_id: 'test-session-123' }` |
+| `mockSession` | `POST /api/session` | Returns `{ session_id, name, pills, language }` |
 | `mockChat` | `POST /api/chat/**` | Returns SSE stream with reply token |
 | `mockChatHang` | `POST /api/chat/**` | Never responds — keeps thinking state visible |
-| `mockChatComplete` | `POST /api/chat/**` | Returns `WAITLIST_COMPLETE` signal |
+| `mockChatComplete` | `POST /api/chat/**` | Returns `WAITLIST_COMPLETE` signal (iframe widget) |
 
 ---
 
@@ -470,6 +542,7 @@ Fonts: **DM Sans** (400, 500, 700) + **DM Mono** (400, 500) — Google Fonts.
 | 3 — /try demo page | **Done** | Full crawl → chat → brief flow, real backend wired |
 | 3.5 — Observability | **Done** | OpenTelemetry + Honeycomb distributed tracing |
 | 3.6 — Widget tests + Analytics | **Done** | Playwright e2e tests, Vercel Web Analytics, GitHub Actions CI |
+| 3.7 — Floating widget | **Done** | Shadow DOM FAB widget, SSE streaming, mobile dark theme, keyboard handling, 54 tests |
 | 4 — Lead delivery | Not started | WhatsApp/email delivery of lead briefs |
 | 5 — Platform plugins | Not started | WordPress, Wix (build at traction) |
 
