@@ -49,9 +49,11 @@ async def mock_stream(*args, **kwargs):
 @patch("app.routers.chat.get_knowledge_base", new_callable=AsyncMock)
 @patch("app.routers.chat.save_session", new_callable=AsyncMock)
 @patch("app.routers.chat.stream_chat_response")
-def test_chat_valid_message(mock_stream_res, mock_save, mock_get_kb, mock_get_session):
+@patch("app.routers.chat.redis.get", new_callable=AsyncMock)
+def test_chat_valid_message(mock_redis_get, mock_stream_res, mock_save, mock_get_kb, mock_get_session):
     mock_get_session.return_value = make_session()
     mock_get_kb.return_value = make_kb()
+    mock_redis_get.return_value = None  # no waitlist prefill
 
     mock_stream_res.side_effect = mock_stream
 
@@ -107,9 +109,11 @@ def test_chat_message_limit_exceeded(mock_get_kb, mock_get_session):
 @patch("app.routers.chat.get_session", new_callable=AsyncMock)
 @patch("app.routers.chat.get_knowledge_base", new_callable=AsyncMock)
 @patch("app.routers.chat.stream_chat_response")
-def test_chat_message_limit_ok(mock_stream, mock_get_kb, mock_get_session):
+@patch("app.routers.chat.redis.get", new_callable=AsyncMock)
+def test_chat_message_limit_ok(mock_redis_get, mock_stream, mock_get_kb, mock_get_session):
     mock_get_session.return_value = make_session(messages=29)
     mock_get_kb.return_value = make_kb()
+    mock_redis_get.return_value = None  # no waitlist prefill
 
     async def mock_gen(*args, **kwargs):
         yield "Hi"
@@ -179,12 +183,14 @@ def test_chat_no_contact():
 @patch("app.routers.chat.get_knowledge_base", new_callable=AsyncMock)
 @patch("app.routers.chat.save_session", new_callable=AsyncMock)
 @patch("app.routers.chat.stream_chat_response")
+@patch("app.routers.chat.redis.get", new_callable=AsyncMock)
 def test_chat_saves_user_and_assistant_message(
-    mock_stream, mock_save, mock_get_kb, mock_get_session
+    mock_redis_get, mock_stream, mock_save, mock_get_kb, mock_get_session
 ):
     s = make_session(messages=0)
     mock_get_session.return_value = s
     mock_get_kb.return_value = make_kb()
+    mock_redis_get.return_value = None  # no waitlist prefill
 
     async def mock_gen(*args, **kwargs):
         yield "Answer"

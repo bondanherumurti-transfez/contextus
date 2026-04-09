@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -8,6 +9,7 @@ from app.services.redis import redis, scan_all_sessions, save_session
 from app.services.llm import generate_lead_brief
 from app.services.notion import post_lead_brief_to_notion
 from app.services.database import get_customer_config
+from app.services.webhook import fire_webhook
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["jobs"])
@@ -77,6 +79,15 @@ async def process_sessions(x_cron_secret: str | None = Header(default=None)):
                 session.brief_sent = True
                 await save_session(session.session_id, session)
                 results["processed"] += 1
+
+                if customer_config and customer_config.get("webhook_url"):
+                    logger.info(
+                        "[jobs] firing webhook for session_id=%s kb_id=%s",
+                        session.session_id, session.kb_id,
+                    )
+                    asyncio.create_task(
+                        fire_webhook(customer_config["webhook_url"], brief)
+                    )
             else:
                 results["failed"] += 1
 

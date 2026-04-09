@@ -54,8 +54,13 @@ async def init_db():
                     notion_db_id    TEXT,
                     allowed_origins TEXT[],
                     token           TEXT,
+                    webhook_url     TEXT,
                     created_at      BIGINT NOT NULL
                 )
+            """)
+            await conn.execute("""
+                ALTER TABLE customer_configs
+                ADD COLUMN IF NOT EXISTS webhook_url TEXT
             """)
         logger.info("[db] Neon DB tables ready")
     except Exception as e:
@@ -108,19 +113,21 @@ async def save_customer_config(config: dict) -> None:
     async with pool.acquire() as conn:
         await conn.execute("""
             INSERT INTO customer_configs
-                (kb_id, url, notion_db_id, allowed_origins, token, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6)
+                (kb_id, url, notion_db_id, allowed_origins, token, webhook_url, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (kb_id) DO UPDATE
                 SET url            = EXCLUDED.url,
                     notion_db_id   = EXCLUDED.notion_db_id,
                     allowed_origins= EXCLUDED.allowed_origins,
-                    token          = EXCLUDED.token
+                    token          = EXCLUDED.token,
+                    webhook_url    = EXCLUDED.webhook_url
         """,
             config.get("kb_id"),
             config.get("url"),
             config.get("notion_db_id"),
             config.get("allowed_origins") or [],
             config.get("token"),
+            config.get("webhook_url"),
             config.get("created_at", int(time.time())),
         )
 

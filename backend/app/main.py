@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 import logging
 import os
 
-from app.routers import crawl, session, chat, brief, waitlist, jobs
+from app.routers import crawl, session, chat, brief, waitlist, jobs, config
 from app.services.database import init_db
 from app.services.telemetry import init_telemetry, instrument_app
 
@@ -60,6 +60,7 @@ app.include_router(chat.router, prefix="/api")
 app.include_router(brief.router, prefix="/api")
 app.include_router(waitlist.router, prefix="/api")
 app.include_router(jobs.router, prefix="/api")
+app.include_router(config.router, prefix="/api")
 
 instrument_app(app)
 

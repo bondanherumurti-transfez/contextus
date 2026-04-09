@@ -1,8 +1,11 @@
+import asyncio
 from fastapi import APIRouter, HTTPException
 
 from app.models import LeadBrief
 from app.services.redis import get_session, get_knowledge_base
 from app.services.llm import generate_lead_brief
+from app.services.database import get_customer_config
+from app.services.webhook import fire_webhook
 
 router = APIRouter(tags=["brief"])
 
@@ -23,5 +26,9 @@ async def generate_brief(session_id: str):
         raise HTTPException(status_code=404, detail="Knowledge base not found")
 
     brief = await generate_lead_brief(session)
+
+    config = await get_customer_config(session.kb_id)
+    if config and config.get("webhook_url"):
+        asyncio.create_task(fire_webhook(config["webhook_url"], brief))
 
     return brief

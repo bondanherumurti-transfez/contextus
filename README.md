@@ -29,6 +29,9 @@ Playwright end-to-end tests covering phase transitions, animation behavior, and 
 **Phase 3.7 — Floating widget: complete.**
 New embeddable floating chat widget (FAB + panel) built in vanilla JS with Shadow DOM isolation. Wired to the real backend via SSE streaming. Mobile-first with dark theme, virtual keyboard handling, and iOS auto-zoom prevention. 54 Playwright tests.
 
+**Phase 3.8 — Test hardening: complete.**
+Backend unit + resilience tests (41 new), widget backend error handling tests (17 new), and GitHub Actions CI for the backend. No credentials required — all third-party calls mocked.
+
 ---
 
 ## Project structure
@@ -48,8 +51,8 @@ contextus/
 │   ├── floating-demo.html              # Floating widget local demo page
 │   ├── embed.js                        # Tier 2 inject script (placeholder)
 │   └── tests/
-│       ├── widget.spec.ts              # Playwright e2e tests — iframe widget (22 tests)
-│       ├── floating.spec.ts            # Playwright e2e tests — floating widget (54 tests)
+│       ├── widget.spec.ts              # Playwright e2e tests — iframe widget (31 tests)
+│       ├── floating.spec.ts            # Playwright e2e tests — floating widget (62 tests)
 │       └── helpers/
 │           └── mock-api.ts             # Route mock helpers (session, chat, hang, complete)
 ├── assets/
@@ -75,6 +78,19 @@ contextus/
 │   │       ├── retrieval.py            # Keyword-based retrieval
 │   │       ├── llm.py                  # OpenRouter LLM wrapper
 │   │       └── telemetry.py            # OpenTelemetry + Honeycomb tracing
+│   ├── tests/
+│   │   ├── integration/
+│   │   │   ├── test_crawl.py           # Crawl endpoint tests (mocked Redis)
+│   │   │   ├── test_brief.py           # Brief + webhook dispatch tests (10 tests)
+│   │   │   ├── test_chat.py
+│   │   │   ├── test_session.py
+│   │   │   └── test_health.py
+│   │   ├── unit/
+│   │   │   ├── test_select_pills.py    # select_pills() logic (13 tests)
+│   │   │   └── test_third_party_resilience.py  # Upstash/Neon/Firecrawl/OpenRouter failure modes (28 tests)
+│   │   └── e2e/
+│   │       ├── test_server.py          # Real uvicorn subprocess (no credentials needed)
+│   │       └── test_real_pipeline.py   # Live Redis + LLM (skipped in CI)
 │   ├── requirements.txt
 │   ├── render.yaml
 │   └── .env.example
@@ -82,7 +98,8 @@ contextus/
 ├── playwright.config.ts                # Playwright config — Chromium, serves repo root
 ├── .github/
 │   └── workflows/
-│       └── widget-tests.yml            # CI: runs on push/PR to widget/**
+│       ├── widget-tests.yml            # CI: Playwright tests on push/PR to widget/**
+│       └── backend-tests.yml           # CI: pytest integration + E2E server on push/PR to backend/**
 └── vercel.json                         # Vercel headers config (iframe embedding)
 ```
 
@@ -248,7 +265,7 @@ npm test
 
 ### Test coverage
 
-**Iframe widget — `widget.spec.ts` (22 tests)**
+**Iframe widget — `widget.spec.ts` (31 tests)**
 
 | Group | Tests |
 |-------|-------|
@@ -258,8 +275,9 @@ npm test
 | Dynamic sizing | Height expands after transition, dynamicHeight param works |
 | Complete phase | Banner shown + input disabled after conversation ends, WAITLIST_COMPLETE stripped |
 | Pill interaction | Clicking pill triggers phase transition |
+| Backend error handling | Session 500/abort, chat 500 both attempts, dots removed, input re-enabled, error placeholder, retry-and-succeed, silent retry |
 
-**Floating widget — `floating.spec.ts` (54 tests)**
+**Floating widget — `floating.spec.ts` (62 tests)**
 
 | Group | Tests |
 |-------|-------|
@@ -274,10 +292,57 @@ npm test
 | Mobile keyboard cover | Panel open does not add `ctxf-kbd`, header visible after open, focus adds `ctxf-kbd`, blur removes it, `ctxf-kbd` gone after agent responds |
 | Input font-size | ≥16px on desktop and mobile (iOS auto-zoom prevention) |
 | Eager session init | Brand name from KB, KB pills from session API, session ID reused (no extra `/api/session` call), fallbacks for empty name/pills |
+| Backend error handling | Session 500/abort, chat 500 both attempts, dots removed, input re-enabled, retry-and-succeed |
 
 ### CI
 
-GitHub Actions runs the full suite on every push or PR that touches `widget/**`. Playwright report uploaded as artifact on failure.
+GitHub Actions runs the full Playwright suite on every push or PR that touches `widget/**`. Playwright report uploaded as artifact on failure.
+
+---
+
+## Backend Tests
+
+Unit and integration tests using `pytest`. No credentials required — all third-party calls are mocked.
+
+### Run locally
+
+```bash
+cd backend
+pytest tests/integration/ -v
+pytest tests/unit/ -v
+pytest tests/e2e/test_server.py -v   # real uvicorn, no credentials
+# pytest tests/e2e/test_real_pipeline.py  # requires .env with real keys
+```
+
+### Test coverage
+
+**Unit — `tests/unit/test_select_pills.py` (13 tests)**
+
+Pure logic tests for `select_pills()` — pill priority algorithm (gap → service → industry → fallback), language support, duplicate prevention, and 3-pill cap.
+
+**Unit — `tests/unit/test_third_party_resilience.py` (28 tests)**
+
+| Section | Tests |
+|---------|-------|
+| Upstash Redis | `get_knowledge_base` returns None when both Neon and Redis fail; Neon fallback to Redis works; `get_session`/`save_session`/`check_rate_limit` propagate (documented gaps) |
+| Neon (asyncpg) | Empty `DATABASE_URL` skips safely; pool creation failure returns None; schema change (missing column) returns None |
+| Firecrawl | No API key → empty result; SDK raises → propagates (documented gap); missing `.data` attr → empty pages; empty markdown filtered; missing metadata → URL fallback |
+| OpenRouter | `extract_json` valid/prose-wrapped/invalid; `_profile_from_partial` handles empty dict, comma-string services, contact as string, gaps as string; network error propagates (documented gap); JSONDecodeError uses partial fallback |
+| crawl_site fallback | `< 100 words` triggers Firecrawl; `≥ 100 words` skips Firecrawl |
+
+**Integration — `tests/integration/test_brief.py` (10 tests)**
+
+Brief generation + webhook dispatch: session not found, insufficient messages, KB not found, valid briefs, webhook fired/not-fired by config, payload shape validation (all required keys, contact shape, quality score).
+
+### CI
+
+GitHub Actions runs integration + E2E server tests on every push or PR that touches `backend/**`. No secrets required.
+
+```yaml
+# .github/workflows/backend-tests.yml
+pytest tests/integration/ -v --tb=short
+pytest tests/e2e/test_server.py -v --tb=short
+```
 
 ### Mock strategy
 
@@ -543,6 +608,7 @@ Fonts: **DM Sans** (400, 500, 700) + **DM Mono** (400, 500) — Google Fonts.
 | 3.5 — Observability | **Done** | OpenTelemetry + Honeycomb distributed tracing |
 | 3.6 — Widget tests + Analytics | **Done** | Playwright e2e tests, Vercel Web Analytics, GitHub Actions CI |
 | 3.7 — Floating widget | **Done** | Shadow DOM FAB widget, SSE streaming, mobile dark theme, keyboard handling, 54 tests |
+| 3.8 — Test hardening | **Done** | Backend unit/resilience tests (41), widget error tests (17), backend CI workflow |
 | 4 — Lead delivery | Not started | WhatsApp/email delivery of lead briefs |
 | 5 — Platform plugins | Not started | WordPress, Wix (build at traction) |
 
