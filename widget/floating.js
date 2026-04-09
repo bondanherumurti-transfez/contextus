@@ -349,7 +349,9 @@
         appendMessage({ role: 'agent', text: cfg.greeting });
       }
 
-      setTimeout(function () { inputEl.focus(); }, 300);
+      // Only auto-focus on desktop — on mobile, programmatic focus would
+      // immediately trigger the virtual keyboard and hide the panel header.
+      if (!isMobile()) setTimeout(function () { inputEl.focus(); }, 300);
       emit('open', null);
     }
 
