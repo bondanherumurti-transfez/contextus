@@ -81,6 +81,10 @@ async def process_sessions(x_cron_secret: str | None = Header(default=None)):
                 results["processed"] += 1
 
                 if customer_config and customer_config.get("webhook_url"):
+                    logger.info(
+                        "[jobs] firing webhook for session_id=%s kb_id=%s",
+                        session.session_id, session.kb_id,
+                    )
                     asyncio.create_task(
                         fire_webhook(customer_config["webhook_url"], brief)
                     )
