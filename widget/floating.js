@@ -136,7 +136,7 @@
     // Input area
     '.ctxf-input-area{padding:12px 16px 16px;border-top:.5px solid #e0e0e0;flex-shrink:0;background:#fff}',
     '.ctxf-input-wrap{display:flex;align-items:center;gap:10px;background:#f0f0f0;border:.5px solid #e0e0e0;border-radius:16px;padding:10px 10px 10px 16px}',
-    '.ctxf-input{flex:1;border:none;background:transparent;font-size:14px;font-family:"DM Sans",sans-serif;color:#000;outline:none;min-width:0}',
+    '.ctxf-input{flex:1;border:none;background:transparent;font-size:16px;font-family:"DM Sans",sans-serif;color:#000;outline:none;min-width:0}',
     '.ctxf-input::placeholder{color:#bbb}',
     '.ctxf-send{width:34px;height:34px;border:none;background:#e0e0e0;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,transform .15s;flex-shrink:0;-webkit-tap-highlight-color:transparent;outline:none}',
     '.ctxf-send svg{width:16px;height:16px;fill:#999;transition:fill .15s}',
@@ -200,7 +200,7 @@
       // Dark input area
       '.ctxf-input-area{background:#1a1a1a;border-top:1px solid #333;padding-bottom:max(16px,env(safe-area-inset-bottom,16px))}',
       '.ctxf-input-wrap{background:#2a2a2a;border:1px solid #333}',
-      '.ctxf-input{color:#fff;font-size:15px}',
+      '.ctxf-input{color:#fff;font-size:16px}',
       '.ctxf-input::placeholder{color:#666}',
       '.ctxf-send{background:#333;width:36px;height:36px}',
       '.ctxf-send svg{fill:#666;width:18px;height:18px}',
