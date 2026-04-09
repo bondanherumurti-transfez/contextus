@@ -555,6 +555,42 @@
       });
     }
 
+    // ── Eager session init — fetch name + pills + lang from backend ───────────────
+
+    if (cfg.apiUrl && cfg.knowledgeBaseId) {
+      (async function initSession() {
+        try {
+          var sr = await fetch(cfg.apiUrl + '/api/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ knowledge_base_id: cfg.knowledgeBaseId }),
+          });
+          if (!sr.ok) return;
+          var data = await sr.json();
+
+          // Store session so sendMessage skips the lazy fetch
+          state.sessionId = data.session_id;
+
+          // Update brand name in header
+          if (data.name) {
+            cfg.name = data.name;
+            var hnameEl = shadow.querySelector('.ctxf-hname');
+            if (hnameEl) hnameEl.textContent = data.name;
+          }
+
+          // Update language
+          if (data.language) cfg.lang = data.language;
+
+          // Replace pills with KB-specific ones (only if user hasn't sent a message yet)
+          if (data.pills && data.pills.length && state.pillsVisible) {
+            pillsEl.innerHTML = data.pills.map(function (p) {
+              return '<button class="ctxf-pill" data-msg="' + esc(p) + '">' + esc(p) + '</button>';
+            }).join('');
+          }
+        } catch (_) { /* fall through — sendMessage will create session lazily */ }
+      })();
+    }
+
     // ── Auto-open ─────────────────────────────────────────────────────────────────
 
     if (cfg.autoOpen) openPanel();

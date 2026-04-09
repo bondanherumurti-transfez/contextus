@@ -91,6 +91,7 @@ class SessionResponse(BaseModel):
     session_id: str
     pills: list[str] = []
     language: str = "en"
+    name: str = ""
 
 
 class ChatRequest(BaseModel):
