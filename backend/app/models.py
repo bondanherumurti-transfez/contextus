@@ -17,6 +17,7 @@ class CompanyProfile(BaseModel):
     summary: str
     gaps: list[str]
     pill_suggestions: PillSuggestions | None = None
+    language: str = "en"
 
 
 class Chunk(BaseModel):
@@ -35,6 +36,7 @@ class KnowledgeBase(BaseModel):
     company_profile: CompanyProfile | None = None
     chunks: list[Chunk] = []
     suggested_pills: list[str] = []
+    language: str = "en"
     created_at: int
 
 
@@ -88,6 +90,7 @@ class SessionRequest(BaseModel):
 class SessionResponse(BaseModel):
     session_id: str
     pills: list[str] = []
+    language: str = "en"
 
 
 class ChatRequest(BaseModel):

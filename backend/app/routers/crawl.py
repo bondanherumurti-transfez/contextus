@@ -26,7 +26,7 @@ DEMO_JOB_ID = "demo"
 
 
 async def run_crawl_job(
-    job_id: str, url: str, ttl: int | None = 1800, permanent: bool = False
+    job_id: str, url: str, ttl: int | None = 1800, permanent: bool = False, lang_hint: str | None = None
 ):
     try:
         kb = await get_knowledge_base(job_id)
@@ -52,11 +52,12 @@ async def run_crawl_job(
             kb.progress = "Generating company profile..."
             await save_knowledge_base(job_id, kb, ttl=ttl, permanent=permanent)
 
-            company_profile = await generate_company_profile(chunks, url)
+            company_profile = await generate_company_profile(chunks, url, lang_hint=lang_hint)
             kb.company_profile = company_profile
             kb.chunks = chunks
             kb.quality_tier = assess_quality_tier(chunks)
-            kb.suggested_pills = select_pills(company_profile.pill_suggestions)
+            kb.language = company_profile.language
+            kb.suggested_pills = select_pills(company_profile.pill_suggestions, language=company_profile.language)
 
         kb.status = "complete"
         kb.progress = ""
@@ -93,6 +94,7 @@ class SeedRequest(BaseModel):
     kb_id: str
     notion_db_id: str | None = None
     allowed_origins: list[str] = []
+    lang: str | None = None  # force pill language, e.g. "id"; auto-detected if omitted
 
 
 @router.post("/crawl/seed")
@@ -131,7 +133,7 @@ async def seed_customer_kb(
         created_at=int(time.time()),
     )
     await save_knowledge_base(body.kb_id, kb, ttl=None, permanent=True)
-    background_tasks.add_task(run_crawl_job, body.kb_id, body.url, None, True)
+    background_tasks.add_task(run_crawl_job, body.kb_id, body.url, None, True, body.lang)
 
     return {"kb_id": body.kb_id, "status": "crawling", "token": token}
 
