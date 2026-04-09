@@ -468,6 +468,99 @@ test.describe('Mobile design (<480px)', () => {
   });
 });
 
+// ── Mobile keyboard cover (ctxf-kbd) ──────────────────────────────────────────
+//
+// ctxf-kbd is added when the user focuses the input on mobile, hiding the
+// header and messages so the input-area fills the full panel (Intercom-style).
+// It must NOT be added by programmatic focus calls from the widget itself.
+
+test.describe('Mobile keyboard cover (ctxf-kbd)', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test('opening the panel does not add ctxf-kbd', async ({ page }) => {
+    await page.goto(URL);
+    await openWidget(page);
+    // Wait past where the old auto-focus setTimeout would have fired (300ms)
+    await page.waitForTimeout(400);
+    await expect(page.locator(sel.panel)).not.toHaveClass(/ctxf-kbd/);
+  });
+
+  test('header is visible after opening (no spurious ctxf-kbd)', async ({ page }) => {
+    await page.goto(URL);
+    await openWidget(page);
+    await page.waitForTimeout(400);
+    const display = await page.locator(sel.header).evaluate(el =>
+      getComputedStyle(el).display
+    );
+    expect(display).not.toBe('none');
+  });
+
+  test('manually focusing input adds ctxf-kbd', async ({ page }) => {
+    await page.goto(URL);
+    await openWidget(page);
+    await page.locator(sel.input).focus();
+    await expect(page.locator(sel.panel)).toHaveClass(/ctxf-kbd/);
+  });
+
+  test('blurring input removes ctxf-kbd', async ({ page }) => {
+    await page.goto(URL);
+    await openWidget(page);
+    await page.locator(sel.input).focus();
+    await expect(page.locator(sel.panel)).toHaveClass(/ctxf-kbd/);
+    await page.locator(sel.input).blur();
+    await expect(page.locator(sel.panel)).not.toHaveClass(/ctxf-kbd/);
+  });
+
+  test('ctxf-kbd is gone after agent responds (no refocus bug)', async ({ page }) => {
+    await mockSession(page);
+    await mockChat(page, 'Got it!');
+    await page.goto(URL);
+    await openWidget(page);
+    // User taps input → keyboard cover activates
+    await page.locator(sel.input).focus();
+    await expect(page.locator(sel.panel)).toHaveClass(/ctxf-kbd/);
+    // User sends message
+    await page.locator(sel.input).fill('Hello');
+    await page.locator(sel.send).click();
+    // After the agent responds the input must NOT be refocused programmatically
+    await expect(page.locator(sel.bubbleAgent).last()).toContainText('Got it!');
+    await expect(page.locator(sel.panel)).not.toHaveClass(/ctxf-kbd/);
+    // Header and messages must be visible again
+    const headerDisplay = await page.locator(sel.header).evaluate(el =>
+      getComputedStyle(el).display
+    );
+    expect(headerDisplay).not.toBe('none');
+    const msgsDisplay = await page.locator(sel.messages).evaluate(el =>
+      getComputedStyle(el).display
+    );
+    expect(msgsDisplay).not.toBe('none');
+  });
+});
+
+// ── Input font-size — iOS auto-zoom prevention ─────────────────────────────────
+//
+// iOS Safari zooms in when an <input> has font-size < 16px.
+// Pin this at ≥ 16px so the fix is never accidentally regressed.
+
+test.describe('Input font-size (iOS zoom prevention)', () => {
+  test('input font-size is at least 16px on desktop', async ({ page }) => {
+    await page.goto(URL);
+    const size = await page.locator(sel.input).evaluate(el =>
+      parseFloat(getComputedStyle(el).fontSize)
+    );
+    expect(size).toBeGreaterThanOrEqual(16);
+  });
+
+  test('input font-size is at least 16px on mobile', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto(URL);
+    const size = await page.locator(sel.input).evaluate(el =>
+      parseFloat(getComputedStyle(el).fontSize)
+    );
+    expect(size).toBeGreaterThanOrEqual(16);
+  });
+});
+
 // ── Eager session init — brand name & KB pills ─────────────────────────────────
 //
 // The demo page has no data-knowledge-base-id, so we inject a minimal page
