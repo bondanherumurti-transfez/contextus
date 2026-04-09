@@ -74,10 +74,14 @@ async def save_session(session_id: str, data: Session, ttl: int = 1800) -> None:
 
 
 async def get_session(session_id: str) -> Session | None:
-    raw = await redis.get(session_key(session_id))
-    if raw is None:
+    try:
+        raw = await redis.get(session_key(session_id))
+        if raw is None:
+            return None
+        return Session.model_validate_json(raw)
+    except Exception as e:
+        logger.error("get_session error for session_id=%s: %s", session_id, e)
         return None
-    return Session.model_validate_json(raw)
 
 
 async def check_rate_limit(
