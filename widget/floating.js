@@ -144,8 +144,8 @@
     '.ctxf-send.ctxf-active:hover{transform:scale(1.05)}',
 
     // Quick reply pills
-    '.ctxf-pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}',
-    '.ctxf-pill{font-size:11px;color:#666;padding:6px 12px;border:.5px solid #e0e0e0;border-radius:16px;background:#fff;cursor:pointer;transition:background .15s,border-color .15s;font-family:"DM Sans",sans-serif;-webkit-tap-highlight-color:transparent;outline:none}',
+    '.ctxf-pills{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start;margin-top:10px}',
+    '.ctxf-pill{font-size:11px;color:#666;padding:6px 12px;border:.5px solid #e0e0e0;border-radius:16px;background:#fff;cursor:pointer;transition:background .15s,border-color .15s;font-family:"DM Sans",sans-serif;-webkit-tap-highlight-color:transparent;outline:none;text-align:left}',
     '.ctxf-pill:hover{background:#f8f8f8;border-color:#ccc}',
 
     // Footer

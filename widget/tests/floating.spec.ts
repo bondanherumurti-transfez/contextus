@@ -24,13 +24,20 @@ const sel = {
   bubbleVisitor: '.ctxf-bubble-visitor',
 };
 
+interface SessionData {
+  session_id?: string;
+  name?: string;
+  pills?: string[];
+  language?: string;
+}
+
 /** Intercept the Render backend so tests never hit the real network. */
-async function mockSession(page: Page): Promise<void> {
+async function mockSession(page: Page, overrides: SessionData = {}): Promise<void> {
   await page.route('**/api/session', route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ session_id: 'test-session-float' }),
+      body: JSON.stringify({ session_id: 'test-session-float', ...overrides }),
     })
   );
 }
@@ -458,5 +465,90 @@ test.describe('Mobile design (<480px)', () => {
       parseFloat(getComputedStyle(el).opacity)
     );
     expect(opacity).toBeLessThan(1);
+  });
+});
+
+// ── Eager session init — brand name & KB pills ─────────────────────────────────
+//
+// The demo page has no data-knowledge-base-id, so we inject a minimal page
+// with that attribute set to trigger the eager /api/session call.
+
+const WIDGET_ABSOLUTE = 'http://localhost:3000/widget/floating.js';
+
+async function loadWidgetWithKB(page: Page, kbId = 'test-kb'): Promise<void> {
+  await page.setContent(`
+    <!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>
+    <script
+      src="${WIDGET_ABSOLUTE}"
+      data-contextus-id="test"
+      data-knowledge-base-id="${kbId}"
+      data-greeting="Hi!"
+    ></script>
+    </body></html>
+  `);
+  // Wait until floating.js has initialised and exposed window.contextus
+  await page.waitForFunction(() => !!(window as any).contextus);
+}
+
+test.describe('Eager session init', () => {
+  test('header shows KB brand name returned by session API', async ({ page }) => {
+    await mockSession(page, { name: 'Finfloo' });
+    await loadWidgetWithKB(page);
+    // Wait for eager fetch to update the DOM
+    await page.waitForFunction(() => {
+      const el = document.querySelector('#ctxf-host')?.shadowRoot?.querySelector('.ctxf-hname');
+      return el?.textContent === 'Finfloo';
+    });
+    await expect(page.locator('.ctxf-hname')).toHaveText('Finfloo');
+  });
+
+  test('pills are replaced with KB-specific pills from session API', async ({ page }) => {
+    const kbPills = ['How do I contact Finfloo?', 'What is Finfloo pricing?', 'Get started with Finfloo'];
+    await mockSession(page, { pills: kbPills });
+    await loadWidgetWithKB(page);
+    await page.waitForFunction((expected: string[]) => {
+      const pills = document.querySelector('#ctxf-host')?.shadowRoot?.querySelectorAll('.ctxf-pill');
+      return pills && pills.length === expected.length && pills[0].textContent === expected[0];
+    }, kbPills);
+    const texts = await page.locator(sel.pill).allTextContents();
+    expect(texts).toEqual(kbPills);
+  });
+
+  test('session ID is pre-set so sendMessage skips /api/session', async ({ page }) => {
+    await mockSession(page, { name: 'Finfloo' });
+    await mockChat(page, 'Hi from Finfloo!');
+    await loadWidgetWithKB(page);
+    // Wait for eager init to complete (name updated = session stored)
+    await page.waitForFunction(() => {
+      const el = document.querySelector('#ctxf-host')?.shadowRoot?.querySelector('.ctxf-hname');
+      return el?.textContent === 'Finfloo';
+    });
+    // Any further session call should be tracked — register AFTER init so only
+    // new calls (from sendMessage fallback) would be captured.
+    const sessionCalls: number[] = [];
+    await page.route('**/api/session', route => {
+      sessionCalls.push(1);
+      route.fulfill({ status: 500, body: 'unexpected session call' });
+    });
+    await page.evaluate(() => (window as any).contextus.open());
+    await page.locator(sel.input).fill('Hello');
+    await page.locator(sel.send).click();
+    await expect(page.locator(sel.bubbleAgent).last()).toContainText('Hi from Finfloo!');
+    expect(sessionCalls.length).toBe(0);
+  });
+
+  test('falls back to default name when session API returns no name', async ({ page }) => {
+    await mockSession(page); // no name field
+    await page.goto(URL);
+    await openWidget(page);
+    const name = await page.locator('.ctxf-hname').textContent();
+    expect(name).toBeTruthy();
+  });
+
+  test('keeps default pills when session API returns empty pills', async ({ page }) => {
+    await mockSession(page, { pills: [] });
+    await page.goto(URL);
+    await openWidget(page);
+    await expect(page.locator(sel.pill)).toHaveCount(3);
   });
 });
