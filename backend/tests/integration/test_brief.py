@@ -135,13 +135,12 @@ def test_webhook_fired_when_url_configured(
 
 
 @patch("app.routers.brief.asyncio.create_task")
-@patch("app.routers.brief.fire_webhook", new_callable=AsyncMock)
 @patch("app.routers.brief.get_customer_config", new_callable=AsyncMock)
 @patch("app.routers.brief.generate_lead_brief", new_callable=AsyncMock)
 @patch("app.routers.brief.get_knowledge_base", new_callable=AsyncMock)
 @patch("app.routers.brief.get_session", new_callable=AsyncMock)
 def test_webhook_not_fired_when_no_url(
-    mock_get_session, mock_get_kb, mock_generate, mock_get_config, mock_fire, mock_create_task
+    mock_get_session, mock_get_kb, mock_generate, mock_get_config, mock_create_task
 ):
     mock_get_session.return_value = make_session(messages=4)
     mock_get_kb.return_value = make_kb()
@@ -150,7 +149,6 @@ def test_webhook_not_fired_when_no_url(
 
     response = client.post("/api/brief/test_session")
     assert response.status_code == 200
-    mock_fire.assert_not_called()
     mock_create_task.assert_not_called()
 
 
