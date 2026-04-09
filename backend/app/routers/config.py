@@ -8,7 +8,7 @@ from app.services.database import get_customer_config, save_customer_config
 router = APIRouter(tags=["config"])
 logger = logging.getLogger(__name__)
 
-ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
+ADMIN_TOKEN = os.getenv("ADMIN_SECRET", "")
 
 
 def _check_auth(authorization: str | None) -> None:
