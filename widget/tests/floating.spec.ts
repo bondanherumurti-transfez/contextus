@@ -645,3 +645,119 @@ test.describe('Eager session init', () => {
     await expect(page.locator(sel.pill)).toHaveCount(3);
   });
 });
+
+// ── Backend error handling ─────────────────────────────────────────────────────
+//
+// The floating widget renders errors as agent bubbles (no dedicated banner
+// element) and re-enables the input so the user can retry.
+// Session is fetched lazily on the first sendMessage() call when no
+// state.sessionId is set — the demo page has no KB ID so the fetch always runs.
+
+test.describe('Backend error handling', () => {
+  test('session 500 → error agent bubble shown', async ({ page }) => {
+    await page.route('**/api/session', route => route.fulfill({ status: 500 }));
+    await page.goto(URL);
+    await openWidget(page);
+    await page.locator(sel.input).fill('Hello');
+    await page.locator(sel.send).click();
+    await expect(page.locator(sel.bubbleAgent).last()).toContainText('Sorry, something went wrong');
+  });
+
+  test('session 500 → thinking dots removed', async ({ page }) => {
+    await page.route('**/api/session', route => route.fulfill({ status: 500 }));
+    await page.goto(URL);
+    await openWidget(page);
+    await page.locator(sel.input).fill('Hello');
+    await page.locator(sel.send).click();
+    await expect(page.locator(sel.bubbleAgent).last()).toContainText('Sorry');
+    await expect(page.locator(sel.dots)).not.toBeAttached();
+  });
+
+  test('session 500 → input re-enabled so user can retry', async ({ page }) => {
+    await page.route('**/api/session', route => route.fulfill({ status: 500 }));
+    await page.goto(URL);
+    await openWidget(page);
+    await page.locator(sel.input).fill('Hello');
+    await page.locator(sel.send).click();
+    await expect(page.locator(sel.bubbleAgent).last()).toContainText('Sorry');
+    await expect(page.locator(sel.input)).toBeEnabled();
+  });
+
+  test('session network error (abort) → error agent bubble shown', async ({ page }) => {
+    await page.route('**/api/session', route => route.abort('failed'));
+    await page.goto(URL);
+    await openWidget(page);
+    await page.locator(sel.input).fill('Hello');
+    await page.locator(sel.send).click();
+    await expect(page.locator(sel.bubbleAgent).last()).toContainText('Sorry');
+  });
+
+  test('chat 500 (both attempts) → error agent bubble shown', async ({ page }) => {
+    await page.clock.install();
+    await mockSession(page);
+    await page.route('**/api/chat/**', route => route.abort('failed'));
+    await page.goto(URL);
+    await openWidget(page);
+    await page.locator(sel.input).fill('Hello');
+    await page.locator(sel.send).click();
+    // Skip the 2-second silent retry delay
+    await page.clock.fastForward(2100);
+    await expect(page.locator(sel.bubbleAgent).last()).toContainText("couldn't connect", { timeout: 5000 });
+  });
+
+  test('chat 500 → thinking dots removed after both attempts', async ({ page }) => {
+    await page.clock.install();
+    await mockSession(page);
+    await page.route('**/api/chat/**', route => route.abort('failed'));
+    await page.goto(URL);
+    await openWidget(page);
+    await page.locator(sel.input).fill('Hello');
+    await page.locator(sel.send).click();
+    await page.clock.fastForward(2100);
+    await expect(page.locator(sel.bubbleAgent).last()).toContainText('Sorry', { timeout: 5000 });
+    await expect(page.locator(sel.dots)).not.toBeAttached();
+  });
+
+  test('chat 500 → input re-enabled after both attempts', async ({ page }) => {
+    await page.clock.install();
+    await mockSession(page);
+    await page.route('**/api/chat/**', route => route.abort('failed'));
+    await page.goto(URL);
+    await openWidget(page);
+    await page.locator(sel.input).fill('Hello');
+    await page.locator(sel.send).click();
+    await page.clock.fastForward(2100);
+    await expect(page.locator(sel.bubbleAgent).last()).toContainText('Sorry', { timeout: 5000 });
+    await expect(page.locator(sel.input)).toBeEnabled();
+  });
+
+  test('chat 500 → user can retry and succeed', async ({ page }) => {
+    await page.clock.install();
+    await mockSession(page);
+    let chatCallCount = 0;
+    await page.route('**/api/chat/**', route => {
+      chatCallCount++;
+      if (chatCallCount <= 2) {
+        route.abort('failed');
+      } else {
+        route.fulfill({
+          status: 200,
+          contentType: 'text/event-stream',
+          headers: { 'Cache-Control': 'no-cache' },
+          body: `data: ${JSON.stringify({ token: 'Recovery!' })}\n\n`,
+        });
+      }
+    });
+    await page.goto(URL);
+    await openWidget(page);
+    await page.locator(sel.input).fill('First try');
+    await page.locator(sel.send).click();
+    await page.clock.fastForward(2100);
+    await expect(page.locator(sel.bubbleAgent).last()).toContainText('Sorry', { timeout: 5000 });
+
+    // Retry — should succeed
+    await page.locator(sel.input).fill('Retry');
+    await page.locator(sel.send).click();
+    await expect(page.locator(sel.bubbleAgent).last()).toContainText('Recovery!');
+  });
+});

@@ -326,6 +326,145 @@ test.describe('Pill interaction', () => {
   });
 });
 
+// ── Backend error handling ─────────────────────────────────────────────────────
+//
+// Tests what the user sees when the backend is down, returns errors,
+// or cuts the stream.  Uses a URL without a pre-set sessionId so the
+// widget actually calls /api/session (WIDGET_URL pre-sets it via
+// window.__ctxSessionId and bypasses the fetch).
+
+const WIDGET_URL_NO_SESSION = '/widget/widget';
+
+test.describe('Backend error handling', () => {
+  test('session 500 → error banner shown', async ({ page }) => {
+    await page.route('**/api/session', route => route.fulfill({ status: 500 }));
+    await page.goto(WIDGET_URL_NO_SESSION);
+    await page.locator('.ctx-input').fill('Hello');
+    await page.locator('.ctx-send').click();
+    await expect(page.locator('.ctx-banner-error')).toBeVisible();
+    await expect(page.locator('.ctx-banner-error')).toContainText('Could not start session');
+  });
+
+  test('session 500 → thinking dots removed', async ({ page }) => {
+    await page.route('**/api/session', route => route.fulfill({ status: 500 }));
+    await page.goto(WIDGET_URL_NO_SESSION);
+    await page.locator('.ctx-input').fill('Hello');
+    await page.locator('.ctx-send').click();
+    await expect(page.locator('.ctx-banner-error')).toBeVisible();
+    await expect(page.locator('.ctx-dots')).not.toBeAttached();
+  });
+
+  test('session 500 → input re-enabled with error placeholder', async ({ page }) => {
+    await page.route('**/api/session', route => route.fulfill({ status: 500 }));
+    await page.goto(WIDGET_URL_NO_SESSION);
+    await page.locator('.ctx-input').fill('Hello');
+    await page.locator('.ctx-send').click();
+    await expect(page.locator('.ctx-banner-error')).toBeVisible();
+    await expect(page.locator('.ctx-input')).toBeEnabled();
+    const placeholder = await page.locator('.ctx-input').getAttribute('placeholder');
+    expect(placeholder).toBe('Try again...');
+  });
+
+  test('session network error (abort) → error banner shown', async ({ page }) => {
+    await page.route('**/api/session', route => route.abort('failed'));
+    await page.goto(WIDGET_URL_NO_SESSION);
+    await page.locator('.ctx-input').fill('Hello');
+    await page.locator('.ctx-send').click();
+    await expect(page.locator('.ctx-banner-error')).toBeVisible();
+  });
+
+  test('chat 500 (both attempts) → generic error banner shown', async ({ page }) => {
+    await page.clock.install();
+    await page.route('**/api/chat/**', route => route.abort('failed'));
+    await page.goto(WIDGET_URL);
+    await page.locator('.ctx-input').fill('Hello');
+    await page.locator('.ctx-send').click();
+    // Skip the 2-second silent retry delay
+    await page.clock.fastForward(2100);
+    await expect(page.locator('.ctx-banner-error')).toBeVisible();
+    await expect(page.locator('.ctx-banner-error')).toContainText('Something went wrong');
+  });
+
+  test('chat 500 → thinking dots removed after both attempts', async ({ page }) => {
+    await page.clock.install();
+    await page.route('**/api/chat/**', route => route.abort('failed'));
+    await page.goto(WIDGET_URL);
+    await page.locator('.ctx-input').fill('Hello');
+    await page.locator('.ctx-send').click();
+    await page.clock.fastForward(2100);
+    await expect(page.locator('.ctx-banner-error')).toBeVisible();
+    await expect(page.locator('.ctx-dots')).not.toBeAttached();
+  });
+
+  test('chat 500 → input re-enabled with error placeholder', async ({ page }) => {
+    await page.clock.install();
+    await page.route('**/api/chat/**', route => route.abort('failed'));
+    await page.goto(WIDGET_URL);
+    await page.locator('.ctx-input').fill('Hello');
+    await page.locator('.ctx-send').click();
+    await page.clock.fastForward(2100);
+    await expect(page.locator('.ctx-banner-error')).toBeVisible();
+    await expect(page.locator('.ctx-input')).toBeEnabled();
+    const placeholder = await page.locator('.ctx-input').getAttribute('placeholder');
+    expect(placeholder).toBe('Try again...');
+  });
+
+  test('chat 500 → user can retry and succeed', async ({ page }) => {
+    await page.clock.install();
+    let chatCallCount = 0;
+    await page.route('**/api/chat/**', route => {
+      chatCallCount++;
+      if (chatCallCount <= 2) {
+        // Both attempts for first message fail
+        route.abort('failed');
+      } else {
+        route.fulfill({
+          status: 200,
+          contentType: 'text/event-stream',
+          headers: { 'Cache-Control': 'no-cache' },
+          body: `data: ${JSON.stringify({ token: 'Recovery response!' })}\n\n`,
+        });
+      }
+    });
+    await page.goto(WIDGET_URL);
+    await page.locator('.ctx-input').fill('First try');
+    await page.locator('.ctx-send').click();
+    await page.clock.fastForward(2100);
+    await expect(page.locator('.ctx-banner-error')).toBeVisible();
+
+    // Retry — should succeed now
+    await page.locator('.ctx-input').fill('Retry');
+    await page.locator('.ctx-send').click();
+    await expect(page.locator('.ctx-bubble-agent').last()).toContainText('Recovery response!');
+    await expect(page.locator('.ctx-banner-error')).not.toBeAttached();
+  });
+
+  test('chat silent retry succeeds → agent bubble shown, no error banner', async ({ page }) => {
+    // First attempt fails, second (silent retry) succeeds — user sees nothing wrong
+    await page.clock.install();
+    let attempt = 0;
+    await page.route('**/api/chat/**', route => {
+      attempt++;
+      if (attempt === 1) {
+        route.abort('failed');
+      } else {
+        route.fulfill({
+          status: 200,
+          contentType: 'text/event-stream',
+          headers: { 'Cache-Control': 'no-cache' },
+          body: `data: ${JSON.stringify({ token: 'Retry worked!' })}\n\n`,
+        });
+      }
+    });
+    await page.goto(WIDGET_URL);
+    await page.locator('.ctx-input').fill('Hello');
+    await page.locator('.ctx-send').click();
+    await page.clock.fastForward(2100);
+    await expect(page.locator('.ctx-bubble-agent').last()).toContainText('Retry worked!');
+    await expect(page.locator('.ctx-banner-error')).not.toBeAttached();
+  });
+});
+
 // ── Localization (lang=id) ─────────────────────────────────────────────────────
 
 test.describe('Localization — lang=id', () => {
