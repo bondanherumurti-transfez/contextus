@@ -519,7 +519,9 @@
 
         state.phase = 'active';
         inputEl.disabled = false;
-        inputEl.focus();
+        // Only refocus on desktop — on mobile, programmatic focus re-adds
+        // ctxf-kbd and hides header/messages even when keyboard is not open.
+        if (!isMobile()) inputEl.focus();
       })();
     }
 
