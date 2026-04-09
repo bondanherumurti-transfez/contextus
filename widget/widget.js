@@ -69,21 +69,59 @@
       .replace(/\*(.+?)\*/g, '<em>$1</em>');
   }
 
+  // ── Translations ─────────────────────────────────────────────────────────────
+
+  const TRANSLATIONS = {
+    en: {
+      greeting:             'Ask us anything...',
+      placeholder_active:   'Type a message...',
+      placeholder_thinking: 'Waiting for response...',
+      placeholder_complete: 'Start a new conversation...',
+      placeholder_error:    'Try again...',
+      greeting_agent:       'Hi! How can I help you today?',
+      nudge:                "Still there? No rush — I'm here whenever you're ready.",
+      banner_complete:      'Conversation ended — <span>lead brief sent</span>',
+      signoff:              "You're all set! The team has been notified and will follow up shortly. Have a great day.",
+      error_session:        'Could not start session. Please try again.',
+      error_generic:        'Something went wrong. Please try again.',
+      pills_fallback:       ['What services do you offer?', 'How can you help me?', 'How do I contact you?'],
+    },
+    id: {
+      greeting:             'Tanya apa saja...',
+      placeholder_active:   'Ketik pesan...',
+      placeholder_thinking: 'Menunggu balasan...',
+      placeholder_complete: 'Mulai percakapan baru...',
+      placeholder_error:    'Coba lagi...',
+      greeting_agent:       'Halo! Ada yang bisa kami bantu?',
+      nudge:                'Masih di sini? Tidak perlu terburu-buru — kami siap membantu.',
+      banner_complete:      'Percakapan selesai — <span>ringkasan lead terkirim</span>',
+      signoff:              'Terima kasih! Tim kami telah diberitahu dan akan segera menghubungi Anda.',
+      error_session:        'Gagal memulai sesi. Silakan coba lagi.',
+      error_generic:        'Terjadi kesalahan. Silakan coba lagi.',
+      pills_fallback:       ['Apa layanan Anda?', 'Bagaimana Anda membantu?', 'Cara menghubungi?'],
+    },
+  };
+
   // ── Widget ───────────────────────────────────────────────────────────────────
 
   function createWidget(config) {
     const cfg = Object.assign({
       root: document.getElementById('contextus-root') || document.body,
       name: 'contextus',
-      greeting: 'Ask us anything...',
+      greeting: '',
       lang: 'auto',
       transparent: false,
       dynamicHeight: false,
-      pills: ['How can you help?', 'Pricing & plans', 'How do I embed this?'],
+      pills: [],
       apiUrl: '',           // e.g. 'https://api.contextus.ai'
       knowledgeBaseId: '',  // job_id from POST /api/crawl
       autoMessage: '',      // if set, sent automatically on widget load
     }, config);
+
+    function t(key) {
+      const lang = cfg.lang === 'auto' ? 'en' : cfg.lang;
+      return (TRANSLATIONS[lang] || TRANSLATIONS.en)[key];
+    }
 
     // ── State ────────────────────────────────────────────────────────────────
 
@@ -129,7 +167,7 @@
     // Input area
     const inputArea = el('div', { className: 'ctx-input-area' });
     const inputWrapper = el('div', { className: 'ctx-input-wrapper' });
-    const input = el('input', { className: 'ctx-input', type: 'text', placeholder: cfg.greeting });
+    const input = el('input', { className: 'ctx-input', type: 'text', placeholder: cfg.greeting || t('greeting') });
     const sendBtn = el('button', { className: 'ctx-send ctx-send-empty', type: 'button', 'aria-label': 'Send' });
     sendBtn.innerHTML = SEND_ICON;
     inputWrapper.appendChild(input);
@@ -137,7 +175,8 @@
     inputArea.appendChild(inputWrapper);
 
     const pillsContainer = el('div', { className: 'ctx-pills' });
-    cfg.pills.forEach(label => {
+    const effectivePills = (cfg.pills && cfg.pills.length > 0) ? cfg.pills : t('pills_fallback');
+    effectivePills.forEach(label => {
       const pill = el('button', { className: 'ctx-pill', type: 'button' });
       pill.textContent = label;
       pill.addEventListener('click', () => sendMessage(label));
@@ -192,7 +231,7 @@
       // Nudge
       if (state.nudgeSent && state.phase === 'active') {
         const nudge = el('div', { className: 'ctx-nudge' });
-        nudge.textContent = 'Still there? No rush — I\'m here whenever you\'re ready.';
+        nudge.textContent = t('nudge');
         msgArea.appendChild(nudge);
       }
 
@@ -251,7 +290,7 @@
 
       if (state.phase === 'complete') {
         const completeBanner = el('div', { className: 'ctx-banner-complete' });
-        completeBanner.innerHTML = `Conversation ended — <span>lead brief sent</span>`;
+        completeBanner.innerHTML = t('banner_complete');
         msgArea.appendChild(completeBanner);
       }
 
@@ -268,13 +307,13 @@
       input.disabled = isDisabled;
 
       if (isComplete) {
-        input.placeholder = 'Start a new conversation...';
+        input.placeholder = t('placeholder_complete');
       } else if (isThinking) {
-        input.placeholder = 'Waiting for response...';
+        input.placeholder = t('placeholder_thinking');
       } else if (state.phase === 'idle') {
-        input.placeholder = cfg.greeting;
+        input.placeholder = cfg.greeting || t('greeting');
       } else {
-        input.placeholder = state.errorMessage ? 'Try again...' : 'Type a message...';
+        input.placeholder = state.errorMessage ? t('placeholder_error') : t('placeholder_active');
       }
 
       updateSendBtn();
@@ -349,7 +388,7 @@
 
       // Prepend greeting on first message
       if (state.messages.length === 0) {
-        state.messages.push({ role: 'agent', text: 'Hi! How can I help you today?' });
+        state.messages.push({ role: 'agent', text: t('greeting_agent') });
       }
 
       const visitorMsg = { role: 'visitor', text: text.trim() };
@@ -384,7 +423,7 @@
             } catch (err) {
               const tidx = state.messages.indexOf(thinkingMsg);
               if (tidx > -1) state.messages.splice(tidx, 1);
-              state.errorMessage = 'Could not start session. Please try again.';
+              state.errorMessage = t('error_session');
               render();
               return;
             }
@@ -483,7 +522,7 @@
           if (aidx > -1) state.messages.splice(aidx, 1);
           const tidx = state.messages.indexOf(thinkingMsg);
           if (tidx > -1) state.messages.splice(tidx, 1);
-          state.errorMessage = 'Something went wrong. Please try again.';
+          state.errorMessage = t('error_generic');
         }
 
         if (state.contactCaptured) {
@@ -527,13 +566,13 @@
 
     function endConversation() {
       state.phase = 'complete';
-      const signOff = { role: 'agent', text: "You're all set! The team has been notified and will follow up shortly. Have a great day." };
+      const signOff = { role: 'agent', text: t('signoff') };
       state.messages.push(signOff);
       render();
 
       // Soft-reset placeholder after 30s
       state.softResetTimer = setTimeout(() => {
-        input.placeholder = 'Start a new conversation...';
+        input.placeholder = t('placeholder_complete');
       }, 30 * 1000);
     }
 

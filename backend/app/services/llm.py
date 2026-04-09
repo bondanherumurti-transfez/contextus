@@ -57,6 +57,7 @@ PROFILE_SYSTEM_PROMPT = """You are a business analyst. Extract company informati
   "contact": {"email": "email if found or null", "phone": "phone if found or null", "whatsapp": "whatsapp number if found or null"},
   "summary": "2-3 sentence description of what the business does",
   "gaps": ["List of important information missing from the website"],
+  "language": "ISO 639-1 code of the website's primary language (e.g. 'en', 'id', 'ms', 'zh', 'es')",
   "pill_suggestions": {
     "service_questions": ["2 natural questions a visitor would ask about their main services (max 6 words each)"],
     "gap_questions": ["1 question addressing the most important missing info (max 6 words)"],
@@ -67,6 +68,7 @@ PROFILE_SYSTEM_PROMPT = """You are a business analyst. Extract company informati
 Rules for pill_suggestions:
 - Max 6 words per question
 - Conversational tone — sound like something a real person types
+- Generate all questions in the website's primary language (matching the "language" field)
 - service_questions based on services[]
 - gap_questions based on gaps[]
 - If services are thin, generate plausible questions from the summary
@@ -154,21 +156,22 @@ Rules:
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 async def _call_profile_model(
-    chunks_text: str, site_url: str, temperature: float = 0.3
+    chunks_text: str, site_url: str, temperature: float = 0.3, lang_hint: str | None = None
 ) -> dict:
     with tracer.start_as_current_span("llm.generate_profile") as span:
         span.set_attribute("model", MODEL_PROFILE)
         span.set_attribute("temperature", temperature)
         span.set_attribute("site_url", site_url)
 
+        user_content = f"Website URL: {site_url}\n\nContent:\n{chunks_text}"
+        if lang_hint:
+            user_content = f"NOTE: Generate all pill_suggestions in '{lang_hint}' language.\n\n" + user_content
+
         response = await client.chat.completions.create(
             model=MODEL_PROFILE,
             messages=[
                 {"role": "system", "content": PROFILE_SYSTEM_PROMPT},
-                {
-                    "role": "user",
-                    "content": f"Website URL: {site_url}\n\nContent:\n{chunks_text}",
-                },
+                {"role": "user", "content": user_content},
             ],
             response_format={"type": "json_object"},
             temperature=temperature,
@@ -204,11 +207,12 @@ def _profile_from_partial(data: dict, site_url: str) -> CompanyProfile:
         summary=data.get("summary") or "",
         gaps=gaps if isinstance(gaps, list) else [],
         pill_suggestions=None,
+        language=data.get("language") or "en",
     )
 
 
 async def generate_company_profile(
-    chunks: list[Chunk], site_url: str
+    chunks: list[Chunk], site_url: str, lang_hint: str | None = None
 ) -> CompanyProfile:
     chunks_text = "\n\n".join([f"[{c.source}]\n{c.text}" for c in chunks[:20]])
     data = {}
@@ -216,7 +220,9 @@ async def generate_company_profile(
     for attempt in range(2):
         try:
             data = await _call_profile_model(
-                chunks_text, site_url, temperature=0.3 if attempt == 0 else 0.1
+                chunks_text, site_url,
+                temperature=0.3 if attempt == 0 else 0.1,
+                lang_hint=lang_hint,
             )
             return CompanyProfile(**data)
         except (ValidationError, json.JSONDecodeError, KeyError, TypeError) as e:
@@ -314,18 +320,20 @@ async def generate_lead_brief(session: Session) -> LeadBrief:
         )
 
 
-def generate_fallback_pills() -> list[str]:
-    return [
-        "What services do you offer?",
-        "How can you help me?",
-        "How do I contact you?",
-    ]
+FALLBACK_PILLS: dict[str, list[str]] = {
+    "en": ["What services do you offer?", "How can you help me?", "How do I contact you?"],
+    "id": ["Apa layanan Anda?", "Bagaimana Anda membantu?", "Cara menghubungi?"],
+}
 
 
-def select_pills(pill_suggestions: PillSuggestions | None) -> list[str]:
+def generate_fallback_pills(language: str = "en") -> list[str]:
+    return FALLBACK_PILLS.get(language, FALLBACK_PILLS["en"])
+
+
+def select_pills(pill_suggestions: PillSuggestions | None, language: str = "en") -> list[str]:
     """Priority: gap → service → industry → fallback."""
     if not pill_suggestions:
-        return generate_fallback_pills()
+        return generate_fallback_pills(language)
 
     pills = []
 
@@ -338,7 +346,7 @@ def select_pills(pill_suggestions: PillSuggestions | None) -> list[str]:
     if len(pills) < 3 and pill_suggestions.industry_questions:
         pills.append(pill_suggestions.industry_questions[0])
 
-    for fallback in generate_fallback_pills():
+    for fallback in generate_fallback_pills(language):
         if len(pills) >= 3:
             break
         if fallback not in pills:

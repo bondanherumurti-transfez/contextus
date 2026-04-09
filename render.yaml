@@ -24,3 +24,15 @@ services:
         sync: false
       - key: ALLOWED_ORIGINS
         value: https://getcontextus.dev,https://www.getcontextus.dev,https://project-b0yme.vercel.app
+
+  - type: cron
+    name: process-sessions-cron
+    runtime: python
+    schedule: "*/15 * * * *"
+    startCommand: >-
+      curl -sf --max-time 30
+      -X POST https://contextus-2d16.onrender.com/api/jobs/process-sessions
+      -H "x-cron-secret: $CRON_SECRET"
+    envVars:
+      - key: CRON_SECRET
+        sync: false
