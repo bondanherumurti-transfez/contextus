@@ -220,6 +220,13 @@
       '.ctxf-powered{color:#666}',
       '.ctxf-powered a{color:#888}',
       '.ctxf-powered a:hover{color:#fff}',
+
+      // Keyboard-open state: input-area + footer cover the full panel
+      // Header and messages are hidden; input-area expands to fill remaining space
+      // so the input field sits at the bottom just above the keyboard.
+      '.ctxf-panel.ctxf-kbd .ctxf-header{display:none}',
+      '.ctxf-panel.ctxf-kbd .ctxf-messages{display:none}',
+      '.ctxf-panel.ctxf-kbd .ctxf-input-area{flex:1;display:flex;flex-direction:column;justify-content:flex-end;border-top:none}',
     '}',
   ].join('');
 
@@ -525,6 +532,16 @@
     }
 
     inputEl.addEventListener('input', updateSend);
+
+    // ── Mobile: keyboard open/close — input-area covers full panel ────────────────
+
+    inputEl.addEventListener('focus', function () {
+      if (isMobile()) panelEl.classList.add('ctxf-kbd');
+    });
+
+    inputEl.addEventListener('blur', function () {
+      panelEl.classList.remove('ctxf-kbd');
+    });
 
     inputEl.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' && !e.shiftKey) {
