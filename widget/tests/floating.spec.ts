@@ -8,18 +8,21 @@ const URL = '/widget/floating-demo.html';
 // Playwright's CSS engine pierces open Shadow DOM by default —
 // plain class selectors work without any special prefix.
 const sel = {
-  fab:      '.ctxf-fab',
-  panel:    '.ctxf-panel',
-  header:   '.ctxf-header',
-  messages: '.ctxf-messages',
-  input:    '.ctxf-input',
-  send:     '.ctxf-send',
-  close:    '.ctxf-close-btn',
-  back:     '.ctxf-back-btn',
-  badge:    '.ctxf-badge',
-  pills:    '.ctxf-pills',
-  pill:     '.ctxf-pill',
-  dots:     '.ctxf-dots',
+  fab:        '.ctxf-fab',
+  panel:      '.ctxf-panel',
+  header:     '.ctxf-header',
+  messages:   '.ctxf-messages',
+  msgsInner:  '.ctxf-messages-inner',
+  scrollBtn:  '.ctxf-scroll-btn',
+  input:      '.ctxf-input',
+  inputArea:  '.ctxf-input-area',
+  send:       '.ctxf-send',
+  close:      '.ctxf-close-btn',
+  back:       '.ctxf-back-btn',
+  badge:      '.ctxf-badge',
+  pills:      '.ctxf-pills',
+  pill:       '.ctxf-pill',
+  dots:       '.ctxf-dots',
   bubbleAgent:   '.ctxf-bubble-agent',
   bubbleVisitor: '.ctxf-bubble-visitor',
 };
@@ -470,9 +473,11 @@ test.describe('Mobile design (<480px)', () => {
 
 // ── Mobile keyboard cover (ctxf-kbd) ──────────────────────────────────────────
 //
-// ctxf-kbd is added when the user focuses the input on mobile, hiding the
-// header and messages so the input-area fills the full panel (Intercom-style).
-// It must NOT be added by programmatic focus calls from the widget itself.
+// ctxf-kbd is added when the user focuses the input on mobile.
+// WhatsApp-style: header hides, but messages STAY VISIBLE. Messages + input
+// push upward together with the keyboard. Input-area does NOT expand to fill
+// the panel — it stays flex-shrink:0 at its natural height.
+// ctxf-kbd must NOT be triggered by programmatic focus from the widget itself.
 
 test.describe('Mobile keyboard cover (ctxf-kbd)', () => {
   test.use({ viewport: { width: 375, height: 812 } });
@@ -511,29 +516,56 @@ test.describe('Mobile keyboard cover (ctxf-kbd)', () => {
     await expect(page.locator(sel.panel)).not.toHaveClass(/ctxf-kbd/);
   });
 
+  test('header hides when ctxf-kbd is active', async ({ page }) => {
+    await page.goto(URL);
+    await openWidget(page);
+    await page.locator(sel.input).focus();
+    await expect(page.locator(sel.panel)).toHaveClass(/ctxf-kbd/);
+    const display = await page.locator(sel.header).evaluate(el =>
+      getComputedStyle(el).display
+    );
+    expect(display).toBe('none');
+  });
+
+  test('messages stay visible while ctxf-kbd is active', async ({ page }) => {
+    await page.goto(URL);
+    await openWidget(page);
+    await page.locator(sel.input).focus();
+    await expect(page.locator(sel.panel)).toHaveClass(/ctxf-kbd/);
+    const display = await page.locator(sel.messages).evaluate(el =>
+      getComputedStyle(el).display
+    );
+    expect(display).not.toBe('none');
+  });
+
+  test('input-area does not expand to fill panel during ctxf-kbd', async ({ page }) => {
+    await page.goto(URL);
+    await openWidget(page);
+    await page.locator(sel.input).focus();
+    await expect(page.locator(sel.panel)).toHaveClass(/ctxf-kbd/);
+    const flexGrow = await page.locator(sel.inputArea).evaluate(el =>
+      getComputedStyle(el).flexGrow
+    );
+    // Must be '0' — input-area stays at natural height, messages fill the rest
+    expect(flexGrow).toBe('0');
+  });
+
   test('ctxf-kbd is gone after agent responds (no refocus bug)', async ({ page }) => {
     await mockSession(page);
     await mockChat(page, 'Got it!');
     await page.goto(URL);
     await openWidget(page);
-    // User taps input → keyboard cover activates
     await page.locator(sel.input).focus();
     await expect(page.locator(sel.panel)).toHaveClass(/ctxf-kbd/);
-    // User sends message
     await page.locator(sel.input).fill('Hello');
     await page.locator(sel.send).click();
-    // After the agent responds the input must NOT be refocused programmatically
+    // Agent must NOT programmatically refocus input after responding
     await expect(page.locator(sel.bubbleAgent).last()).toContainText('Got it!');
     await expect(page.locator(sel.panel)).not.toHaveClass(/ctxf-kbd/);
-    // Header and messages must be visible again
     const headerDisplay = await page.locator(sel.header).evaluate(el =>
       getComputedStyle(el).display
     );
     expect(headerDisplay).not.toBe('none');
-    const msgsDisplay = await page.locator(sel.messages).evaluate(el =>
-      getComputedStyle(el).display
-    );
-    expect(msgsDisplay).not.toBe('none');
   });
 });
 
@@ -759,5 +791,219 @@ test.describe('Backend error handling', () => {
     await page.locator(sel.input).fill('Retry');
     await page.locator(sel.send).click();
     await expect(page.locator(sel.bubbleAgent).last()).toContainText('Recovery!');
+  });
+});
+
+// ── Messages: bottom-anchored layout ──────────────────────────────────────────
+//
+// Messages start from the bottom (WhatsApp / Google Chat style).
+// .ctxf-messages is display:flex + flex-direction:column.
+// .ctxf-messages-inner has margin-top:auto so a short conversation
+// gravity-sticks to the bottom. Scroll stays pinned after each append.
+
+test.describe('Messages: bottom-anchored layout', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test('messages container is a flex column', async ({ page }) => {
+    await page.goto(URL);
+    await openWidget(page);
+    const flexDir = await page.evaluate(() => {
+      const el = document.querySelector('#ctxf-host')?.shadowRoot
+        ?.querySelector('.ctxf-messages') as HTMLElement | null;
+      return el ? getComputedStyle(el).flexDirection : null;
+    });
+    expect(flexDir).toBe('column');
+  });
+
+  test('inner wrapper exists as child of messages container', async ({ page }) => {
+    await page.goto(URL);
+    await openWidget(page);
+    const exists = await page.evaluate(() => {
+      const root = document.querySelector('#ctxf-host')?.shadowRoot;
+      return !!root?.querySelector('.ctxf-messages > .ctxf-messages-inner');
+    });
+    expect(exists).toBe(true);
+  });
+
+  test('greeting message is inside the inner wrapper (not directly in container)', async ({ page }) => {
+    await page.goto(URL);
+    await openWidget(page);
+    const count = await page.evaluate(() => {
+      const root = document.querySelector('#ctxf-host')?.shadowRoot;
+      return root?.querySelector('.ctxf-messages-inner')?.querySelectorAll('.ctxf-msg').length ?? 0;
+    });
+    expect(count).toBeGreaterThan(0);
+  });
+
+  test('first message is anchored near the bottom (gap above inner wrapper)', async ({ page }) => {
+    await page.goto(URL);
+    await openWidget(page);
+    // With only the greeting, margin-top:auto should push the inner wrapper down
+    const gap = await page.evaluate(() => {
+      const root = document.querySelector('#ctxf-host')?.shadowRoot;
+      const msgs  = root?.querySelector('.ctxf-messages')?.getBoundingClientRect();
+      const inner = root?.querySelector('.ctxf-messages-inner')?.getBoundingClientRect();
+      if (!msgs || !inner) return -1;
+      return inner.top - msgs.top;
+    });
+    expect(gap).toBeGreaterThan(0);
+  });
+
+  test('scroll is pinned to bottom after a message is sent', async ({ page }) => {
+    await mockSession(page);
+    await mockChat(page, 'Response!');
+    await page.goto(URL);
+    await openWidget(page);
+    await page.locator(sel.input).fill('Hello');
+    await page.locator(sel.send).click();
+    await expect(page.locator(sel.bubbleAgent).last()).toContainText('Response!');
+    const atBottom = await page.evaluate(() => {
+      const el = document.querySelector('#ctxf-host')?.shadowRoot
+        ?.querySelector('.ctxf-messages') as HTMLElement | null;
+      if (!el) return false;
+      return Math.round(el.scrollHeight - el.scrollTop - el.clientHeight) < 5;
+    });
+    expect(atBottom).toBe(true);
+  });
+});
+
+// ── Scroll-to-bottom button ────────────────────────────────────────────────────
+//
+// A small button (position:absolute, outside flex flow) appears when the user
+// scrolls up to read history. It has zero layout impact when hidden — no gap
+// between the last message and input area. Clicking it scrolls to bottom.
+// Auto-scroll is suppressed while scrollPinned=false (user reading history).
+
+/** Inject N overflow messages and scroll to the top to trigger the button. */
+async function triggerScrollButton(page: Page, count = 20): Promise<void> {
+  await page.evaluate((n: number) => {
+    const root  = document.querySelector('#ctxf-host')?.shadowRoot;
+    const inner = root?.querySelector('.ctxf-messages-inner');
+    const msgs  = root?.querySelector('.ctxf-messages') as HTMLElement | null;
+    for (let i = 0; i < n; i++) {
+      const row    = document.createElement('div');
+      row.className = 'ctxf-msg';
+      const bubble = document.createElement('div');
+      bubble.className = 'ctxf-bubble ctxf-bubble-agent';
+      bubble.textContent = `Overflow message ${i}`;
+      row.appendChild(bubble);
+      inner?.appendChild(row);
+    }
+    if (msgs) msgs.scrollTop = 0;
+    msgs?.dispatchEvent(new Event('scroll'));
+  }, count);
+  await page.waitForTimeout(100);
+}
+
+test.describe('Scroll-to-bottom button', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test('scroll button exists in shadow DOM', async ({ page }) => {
+    await page.goto(URL);
+    await openWidget(page);
+    const exists = await page.evaluate(() =>
+      !!document.querySelector('#ctxf-host')?.shadowRoot?.querySelector('.ctxf-scroll-btn')
+    );
+    expect(exists).toBe(true);
+  });
+
+  test('scroll button is hidden initially (no ctxf-visible class)', async ({ page }) => {
+    await page.goto(URL);
+    await openWidget(page);
+    const hasVisible = await page.evaluate(() =>
+      document.querySelector('#ctxf-host')?.shadowRoot
+        ?.querySelector('.ctxf-scroll-btn')?.classList.contains('ctxf-visible') ?? false
+    );
+    expect(hasVisible).toBe(false);
+  });
+
+  test('scroll button has position:absolute (no layout impact when hidden)', async ({ page }) => {
+    await page.goto(URL);
+    await openWidget(page);
+    const pos = await page.evaluate(() => {
+      const el = document.querySelector('#ctxf-host')?.shadowRoot
+        ?.querySelector('.ctxf-scroll-btn') as HTMLElement | null;
+      return el ? getComputedStyle(el).position : null;
+    });
+    expect(pos).toBe('absolute');
+  });
+
+  test('scroll button is inside the messages wrap (not inside the scroll container)', async ({ page }) => {
+    await page.goto(URL);
+    await openWidget(page);
+    // Button must be inside .ctxf-messages-wrap but NOT inside .ctxf-messages (scroll container)
+    const [insideWrap, insideScrollContainer] = await page.evaluate(() => {
+      const shadow = document.querySelector('#ctxf-host')?.shadowRoot;
+      const wrap = shadow?.querySelector('.ctxf-messages-wrap');
+      const msgs = shadow?.querySelector('.ctxf-messages');
+      return [
+        !!wrap?.querySelector('.ctxf-scroll-btn'),
+        !!msgs?.querySelector('.ctxf-scroll-btn'),
+      ];
+    });
+    expect(insideWrap).toBe(true);
+    expect(insideScrollContainer).toBe(false);
+  });
+
+  test('scroll button appears when user scrolls up', async ({ page }) => {
+    await page.goto(URL);
+    await openWidget(page);
+    await triggerScrollButton(page);
+    const isVisible = await page.evaluate(() =>
+      document.querySelector('#ctxf-host')?.shadowRoot
+        ?.querySelector('.ctxf-scroll-btn')?.classList.contains('ctxf-visible') ?? false
+    );
+    expect(isVisible).toBe(true);
+  });
+
+  test('clicking scroll button scrolls to bottom', async ({ page }) => {
+    await page.goto(URL);
+    await openWidget(page);
+    await triggerScrollButton(page);
+    await page.locator(sel.scrollBtn).click();
+    await page.waitForTimeout(100);
+    const atBottom = await page.evaluate(() => {
+      const msgs = document.querySelector('#ctxf-host')?.shadowRoot
+        ?.querySelector('.ctxf-messages') as HTMLElement | null;
+      return msgs ? Math.round(msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight) < 5 : false;
+    });
+    expect(atBottom).toBe(true);
+  });
+
+  test('clicking scroll button hides the button', async ({ page }) => {
+    await page.goto(URL);
+    await openWidget(page);
+    await triggerScrollButton(page);
+    await page.locator(sel.scrollBtn).click();
+    await page.waitForTimeout(100);
+    const isVisible = await page.evaluate(() =>
+      document.querySelector('#ctxf-host')?.shadowRoot
+        ?.querySelector('.ctxf-scroll-btn')?.classList.contains('ctxf-visible') ?? true
+    );
+    expect(isVisible).toBe(false);
+  });
+
+  test('auto-scroll does not fire when user has scrolled up (scrollPinned=false)', async ({ page }) => {
+    // Must use desktop viewport: on mobile the input focus handler always calls
+    // scrollToBottom() (by design — keyboard appears, pin to latest). On desktop
+    // the focus handler is a no-op for scrollPinned, so the flag stays false.
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await mockSession(page);
+    await mockChat(page, 'New reply!');
+    await page.goto(URL);
+    await openWidget(page);
+    // Overflow + scroll to top — sets scrollPinned=false internally
+    await triggerScrollButton(page);
+    // Send a message — agent responds, but scrollPinned=false so no auto-scroll
+    await page.locator(sel.input).fill('Hi');
+    await page.locator(sel.send).click();
+    await expect(page.locator(sel.bubbleAgent).last()).toContainText('New reply!');
+    // Container should NOT have jumped to the bottom
+    const atBottom = await page.evaluate(() => {
+      const msgs = document.querySelector('#ctxf-host')?.shadowRoot
+        ?.querySelector('.ctxf-messages') as HTMLElement | null;
+      return msgs ? Math.round(msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight) < 5 : true;
+    });
+    expect(atBottom).toBe(false);
   });
 });
