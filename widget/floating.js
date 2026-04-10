@@ -145,6 +145,11 @@
     '.ctxf-send.ctxf-active svg{fill:#fff}',
     '.ctxf-send.ctxf-active:hover{transform:scale(1.05)}',
 
+    // Scroll-to-bottom button (sticky inside messages container)
+    '.ctxf-scroll-btn{position:sticky;bottom:10px;align-self:flex-end;width:28px;height:28px;border-radius:50%;border:.5px solid #e0e0e0;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s ease;flex-shrink:0;-webkit-tap-highlight-color:transparent;outline:none}',
+    '.ctxf-scroll-btn.ctxf-visible{opacity:1;pointer-events:auto}',
+    '.ctxf-scroll-btn svg{width:16px;height:16px;fill:#888}',
+
     // Quick reply pills
     '.ctxf-pills{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start;margin-top:10px}',
     '.ctxf-pill{font-size:11px;color:#666;padding:6px 12px;border:.5px solid #e0e0e0;border-radius:16px;background:#fff;cursor:pointer;transition:background .15s,border-color .15s;font-family:"DM Sans",sans-serif;-webkit-tap-highlight-color:transparent;outline:none;text-align:left}',
@@ -222,6 +227,10 @@
       '.ctxf-powered a{color:#888}',
       '.ctxf-powered a:hover{color:#fff}',
 
+      // Scroll button: dark theme on mobile
+      '.ctxf-scroll-btn{background:#2a2a2a;border-color:#444}',
+      '.ctxf-scroll-btn svg{fill:#aaa}',
+
       // Keyboard-open state: header hides, messages shrink to fill remaining space,
       // input stays pinned at the bottom just above the keyboard.
       '.ctxf-panel.ctxf-kbd .ctxf-header{display:none}',
@@ -294,7 +303,7 @@
           '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"/></svg>',
         '</button>',
       '</div>',
-      '<div class="ctxf-messages" id="ctxf-messages"><div class="ctxf-messages-inner" id="ctxf-messages-inner"></div></div>',
+      '<div class="ctxf-messages" id="ctxf-messages"><div class="ctxf-messages-inner" id="ctxf-messages-inner"></div><button class="ctxf-scroll-btn" id="ctxf-scroll-btn" aria-label="Scroll to latest"><svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg></button></div>',
       '<div class="ctxf-input-area">',
         '<div class="ctxf-input-wrap">',
           '<input class="ctxf-input" id="ctxf-input" type="text" placeholder="Type a message..." autocomplete="off">',
@@ -319,7 +328,30 @@
     var sendBtn      = shadow.getElementById('ctxf-send');
     var messagesEl   = shadow.getElementById('ctxf-messages');
     var msgsInnerEl  = shadow.getElementById('ctxf-messages-inner');
+    var scrollBtnEl  = shadow.getElementById('ctxf-scroll-btn');
     var pillsEl      = shadow.getElementById('ctxf-pills');
+
+    // ── Scroll management ─────────────────────────────────────────────────────────
+
+    var scrollPinned = true; // true = auto-scroll new messages to bottom
+
+    function scrollToBottom() {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      scrollPinned = true;
+      scrollBtnEl.classList.remove('ctxf-visible');
+    }
+
+    messagesEl.addEventListener('scroll', function () {
+      var nearBottom = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 50;
+      scrollPinned = nearBottom;
+      if (nearBottom) {
+        scrollBtnEl.classList.remove('ctxf-visible');
+      } else {
+        scrollBtnEl.classList.add('ctxf-visible');
+      }
+    });
+
+    scrollBtnEl.addEventListener('click', scrollToBottom);
 
     // ── Open / close ──────────────────────────────────────────────────────────────
 
@@ -400,7 +432,7 @@
 
       row.appendChild(bubble);
       msgsInnerEl.appendChild(row);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+      if (scrollPinned) scrollToBottom();
       return row;
     }
 
@@ -489,7 +521,7 @@
                   agentMsg.text += payload.token;
                   if (streamBubble) {
                     streamBubble.textContent = agentMsg.text;
-                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                    if (scrollPinned) scrollToBottom();
                   }
                 }
               }
@@ -540,7 +572,11 @@
     // ── Mobile: keyboard open/close — input-area covers full panel ────────────────
 
     inputEl.addEventListener('focus', function () {
-      if (isMobile()) panelEl.classList.add('ctxf-kbd');
+      if (isMobile()) {
+        panelEl.classList.add('ctxf-kbd');
+        // Keyboard is appearing — always scroll to latest so user can see context
+        requestAnimationFrame(scrollToBottom);
+      }
     });
 
     inputEl.addEventListener('blur', function () {
@@ -587,6 +623,8 @@
       } else {
         panelEl.style.setProperty('height', window.innerHeight + 'px', 'important');
       }
+      // After panel resizes (keyboard show/hide), re-pin scroll to latest message
+      requestAnimationFrame(scrollToBottom);
     }
 
     if (window.visualViewport) {
