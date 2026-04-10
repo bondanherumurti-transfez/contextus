@@ -145,8 +145,8 @@
     '.ctxf-send.ctxf-active svg{fill:#fff}',
     '.ctxf-send.ctxf-active:hover{transform:scale(1.05)}',
 
-    // Scroll-to-bottom button (sticky inside messages container)
-    '.ctxf-scroll-btn{position:sticky;bottom:10px;align-self:flex-end;width:28px;height:28px;border-radius:50%;border:.5px solid #e0e0e0;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s ease;flex-shrink:0;-webkit-tap-highlight-color:transparent;outline:none}',
+    // Scroll-to-bottom button (absolute inside panel, above input — no layout impact)
+    '.ctxf-scroll-btn{position:absolute;right:16px;bottom:90px;width:28px;height:28px;border-radius:50%;border:.5px solid #e0e0e0;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:5;-webkit-tap-highlight-color:transparent;outline:none}',
     '.ctxf-scroll-btn.ctxf-visible{opacity:1;pointer-events:auto}',
     '.ctxf-scroll-btn svg{width:16px;height:16px;fill:#888}',
 
@@ -303,7 +303,8 @@
           '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"/></svg>',
         '</button>',
       '</div>',
-      '<div class="ctxf-messages" id="ctxf-messages"><div class="ctxf-messages-inner" id="ctxf-messages-inner"></div><button class="ctxf-scroll-btn" id="ctxf-scroll-btn" aria-label="Scroll to latest"><svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg></button></div>',
+      '<div class="ctxf-messages" id="ctxf-messages"><div class="ctxf-messages-inner" id="ctxf-messages-inner"></div></div>',
+      '<button class="ctxf-scroll-btn" id="ctxf-scroll-btn" aria-label="Scroll to latest"><svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg></button>',
       '<div class="ctxf-input-area">',
         '<div class="ctxf-input-wrap">',
           '<input class="ctxf-input" id="ctxf-input" type="text" placeholder="Type a message..." autocomplete="off">',
