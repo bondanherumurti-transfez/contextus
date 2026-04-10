@@ -130,23 +130,22 @@ footer .fr{font-family:var(--mono);font-size:11px;color:var(--g400);letter-spaci
 @media(max-width:768px){.ci-row input,.ai-wrap .ci-row input,.sf input{font-size:16px}}
 .lang-id{display:none!important}body.id .lang-id{display:revert!important}
 body.id .lang-en{display:none!important}
-.impl-card{border:.5px solid var(--g300);border-radius:10px;overflow:hidden;background:var(--g50)}
-.impl-card-h{padding:.625rem 1rem;border-bottom:.5px solid var(--g300);font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:.5px;display:flex;align-items:center;gap:6px}
+.impl-card{border:.5px solid var(--g300);border-radius:10px;overflow:hidden;background:var(--g50);display:flex;flex-direction:column}
+.impl-card-h{padding:.625rem 1rem;border-bottom:.5px solid var(--g300);font-family:var(--mono);font-size:11px;color:var(--g500);letter-spacing:.5px;display:flex;align-items:center;gap:6px;flex-shrink:0}
 .impl-card-h .dot{width:8px;height:8px;border-radius:50%;background:var(--g300)}
-.impl-card-b{padding:1rem;font-family:var(--mono);font-size:12px;line-height:1.8;color:var(--g700);overflow-x:auto;white-space:pre}
+.impl-card-b{padding:1rem;font-family:var(--mono);font-size:12px;line-height:1.8;color:var(--g700);overflow-x:auto;white-space:pre;flex:1}
 .impl-card-b .cm{color:var(--g400);font-style:italic}
 .impl-card-b .tg{color:var(--g900);font-weight:500}
 .impl-card-b .at{color:var(--g600)}
 .impl-card-b .vl{color:var(--g500)}
 .impl-note{margin-top:1.5rem;padding:1rem 1.25rem;background:var(--g100);border-radius:8px;font-size:.875rem;color:var(--g600);line-height:1.6}
 .impl-note strong{color:var(--black);font-weight:500}
-.impl-options{margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap}
-.impl-opt{flex:1;min-width:140px;padding:1rem;border:.5px solid var(--g300);border-radius:8px;text-align:center;position:relative}
-.impl-opt.soon{opacity:.5}
-.impl-opt.soon::after{content:'soon';position:absolute;top:6px;right:8px;font-size:9px;font-family:var(--mono);color:var(--g500);letter-spacing:.5px;text-transform:uppercase}
-.impl-opt-icon{font-size:20px;margin-bottom:.5rem;filter:grayscale(1);opacity:.6}
-.impl-opt-name{font-size:13px;font-weight:500;margin-bottom:.2rem}
-.impl-opt-desc{font-size:11px;color:var(--g500);line-height:1.5}
+.impl-tabs{display:flex;gap:6px;margin-bottom:1.25rem;flex-wrap:wrap}
+.impl-tab{font-family:var(--mono);font-size:11px;letter-spacing:.5px;padding:5px 14px;border-radius:20px;border:.5px solid var(--g300);background:var(--white);color:var(--g500);cursor:pointer;transition:all .15s;text-transform:uppercase}
+.impl-tab:hover:not(.disabled){border-color:var(--g500);color:var(--g800)}
+.impl-tab.active{background:var(--black);color:var(--white);border-color:var(--black)}
+.impl-tab.disabled{opacity:.4;cursor:default;position:relative}
+.impl-tab.disabled::after{content:'soon';position:absolute;top:-7px;right:-2px;font-size:8px;color:var(--g500);letter-spacing:.5px}
 @keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 .fu{opacity:0;animation:fu .5s ease forwards}
 .fd1{animation-delay:.1s}.fd2{animation-delay:.2s}.fd3{animation-delay:.3s}.fd4{animation-delay:.4s}.fd5{animation-delay:.5s}
@@ -235,12 +234,27 @@ body.id .lang-en{display:none!important}
 
 <section class="impl"><div class="container">
   <h2>Drop it into any website</h2>
-  <p class="desc">One line of code. The interface adapts to your site. No build step, no SDK, no framework dependency.</p>
-  <p class="desc lang-id" style="font-size:.85rem;color:var(--g500);font-style:italic;margin-top:-1rem">Satu baris kode. Tidak perlu framework atau proses build apapun.</p>
+  <p class="desc">Paste one snippet. The widget adapts to your site. No build step, no SDK, no framework dependency.</p>
+  <p class="desc lang-id" style="font-size:.85rem;color:var(--g500);font-style:italic;margin-top:-1rem">Tempel satu snippet. Tidak perlu framework atau proses build apapun.</p>
+  <div class="impl-tabs">
+    <button class="impl-tab active" data-impl="floating">&#9701; Floating</button>
+    <button class="impl-tab" data-impl="iframe">&#8644; iframe</button>
+    <button class="impl-tab disabled" disabled>&#9645; Inline</button>
+    <button class="impl-tab disabled" disabled>&#9634; Full page</button>
+  </div>
   <div class="impl-grid">
     <div class="impl-card">
       <div class="impl-card-h"><span class="dot"></span>EMBED SNIPPET</div>
-      <div class="impl-card-b"><span class="tg">&lt;style&gt;</span>
+      <div class="impl-card-b" id="snip-floating"><span class="tg">&lt;script</span>
+  <span class="at">src</span>=<span class="vl">"https://www.getcontextus.dev/widget/floating.js"</span>
+  <span class="at">data-contextus-id</span>=<span class="vl">"YOUR_ID"</span>
+  <span class="at">data-knowledge-base-id</span>=<span class="vl">"YOUR_KB_ID"</span>
+  <span class="at">data-position</span>=<span class="vl">"bottom-right"</span>
+  <span class="at">data-offset</span>=<span class="vl">"20"</span>
+  <span class="at">data-color</span>=<span class="vl">"#000000"</span>
+  <span class="at">async</span>
+<span class="tg">&gt;&lt;/script&gt;</span></div>
+      <div class="impl-card-b" id="snip-iframe" style="display:none"><span class="tg">&lt;style&gt;</span>
   <span class="at">#contextus-wrapper</span> <span class="tg">{</span>
     <span class="at">max-height:</span> <span class="vl">250px;</span>
     <span class="at">overflow:</span>   <span class="vl">hidden;</span>
@@ -281,7 +295,19 @@ body.id .lang-en{display:none!important}
     </div>
     <div class="impl-card">
       <div class="impl-card-h"><span class="dot"></span>WHAT RENDERS</div>
-      <div class="impl-card-b"><span class="cm">// Idle (auto height)</span>
+      <div class="impl-card-b" id="render-floating"><span class="cm">// Idle: bubble in corner</span>
+<span class="cm">// Click: panel slides up</span>
+
+<span class="cm">// Panel layout:</span>
+<span class="cm">//   header   (fixed, ~42px)</span>
+<span class="cm">//   messages (scrollable)</span>
+<span class="cm">//   input    (fixed, ~70px)</span>
+
+<span class="tg">position:</span>  <span class="vl">bottom-right</span>
+<span class="tg">language:</span>  <span class="vl">auto-detected</span>
+<span class="tg">knowledge:</span> <span class="vl">your-business-profile</span>
+<span class="tg">output:</span>    <span class="vl">lead brief → Notion</span></div>
+      <div class="impl-card-b" id="render-iframe" style="display:none"><span class="cm">// Idle (auto height)</span>
 <span class="cm">// Header + quick-reply pills</span>
 
 <span class="cm">// First message sent:</span>
@@ -295,12 +321,6 @@ body.id .lang-en{display:none!important}
 <span class="tg">knowledge:</span> <span class="vl">your-business-profile</span>
 <span class="tg">output:</span>    <span class="vl">lead brief → Notion</span></div>
     </div>
-  </div>
-  <div class="impl-options">
-    <div class="impl-opt soon"><div class="impl-opt-icon">&#9645;</div><div class="impl-opt-name">Inline</div><div class="impl-opt-desc">Replaces your existing contact form section</div></div>
-    <div class="impl-opt soon"><div class="impl-opt-icon">&#9701;</div><div class="impl-opt-name">Floating</div><div class="impl-opt-desc">Appears as a panel from the corner</div></div>
-    <div class="impl-opt soon"><div class="impl-opt-icon">&#9634;</div><div class="impl-opt-name">Full page</div><div class="impl-opt-desc">Dedicated /contact page experience</div></div>
-    <div class="impl-opt"><div class="impl-opt-icon">&#8644;</div><div class="impl-opt-name">iframe</div><div class="impl-opt-desc">Embed anywhere with a simple URL</div></div>
   </div>
 </div></section>
 
@@ -360,6 +380,20 @@ hs.addEventListener('click',hS);hi.addEventListener('keydown',e=>{if(e.key==='En
 as.addEventListener('click',aS);ai.addEventListener('keydown',e=>{if(e.key==='Enter')aS()});
 document.querySelectorAll('.pill').forEach(b=>b.addEventListener('click',()=>go(b.dataset.q)));
 if(new URLSearchParams(location.search).get('lang')==='id')document.body.classList.add('id');
+</script>
+<script>
+document.querySelectorAll('.impl-tab:not(.disabled)').forEach(function(tab) {
+  tab.addEventListener('click', function() {
+    var impl = tab.dataset.impl;
+    document.querySelectorAll('.impl-tab:not(.disabled)').forEach(function(t) { t.classList.remove('active'); });
+    tab.classList.add('active');
+    ['snip-floating','snip-iframe','render-floating','render-iframe'].forEach(function(id) {
+      document.getElementById(id).style.display = 'none';
+    });
+    document.getElementById('snip-' + impl).style.display = '';
+    document.getElementById('render-' + impl).style.display = '';
+  });
+});
 </script>
 <script defer src="/_vercel/insights/script.js"></script>
 <script
