@@ -1,0 +1,2087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
+<title>contextus — Floating Widget Design Guideline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; color-scheme: light; }
+body { font-family: 'DM Sans', sans-serif; color: #000; background: #fff; font-size: 15px; line-height: 1.7; -webkit-font-smoothing: antialiased; }
+::selection { background: #000; color: #fff; }
+
+.page { max-width: 780px; margin: 0 auto; padding: 3rem 1.5rem 6rem; }
+
+/* ── Header ── */
+.doc-header { padding-bottom: 2.5rem; border-bottom: 0.5px solid #e0e0e0; margin-bottom: 3rem; }
+.doc-header .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; }
+.doc-header .logo-row svg { display: block; }
+.doc-header .logo-row span { font-size: 20px; font-weight: 500; letter-spacing: -0.5px; }
+.doc-header h1 { font-size: 28px; font-weight: 500; letter-spacing: -0.5px; margin-bottom: 0.5rem; }
+.doc-header .meta { font-family: 'DM Mono', monospace; font-size: 12px; color: #888; letter-spacing: 0.5px; }
+
+/* ── Section ── */
+.section { margin-bottom: 3.5rem; }
+.section-label { font-family: 'DM Mono', monospace; font-size: 11px; color: #888; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 0.75rem; }
+.section h2 { font-size: 20px; font-weight: 500; letter-spacing: -0.3px; margin-bottom: 0.5rem; }
+.section h3 { font-size: 16px; font-weight: 500; margin-bottom: 0.5rem; margin-top: 1.5rem; }
+.section p { color: #444; margin-bottom: 1rem; }
+.section p.muted { color: #888; font-size: 13px; }
+.section ul { color: #444; margin-bottom: 1rem; padding-left: 1.5rem; }
+.section li { margin-bottom: 0.5rem; }
+
+/* ── Brand tokens ── */
+.token-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 1rem 0; }
+@media (max-width: 560px) { .token-grid { grid-template-columns: 1fr; } }
+.token-card { border: 0.5px solid #e0e0e0; border-radius: 8px; padding: 12px 14px; }
+.token-label { font-family: 'DM Mono', monospace; font-size: 11px; color: #888; letter-spacing: 0.5px; margin-bottom: 4px; }
+.token-value { font-size: 14px; font-weight: 500; }
+.token-swatch { display: flex; align-items: center; gap: 10px; }
+.swatch { width: 28px; height: 28px; border-radius: 6px; border: 0.5px solid #e0e0e0; flex-shrink: 0; }
+
+/* ── TOC ── */
+.toc { margin: 1.5rem 0 2rem; }
+.toc a { display: block; font-size: 13px; color: #666; text-decoration: none; padding: 4px 0; transition: color 0.15s; }
+.toc a:hover { color: #000; }
+.toc a .num { font-family: 'DM Mono', monospace; color: #bbb; font-size: 11px; margin-right: 8px; }
+
+/* ── Code block ── */
+.code-block { background: #f5f5f5; border: 0.5px solid #e0e0e0; border-radius: 8px; padding: 12px 14px; font-family: 'DM Mono', monospace; font-size: 12px; line-height: 1.8; color: #333; overflow-x: auto; margin: 0.75rem 0; white-space: pre; }
+
+/* ── Table ── */
+.spec-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 1rem 0; }
+.spec-table th { text-align: left; font-family: 'DM Mono', monospace; font-size: 11px; color: #888; letter-spacing: 0.5px; padding: 8px 10px; border-bottom: 0.5px solid #e0e0e0; font-weight: 400; }
+.spec-table td { padding: 8px 10px; border-bottom: 0.5px solid #f0f0f0; color: #444; vertical-align: top; }
+.spec-table td:first-child { font-weight: 500; color: #000; white-space: nowrap; }
+
+/* ── Behavior spec ── */
+.behavior { background: #fafafa; border: 0.5px solid #e0e0e0; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #444; line-height: 1.7; margin: 0.75rem 0 0; }
+.behavior strong { color: #000; font-weight: 500; }
+
+/* ── State card ── */
+.state-card { margin-bottom: 2.5rem; padding-bottom: 2.5rem; border-bottom: 0.5px solid #e0e0e0; }
+.state-card:last-child { border-bottom: none; }
+.state-id { font-family: 'DM Mono', monospace; font-size: 11px; color: #bbb; letter-spacing: 1px; margin-bottom: 4px; }
+.state-title { font-size: 17px; font-weight: 500; margin-bottom: 4px; }
+.state-desc { font-size: 13px; color: #666; margin-bottom: 0; }
+
+/* ══════════════════════════════════════ */
+/* FLOATING WIDGET COMPONENTS */
+/* ══════════════════════════════════════ */
+
+/* ── Interactive Demo Container ── */
+.demo-container { 
+  position: relative; 
+  background: linear-gradient(135deg, #f8f8f8 0%, #f0f0f0 100%); 
+  border: 0.5px solid #e0e0e0; 
+  border-radius: 12px; 
+  height: 400px; 
+  margin: 1.5rem 0; 
+  overflow: hidden;
+}
+.demo-container.tall { height: 550px; }
+.demo-website {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  bottom: 80px;
+  background: #fff;
+  border-radius: 8px;
+  border: 0.5px solid #e0e0e0;
+  padding: 20px;
+  font-size: 12px;
+  color: #888;
+}
+.demo-website-header {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.demo-website-header span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e0e0e0;
+}
+.demo-website-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.demo-website-line {
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+}
+.demo-website-line:nth-child(1) { width: 60%; }
+.demo-website-line:nth-child(2) { width: 90%; }
+.demo-website-line:nth-child(3) { width: 75%; }
+.demo-website-line:nth-child(4) { width: 45%; }
+
+.demo-label {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: #888;
+  letter-spacing: 0.5px;
+}
+
+/* ── FAB (Floating Action Button) ── */
+.fab {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  background: #000;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.fab:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+.fab:active {
+  transform: scale(0.98);
+}
+.fab svg {
+  width: 24px;
+  height: 24px;
+  fill: #fff;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.fab .icon-close {
+  position: absolute;
+  opacity: 0;
+  transform: rotate(-90deg);
+}
+.fab.open .icon-chat { opacity: 0; transform: rotate(90deg); }
+.fab.open .icon-close { opacity: 1; transform: rotate(0deg); }
+
+/* FAB Badge */
+.fab-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  background: #e53935;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fab-badge.pulse {
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* ── Chat Panel ── */
+.chat-panel {
+  position: absolute;
+  bottom: 90px;
+  right: 20px;
+  width: 380px;
+  max-width: calc(100% - 40px);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+  transform-origin: bottom right;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+.chat-panel.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* Panel Header */
+.panel-header {
+  padding: 14px 16px;
+  background: #fff;
+  border-bottom: 0.5px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.panel-avatar {
+  width: 32px;
+  height: 32px;
+  background: #000;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+.panel-header-info {
+  flex: 1;
+}
+.panel-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #000;
+}
+.panel-status {
+  font-size: 11px;
+  color: #888;
+}
+.panel-close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.panel-close:hover {
+  background: #f0f0f0;
+}
+.panel-close svg {
+  width: 16px;
+  height: 16px;
+  fill: #888;
+}
+
+/* Panel Body */
+.panel-body {
+  height: 320px;
+  display: flex;
+  flex-direction: column;
+}
+.panel-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+.panel-messages::-webkit-scrollbar { width: 4px; }
+.panel-messages::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 2px; }
+
+/* Messages */
+.msg-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.msg-row.visitor { justify-content: flex-end; }
+.msg-avatar {
+  width: 24px;
+  height: 24px;
+  background: #000;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.msg-bubble {
+  max-width: 75%;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #222;
+}
+.msg-bubble p { margin: 0; }
+.msg-bubble.visitor-bubble {
+  background: #000;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border-bottom-right-radius: 4px;
+}
+.msg-bubble.agent-bubble {
+  padding: 2px 0;
+}
+
+/* Typing indicator */
+.typing-dots {
+  display: flex;
+  gap: 4px;
+  padding: 8px 0;
+}
+.typing-dots span {
+  width: 6px;
+  height: 6px;
+  background: #bbb;
+  border-radius: 50%;
+  animation: typing-bounce 1.2s infinite;
+}
+.typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typing-bounce {
+  0%, 60%, 100% { opacity: 0.4; transform: scale(0.85); }
+  30% { opacity: 1; transform: scale(1); }
+}
+
+/* Panel Input */
+.panel-input-area {
+  padding: 12px 16px 16px;
+  border-top: 0.5px solid #e0e0e0;
+}
+.panel-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f0f0f0;
+  border: 0.5px solid #e0e0e0;
+  border-radius: 16px;
+  padding: 10px 10px 10px 16px;
+}
+.panel-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  color: #000;
+  outline: none;
+}
+.panel-input::placeholder { color: #bbb; }
+.panel-send {
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: #e0e0e0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+.panel-send svg { width: 16px; height: 16px; fill: #999; transition: fill 0.15s; }
+.panel-send.active { background: #000; }
+.panel-send.active svg { fill: #fff; }
+.panel-send.active:hover { transform: scale(1.05); }
+
+/* Quick replies / pills */
+.panel-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.panel-pill {
+  font-size: 11px;
+  color: #666;
+  padding: 6px 12px;
+  border: 0.5px solid #e0e0e0;
+  border-radius: 16px;
+  background: #fff;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.panel-pill:hover {
+  background: #f8f8f8;
+  border-color: #ccc;
+}
+
+/* Panel Footer */
+.panel-footer {
+  padding: 8px 16px;
+  background: #fafafa;
+  border-top: 0.5px solid #e0e0e0;
+  text-align: center;
+}
+.panel-powered {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: #bbb;
+  letter-spacing: 0.3px;
+}
+.panel-powered a {
+  color: #888;
+  text-decoration: none;
+}
+.panel-powered a:hover {
+  color: #000;
+}
+
+/* ── FAB States Grid ── */
+.fab-states-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin: 1.5rem 0;
+}
+@media (max-width: 600px) { .fab-states-grid { grid-template-columns: repeat(2, 1fr); } }
+.fab-state-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.fab-state-preview {
+  width: 56px;
+  height: 56px;
+  background: #000;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.fab-state-preview svg {
+  width: 24px;
+  height: 24px;
+  fill: #fff;
+}
+.fab-state-preview.hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+.fab-state-preview.pressed {
+  transform: scale(0.95);
+}
+.fab-state-preview.disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+.fab-state-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── Position Options ── */
+.position-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 1.5rem 0;
+}
+@media (max-width: 500px) { .position-grid { grid-template-columns: 1fr; } }
+.position-card {
+  border: 0.5px solid #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.position-preview {
+  height: 120px;
+  background: #f8f8f8;
+  position: relative;
+}
+.position-preview .pos-fab {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  background: #000;
+  border-radius: 8px;
+}
+.position-preview .pos-fab.br { bottom: 12px; right: 12px; }
+.position-preview .pos-fab.bl { bottom: 12px; left: 12px; }
+.position-card-label {
+  padding: 10px 14px;
+  background: #fff;
+  border-top: 0.5px solid #e0e0e0;
+}
+.position-card-label strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+.position-card-label span {
+  font-size: 11px;
+  color: #888;
+}
+
+/* ── Animation Spec ── */
+.anim-spec {
+  display: flex;
+  gap: 20px;
+  margin: 1.5rem 0;
+  flex-wrap: wrap;
+}
+.anim-item {
+  flex: 1;
+  min-width: 200px;
+  border: 0.5px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 14px;
+}
+.anim-item-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: #888;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.anim-item-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #000;
+}
+.anim-item-desc {
+  font-size: 11px;
+  color: #666;
+  margin-top: 4px;
+}
+
+/* ── Responsive breakpoints table ── */
+.breakpoint-visual {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 80px;
+  margin: 1rem 0;
+}
+.bp-bar {
+  background: #000;
+  border-radius: 4px 4px 0 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 6px;
+}
+.bp-bar span {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: #fff;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+.bp-bar.mobile { width: 30px; height: 40px; }
+.bp-bar.tablet { width: 50px; height: 60px; }
+.bp-bar.desktop { width: 80px; height: 80px; }
+
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ── Document Header ── -->
+<div class="doc-header">
+  <div class="logo-row">
+    <svg width="32" height="32" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg>
+    <span>contextus</span>
+  </div>
+  <h1>Floating Widget — Design Guideline</h1>
+  <div class="meta">VERSION 1.0 &middot; APRIL 2026 &middot; INTERNAL</div>
+</div>
+
+<!-- ── TOC ── -->
+<div class="toc">
+  <a href="#overview"><span class="num">01</span>Overview &amp; Rationale</a>
+  <a href="#anatomy"><span class="num">02</span>Widget anatomy</a>
+  <a href="#fab"><span class="num">03</span>FAB (Floating Action Button)</a>
+  <a href="#panel"><span class="num">04</span>Chat panel</a>
+  <a href="#states"><span class="num">05</span>Widget states</a>
+  <a href="#animations"><span class="num">06</span>Animations &amp; transitions</a>
+  <a href="#positioning"><span class="num">07</span>Positioning &amp; responsive</a>
+  <a href="#embed"><span class="num">08</span>Embed script</a>
+  <a href="#demo"><span class="num">09</span>Desktop demo</a>
+  <a href="#mobile-demo"><span class="num">10</span>Mobile demo ★</a>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- 01. OVERVIEW -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="overview">
+  <div class="section-label">01</div>
+  <h2>Overview &amp; Rationale</h2>
+  <p>The floating widget is a non-intrusive alternative to the inline iframe embed. Unlike the iframe approach which requires a designated container and can disrupt existing page layouts, the floating widget overlays the page without affecting any DOM elements.</p>
+  
+  <div class="behavior" style="background: #e1f5ee; border-color: #0f6e56;">
+    <strong style="color: #0f6e56;">📱 Mobile-First Priority:</strong> The majority of traffic comes through mobile devices. This guideline prioritizes mobile experiences — all components are designed touch-first with mobile viewport constraints in mind. Desktop is the adaptation, not the default.
+  </div>
+
+  <h3>Key benefits</h3>
+  <ul>
+    <li><strong>Zero layout impact</strong> — Uses fixed positioning, doesn't push or shift any page elements</li>
+    <li><strong>Familiar pattern</strong> — Users recognize the floating chat button from Intercom, Drift, Zendesk, etc.</li>
+    <li><strong>Progressive disclosure</strong> — Minimal footprint when collapsed (just the FAB), full experience when expanded</li>
+    <li><strong>Easy integration</strong> — Single script tag, no container needed</li>
+    <li><strong>Touch-optimized</strong> — 56px FAB meets touch target guidelines, full-width panel on mobile</li>
+  </ul>
+
+  <h3>When to use</h3>
+  <div class="behavior">
+    <strong>Use floating widget when:</strong> Client sites have complex layouts, dynamic content, or the inline iframe would break their design. Also ideal for SPAs where container injection is problematic.<br><br>
+    <strong>Use inline widget when:</strong> Client wants the chat deeply integrated into a specific page section (e.g., dedicated contact page) or needs the two-phase expand behavior.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- 02. ANATOMY -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="anatomy">
+  <div class="section-label">02</div>
+  <h2>Widget anatomy</h2>
+  <p>The floating widget consists of two primary components that work together: the FAB (always visible) and the chat panel (shown on demand).</p>
+
+  <div class="demo-container">
+    <div class="demo-website">
+      <div class="demo-website-header">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="demo-website-content">
+        <div class="demo-website-line"></div>
+        <div class="demo-website-line"></div>
+        <div class="demo-website-line"></div>
+        <div class="demo-website-line"></div>
+      </div>
+    </div>
+    
+    <!-- Chat Panel -->
+    <div class="chat-panel visible" style="bottom: 90px;">
+      <div class="panel-header">
+        <div class="panel-avatar">C</div>
+        <div class="panel-header-info">
+          <div class="panel-name">contextus</div>
+          <div class="panel-status">Powered by AI</div>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="panel-messages">
+          <div class="msg-row">
+            <div class="msg-avatar">C</div>
+            <div class="msg-bubble agent-bubble">
+              <p>Hi! 👋 How can I help you today?</p>
+            </div>
+          </div>
+        </div>
+        <div class="panel-input-area">
+          <div class="panel-input-wrap">
+            <input type="text" class="panel-input" placeholder="Type a message..." disabled>
+            <button class="panel-send"><svg viewBox="0 0 16 16"><path d="M2.5 8L13.5 2.5L10 8L13.5 13.5L2.5 8Z"/></svg></button>
+          </div>
+          <div class="panel-pills">
+            <div class="panel-pill">What do you do?</div>
+            <div class="panel-pill">Pricing</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel-footer">
+        <div class="panel-powered">powered by <a href="#">contextus</a></div>
+      </div>
+    </div>
+    
+    <!-- FAB -->
+    <div class="fab open">
+      <svg class="icon-chat" viewBox="0 0 24 24"><path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H6L4 18V4H20V16Z"/></svg>
+      <svg class="icon-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"/></svg>
+    </div>
+    
+    <div class="demo-label">EXPANDED STATE — PANEL + FAB</div>
+  </div>
+
+  <table class="spec-table">
+    <tr><th>Component</th><th>Description</th></tr>
+    <tr><td>FAB</td><td>56×56px floating button, fixed position, always visible. Toggles panel open/closed.</td></tr>
+    <tr><td>Chat Panel</td><td>380px wide floating panel containing header, messages, input. Appears above the FAB.</td></tr>
+    <tr><td>Notification Badge</td><td>Optional red badge on FAB to indicate unread messages or grab attention.</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- 03. FAB -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="fab">
+  <div class="section-label">03</div>
+  <h2>FAB (Floating Action Button)</h2>
+  <p>The FAB is the persistent entry point for the chat experience. It follows the contextus monochrome aesthetic while providing clear affordance.</p>
+
+  <h3>Specifications</h3>
+  <table class="spec-table">
+    <tr><th>Property</th><th>Value</th></tr>
+    <tr><td>Size</td><td>56 × 56px</td></tr>
+    <tr><td>Background</td><td>#000000</td></tr>
+    <tr><td>Border radius</td><td>16px</td></tr>
+    <tr><td>Icon size</td><td>24 × 24px</td></tr>
+    <tr><td>Icon color</td><td>#FFFFFF</td></tr>
+    <tr><td>Shadow (rest)</td><td>0 4px 12px rgba(0,0,0,0.15)</td></tr>
+    <tr><td>Shadow (hover)</td><td>0 6px 20px rgba(0,0,0,0.2)</td></tr>
+  </table>
+
+  <h3>FAB states</h3>
+  <div class="fab-states-grid">
+    <div class="fab-state-item">
+      <div class="fab-state-preview">
+        <svg viewBox="0 0 24 24"><path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z"/></svg>
+      </div>
+      <div class="fab-state-label">Rest</div>
+    </div>
+    <div class="fab-state-item">
+      <div class="fab-state-preview hover">
+        <svg viewBox="0 0 24 24"><path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z"/></svg>
+      </div>
+      <div class="fab-state-label">Hover</div>
+    </div>
+    <div class="fab-state-item">
+      <div class="fab-state-preview pressed">
+        <svg viewBox="0 0 24 24"><path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z"/></svg>
+      </div>
+      <div class="fab-state-label">Pressed</div>
+    </div>
+    <div class="fab-state-item">
+      <div class="fab-state-preview">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"/></svg>
+      </div>
+      <div class="fab-state-label">Open</div>
+    </div>
+  </div>
+
+  <h3>Notification badge</h3>
+  <p>The badge appears when there's a proactive message or to create initial engagement. It uses a red accent (#E53935) for visibility against the black FAB.</p>
+  
+  <div class="token-grid">
+    <div class="token-card"><div class="token-label">BADGE SIZE</div><div class="token-value">18 × 18px</div></div>
+    <div class="token-card"><div class="token-label">BADGE COLOR</div><div class="token-swatch"><div class="swatch" style="background:#e53935"></div><div class="token-value">#E53935</div></div></div>
+    <div class="token-card"><div class="token-label">BADGE BORDER</div><div class="token-value">2px solid #FFFFFF</div></div>
+    <div class="token-card"><div class="token-label">BADGE FONT</div><div class="token-value">10px / 600 weight</div></div>
+  </div>
+
+  <div class="behavior">
+    <strong>Badge behavior:</strong> Show badge on initial load if configured (e.g., "1" for proactive greeting). Badge disappears once panel is opened. Optional pulse animation to draw attention. Badge can show number (1-9) or just a dot.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- 04. CHAT PANEL -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="panel">
+  <div class="section-label">04</div>
+  <h2>Chat panel</h2>
+  <p>The panel contains the full conversation interface. It appears above the FAB when opened and follows the same design language as the inline widget.</p>
+
+  <h3>Panel specifications</h3>
+  <table class="spec-table">
+    <tr><th>Property</th><th>Value</th></tr>
+    <tr><td>Width</td><td>380px (max: 100vw - 40px)</td></tr>
+    <tr><td>Max height</td><td>600px (or 80vh on mobile)</td></tr>
+    <tr><td>Background</td><td>#FFFFFF</td></tr>
+    <tr><td>Border radius</td><td>16px</td></tr>
+    <tr><td>Shadow</td><td>0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)</td></tr>
+    <tr><td>Gap from FAB</td><td>14px</td></tr>
+  </table>
+
+  <h3>Panel structure</h3>
+  <div class="code-block">┌─────────────────────────────────────┐
+│  HEADER                              │
+│  [Avatar] contextus     [×]          │
+│           Powered by AI              │
+├─────────────────────────────────────┤
+│                                      │
+│  MESSAGES AREA (scrollable)          │
+│                                      │
+│  [C] Hi! How can I help?             │
+│                                      │
+│              [User message] █        │
+│                                      │
+│  [C] Thanks for reaching out...      │
+│                                      │
+├─────────────────────────────────────┤
+│  INPUT AREA                          │
+│  ┌───────────────────────────────┐   │
+│  │ Type your message...    [→]   │   │
+│  └───────────────────────────────┘   │
+│  [Quick reply] [Quick reply]         │
+├─────────────────────────────────────┤
+│  FOOTER                              │
+│  powered by contextus                │
+└─────────────────────────────────────┘</div>
+
+  <h3>Header</h3>
+  <p>Contains brand identity, status indicator, and close button. The close button provides an alternative way to dismiss the panel (users can also click the FAB).</p>
+  
+  <table class="spec-table">
+    <tr><th>Element</th><th>Spec</th></tr>
+    <tr><td>Avatar</td><td>32×32px, #000 background, 8px radius, "C" centered</td></tr>
+    <tr><td>Name</td><td>14px / 500 weight / #000</td></tr>
+    <tr><td>Status</td><td>11px / #888</td></tr>
+    <tr><td>Close button</td><td>28×28px hit area, 16px icon, #888 fill</td></tr>
+    <tr><td>Padding</td><td>14px 16px</td></tr>
+  </table>
+
+  <h3>Messages area</h3>
+  <p>Scrollable container for the conversation. Uses the same bubble styles as the inline widget.</p>
+  
+  <table class="spec-table">
+    <tr><th>Element</th><th>Spec</th></tr>
+    <tr><td>Agent bubble</td><td>Plain text, 13px / #222, max-width 75%</td></tr>
+    <tr><td>Visitor bubble</td><td>#000 background, #FFF text, 14px radius, bottom-right 4px radius</td></tr>
+    <tr><td>Agent avatar</td><td>24×24px inline with message</td></tr>
+    <tr><td>Message gap</td><td>12px between messages</td></tr>
+    <tr><td>Padding</td><td>16px</td></tr>
+  </table>
+
+  <h3>Input area</h3>
+  <p>The input follows the design from the inline widget guideline, maintaining consistency across embed types.</p>
+  
+  <table class="spec-table">
+    <tr><th>Element</th><th>Spec</th></tr>
+    <tr><td>Input background</td><td>#F0F0F0</td></tr>
+    <tr><td>Input border</td><td>0.5px solid #E0E0E0</td></tr>
+    <tr><td>Input radius</td><td>16px</td></tr>
+    <tr><td>Send button</td><td>34×34px, 8px radius, #E0E0E0 empty, #000 when active</td></tr>
+    <tr><td>Placeholder</td><td>"Type a message..." / #BBB</td></tr>
+  </table>
+
+  <h3>Quick replies (pills)</h3>
+  <p>Optional suggested responses shown below the input. Hide after first user message to maximize message space.</p>
+
+  <h3>Footer</h3>
+  <p>Branding footer with "powered by contextus" link. Always visible at the bottom of the panel.</p>
+  
+  <table class="spec-table">
+    <tr><th>Element</th><th>Spec</th></tr>
+    <tr><td>Background</td><td>#FAFAFA</td></tr>
+    <tr><td>Text</td><td>10px DM Mono / #BBB</td></tr>
+    <tr><td>Link color</td><td>#888 (hover: #000)</td></tr>
+    <tr><td>Padding</td><td>8px 16px</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- 05. WIDGET STATES -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="states">
+  <div class="section-label">05</div>
+  <h2>Widget states</h2>
+  <p>The floating widget maintains the same conversational states as the inline widget, adapted for the floating context.</p>
+
+  <div class="state-card">
+    <div class="state-id">STATE 01</div>
+    <div class="state-title">Collapsed (FAB only)</div>
+    <p class="state-desc">Default state. Only the FAB is visible. Panel is hidden. Optional notification badge may be shown.</p>
+    <div class="behavior">
+      <strong>Entry:</strong> Page load, or user closes panel<br>
+      <strong>Exit:</strong> User clicks FAB → Open panel
+    </div>
+  </div>
+
+  <div class="state-card">
+    <div class="state-id">STATE 02</div>
+    <div class="state-title">Expanded — Idle</div>
+    <p class="state-desc">Panel is open showing the greeting message and quick reply pills. Input is empty and ready for user.</p>
+    <div class="behavior">
+      <strong>Entry:</strong> User clicks FAB to open<br>
+      <strong>Exit:</strong> User types message or closes panel
+    </div>
+  </div>
+
+  <div class="state-card">
+    <div class="state-id">STATE 03</div>
+    <div class="state-title">Expanded — Composing</div>
+    <p class="state-desc">User is typing. Send button becomes active (#000). Quick reply pills may hide to save space.</p>
+    <div class="behavior">
+      <strong>Entry:</strong> User focuses input and types<br>
+      <strong>Exit:</strong> User sends message or clears input
+    </div>
+  </div>
+
+  <div class="state-card">
+    <div class="state-id">STATE 04</div>
+    <div class="state-title">Expanded — Agent typing</div>
+    <p class="state-desc">User message sent. Agent shows typing indicator (three bouncing dots). Input disabled during this time.</p>
+    <div class="behavior">
+      <strong>Entry:</strong> User sends message<br>
+      <strong>Exit:</strong> Agent response received
+    </div>
+  </div>
+
+  <div class="state-card">
+    <div class="state-id">STATE 05</div>
+    <div class="state-title">Expanded — Conversation active</div>
+    <p class="state-desc">Ongoing back-and-forth conversation. Messages stack in scrollable area. Quick replies hidden.</p>
+    <div class="behavior">
+      <strong>Entry:</strong> After first exchange<br>
+      <strong>Exit:</strong> Session end, error, or user closes
+    </div>
+  </div>
+
+  <div class="state-card">
+    <div class="state-id">STATE 06</div>
+    <div class="state-title">Contact collected</div>
+    <p class="state-desc">Agent has collected visitor's contact info (email/phone/name). Show confirmation badge and continue conversation.</p>
+    <div class="behavior">
+      Show green confirmation: "✓ Contact saved"<br>
+      Conversation continues normally after.
+    </div>
+  </div>
+
+  <div class="state-card">
+    <div class="state-id">STATE 07</div>
+    <div class="state-title">Session complete</div>
+    <p class="state-desc">Conversation goal achieved. Show success state with summary. Option to start new conversation.</p>
+    <div class="behavior">
+      <strong>Visual:</strong> Success banner with checkmark<br>
+      <strong>Action:</strong> "Start new conversation" link
+    </div>
+  </div>
+
+  <div class="state-card">
+    <div class="state-id">STATE 08</div>
+    <div class="state-title">Error state</div>
+    <p class="state-desc">Network error or API failure. Show error message with retry option. Don't lose conversation history.</p>
+    <div class="behavior">
+      <strong>Visual:</strong> Red error banner<br>
+      <strong>Message:</strong> "Something went wrong. Tap to retry."
+    </div>
+  </div>
+
+  <div class="state-card">
+    <div class="state-id">STATE 09</div>
+    <div class="state-title">Out of scope</div>
+    <p class="state-desc">User asks something outside the agent's knowledge. Show amber warning and redirect to appropriate action.</p>
+    <div class="behavior">
+      <strong>Visual:</strong> Amber info banner<br>
+      <strong>Message:</strong> Varies based on context
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- 06. ANIMATIONS -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="animations">
+  <div class="section-label">06</div>
+  <h2>Animations &amp; transitions</h2>
+  <p>Smooth, subtle animations provide polish without being distracting. All animations use ease timing functions for natural feel.</p>
+
+  <h3>FAB animations</h3>
+  <div class="anim-spec">
+    <div class="anim-item">
+      <div class="anim-item-label">Hover scale</div>
+      <div class="anim-item-value">scale(1.05)</div>
+      <div class="anim-item-desc">200ms ease</div>
+    </div>
+    <div class="anim-item">
+      <div class="anim-item-label">Press scale</div>
+      <div class="anim-item-value">scale(0.98)</div>
+      <div class="anim-item-desc">100ms ease</div>
+    </div>
+    <div class="anim-item">
+      <div class="anim-item-label">Icon rotate</div>
+      <div class="anim-item-value">rotate(90deg)</div>
+      <div class="anim-item-desc">200ms ease — chat↔close crossfade</div>
+    </div>
+  </div>
+
+  <h3>Panel animations</h3>
+  <div class="anim-spec">
+    <div class="anim-item">
+      <div class="anim-item-label">Open</div>
+      <div class="anim-item-value">translateY(20px) → 0</div>
+      <div class="anim-item-desc">250ms ease — with scale 0.95→1 and fade</div>
+    </div>
+    <div class="anim-item">
+      <div class="anim-item-label">Close</div>
+      <div class="anim-item-value">0 → translateY(10px)</div>
+      <div class="anim-item-desc">200ms ease — with fade out</div>
+    </div>
+    <div class="anim-item">
+      <div class="anim-item-label">Transform origin</div>
+      <div class="anim-item-value">bottom right</div>
+      <div class="anim-item-desc">Panel grows from FAB position</div>
+    </div>
+  </div>
+
+  <h3>Message animations</h3>
+  <div class="anim-spec">
+    <div class="anim-item">
+      <div class="anim-item-label">New message</div>
+      <div class="anim-item-value">translateY(10px) → 0</div>
+      <div class="anim-item-desc">150ms ease — with fade in</div>
+    </div>
+    <div class="anim-item">
+      <div class="anim-item-label">Typing dots</div>
+      <div class="anim-item-value">scale(0.85) → scale(1)</div>
+      <div class="anim-item-desc">1200ms infinite — staggered 150ms</div>
+    </div>
+  </div>
+
+  <h3>CSS implementation</h3>
+  <div class="code-block">/* Panel open/close */
+.chat-panel {
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+  transform-origin: bottom right;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+.chat-panel.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* FAB icon crossfade */
+.fab svg {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.fab .icon-close {
+  position: absolute;
+  opacity: 0;
+  transform: rotate(-90deg);
+}
+.fab.open .icon-chat { opacity: 0; transform: rotate(90deg); }
+.fab.open .icon-close { opacity: 1; transform: rotate(0deg); }</div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- 07. POSITIONING -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="positioning">
+  <div class="section-label">07</div>
+  <h2>Positioning &amp; responsive</h2>
+  <p>The widget uses fixed positioning and adapts to different viewport sizes. <strong>Mobile is the primary design target</strong> — desktop is the adaptation.</p>
+
+  <div class="behavior" style="background: #e1f5ee; border-color: #0f6e56; margin-bottom: 1.5rem;">
+    <strong style="color: #0f6e56;">📱 Mobile-first sizing:</strong> Design for 320px viewport first, then scale up. The panel should feel native on mobile, not like a shrunk desktop widget.
+  </div>
+
+  <h3>Position options</h3>
+  <div class="position-grid">
+    <div class="position-card">
+      <div class="position-preview">
+        <div class="pos-fab br"></div>
+      </div>
+      <div class="position-card-label">
+        <strong>Bottom-right (default)</strong>
+        <span>Most common pattern, users expect it here</span>
+      </div>
+    </div>
+    <div class="position-card">
+      <div class="position-preview">
+        <div class="pos-fab bl"></div>
+      </div>
+      <div class="position-card-label">
+        <strong>Bottom-left</strong>
+        <span>Alternative when right side is occupied</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>Offset specifications</h3>
+  <table class="spec-table">
+    <tr><th>Viewport</th><th>FAB offset</th><th>Panel behavior</th></tr>
+    <tr><td>Mobile (&lt;480px)</td><td>16px from edge</td><td><strong>Full-screen takeover</strong> (100vw × 100vh)</td></tr>
+    <tr><td>Desktop (≥480px)</td><td>20px from edge</td><td>Floating panel (380px width)</td></tr>
+  </table>
+
+  <h3>Mobile adaptations</h3>
+  <div class="behavior">
+    <strong>Full-screen takeover:</strong> On mobile (&lt;480px), the chat takes 100% of the viewport — not a floating panel. This creates an immersive, app-like experience.<br><br>
+    <strong>FAB behavior:</strong> FAB hides when full-screen chat is open, reappears when closed.<br><br>
+    <strong>Back button:</strong> Primary dismiss action (familiar mobile pattern), plus optional X button.<br><br>
+    <strong>Input:</strong> Panel accounts for virtual keyboard (visualViewport API). Header hides when keyboard opens; messages shrink to fill remaining space and input stays pinned just above the keyboard — last message stays in view.<br><br>
+    <strong>Safe areas:</strong> Respect env(safe-area-inset-*) for notched devices.
+  </div>
+
+  <h3>Z-index hierarchy</h3>
+  <div class="code-block">/* Ensure widget floats above page content */
+.contextus-widget {
+  --z-fab: 2147483646;      /* Max minus 1 */
+  --z-panel: 2147483645;    /* Below FAB */
+  --z-backdrop: 2147483644; /* Optional overlay */
+}</div>
+
+  <h3>Responsive breakpoints</h3>
+  <div class="breakpoint-visual">
+    <div class="bp-bar mobile"><span>MOBILE</span></div>
+    <div class="bp-bar tablet"><span>TABLET</span></div>
+    <div class="bp-bar desktop"><span>DESKTOP</span></div>
+  </div>
+  
+  <table class="spec-table">
+    <tr><th>Breakpoint</th><th>Width</th><th>Behavior</th></tr>
+    <tr><td>Mobile ★</td><td>&lt;480px</td><td><strong>Full-screen takeover</strong> — 100vw × 100vh, FAB hides</td></tr>
+    <tr><td>Tablet</td><td>480-768px</td><td>Floating panel (380px), FAB visible</td></tr>
+    <tr><td>Desktop</td><td>≥768px</td><td>Floating panel (380px), 20px offsets</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- 08. EMBED -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="embed">
+  <div class="section-label">08</div>
+  <h2>Embed script</h2>
+  <p>The floating widget is embedded via a single script tag. No container element needed.</p>
+
+  <h3>Basic embed</h3>
+  <div class="code-block">&lt;script
+  src="https://widget.getcontextus.dev/floating.js"
+  data-contextus-id="YOUR_WIDGET_ID"
+  async
+&gt;&lt;/script&gt;</div>
+
+  <h3>Configuration options</h3>
+  <div class="code-block">&lt;script
+  src="https://widget.getcontextus.dev/floating.js"
+  data-contextus-id="YOUR_WIDGET_ID"
+  data-position="bottom-right"
+  data-offset="20"
+  data-greeting="Hi! How can I help?"
+  data-badge="1"
+  data-color="#000000"
+  async
+&gt;&lt;/script&gt;</div>
+
+  <table class="spec-table">
+    <tr><th>Attribute</th><th>Type</th><th>Default</th><th>Description</th></tr>
+    <tr><td>data-contextus-id</td><td>string</td><td>required</td><td>Your unique widget identifier</td></tr>
+    <tr><td>data-position</td><td>string</td><td>bottom-right</td><td>FAB position: "bottom-right" or "bottom-left"</td></tr>
+    <tr><td>data-offset</td><td>number</td><td>20</td><td>Distance from viewport edge in pixels</td></tr>
+    <tr><td>data-greeting</td><td>string</td><td>—</td><td>Initial greeting message</td></tr>
+    <tr><td>data-badge</td><td>string</td><td>—</td><td>Initial badge text (e.g., "1" or "•")</td></tr>
+    <tr><td>data-color</td><td>string</td><td>#000000</td><td>FAB background color (brand customization)</td></tr>
+    <tr><td>data-open</td><td>boolean</td><td>false</td><td>Open panel on load</td></tr>
+  </table>
+
+  <h3>JavaScript API</h3>
+  <div class="code-block">// Open the widget programmatically
+window.contextus.open();
+
+// Close the widget
+window.contextus.close();
+
+// Toggle open/closed
+window.contextus.toggle();
+
+// Show notification badge
+window.contextus.setBadge("1");
+window.contextus.setBadge("•");
+window.contextus.clearBadge();
+
+// Listen to events
+window.contextus.on('open', () =&gt; { ... });
+window.contextus.on('close', () =&gt; { ... });
+window.contextus.on('message', (msg) =&gt; { ... });
+window.contextus.on('lead', (data) =&gt; { ... });</div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- 09. DESKTOP DEMO -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="demo">
+  <div class="section-label">09</div>
+  <h2>Desktop demo</h2>
+  <p>Click the FAB to toggle the chat panel. This demonstrates the full open/close interaction on desktop viewport.</p>
+
+  <div class="demo-container tall" id="demo-container">
+    <div class="demo-website">
+      <div class="demo-website-header">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="demo-website-content">
+        <div class="demo-website-line"></div>
+        <div class="demo-website-line"></div>
+        <div class="demo-website-line"></div>
+        <div class="demo-website-line"></div>
+      </div>
+      <p style="margin-top: 20px; font-size: 11px; color: #aaa;">Simulated host website</p>
+    </div>
+    
+    <!-- Interactive Chat Panel -->
+    <div class="chat-panel" id="demo-panel">
+      <div class="panel-header">
+        <div class="panel-avatar">C</div>
+        <div class="panel-header-info">
+          <div class="panel-name">contextus</div>
+          <div class="panel-status">Powered by AI</div>
+        </div>
+        <button class="panel-close" id="demo-close">
+          <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"/></svg>
+        </button>
+      </div>
+      <div class="panel-body">
+        <div class="panel-messages" id="demo-messages">
+          <div class="msg-row">
+            <div class="msg-avatar">C</div>
+            <div class="msg-bubble agent-bubble">
+              <p>Hi! 👋 How can I help you today?</p>
+            </div>
+          </div>
+        </div>
+        <div class="panel-input-area">
+          <div class="panel-input-wrap">
+            <input type="text" class="panel-input" id="demo-input" placeholder="Type a message...">
+            <button class="panel-send" id="demo-send"><svg viewBox="0 0 16 16"><path d="M2.5 8L13.5 2.5L10 8L13.5 13.5L2.5 8Z"/></svg></button>
+          </div>
+          <div class="panel-pills" id="demo-pills">
+            <div class="panel-pill" data-msg="What does contextus do?">What does contextus do?</div>
+            <div class="panel-pill" data-msg="How much does it cost?">Pricing</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel-footer">
+        <div class="panel-powered">powered by <a href="#">contextus</a></div>
+      </div>
+    </div>
+    
+    <!-- Interactive FAB -->
+    <div class="fab" id="demo-fab">
+      <svg class="icon-chat" viewBox="0 0 24 24"><path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z"/></svg>
+      <svg class="icon-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"/></svg>
+      <div class="fab-badge pulse" id="demo-badge">1</div>
+    </div>
+    
+    <div class="demo-label" id="demo-label">STATE: COLLAPSED — CLICK FAB TO OPEN</div>
+  </div>
+
+  <script>
+    (function() {
+      var fab = document.getElementById('demo-fab');
+      var panel = document.getElementById('demo-panel');
+      var closeBtn = document.getElementById('demo-close');
+      var input = document.getElementById('demo-input');
+      var sendBtn = document.getElementById('demo-send');
+      var messages = document.getElementById('demo-messages');
+      var pills = document.getElementById('demo-pills');
+      var badge = document.getElementById('demo-badge');
+      var label = document.getElementById('demo-label');
+      var isOpen = false;
+
+      function togglePanel() {
+        isOpen = !isOpen;
+        if (isOpen) {
+          panel.classList.add('visible');
+          fab.classList.add('open');
+          badge.style.display = 'none';
+          label.textContent = 'STATE: EXPANDED — CONVERSATION READY';
+          setTimeout(function() { input.focus(); }, 300);
+        } else {
+          panel.classList.remove('visible');
+          fab.classList.remove('open');
+          label.textContent = 'STATE: COLLAPSED — CLICK FAB TO OPEN';
+        }
+      }
+
+      fab.addEventListener('click', togglePanel);
+      closeBtn.addEventListener('click', togglePanel);
+
+      input.addEventListener('input', function() {
+        if (input.value.trim()) {
+          sendBtn.classList.add('active');
+        } else {
+          sendBtn.classList.remove('active');
+        }
+      });
+
+      function sendMessage(text) {
+        if (!text || !text.trim()) return;
+        
+        // Hide pills
+        pills.style.display = 'none';
+        
+        // Add visitor message
+        var visitorRow = document.createElement('div');
+        visitorRow.className = 'msg-row visitor';
+        visitorRow.innerHTML = '<div class="msg-bubble visitor-bubble">' + text.trim() + '</div>';
+        messages.appendChild(visitorRow);
+        
+        // Clear input
+        input.value = '';
+        sendBtn.classList.remove('active');
+        
+        // Show typing
+        var typingRow = document.createElement('div');
+        typingRow.className = 'msg-row';
+        typingRow.id = 'typing-indicator';
+        typingRow.innerHTML = '<div class="msg-avatar">C</div><div class="msg-bubble agent-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
+        messages.appendChild(typingRow);
+        messages.scrollTop = messages.scrollHeight;
+        
+        label.textContent = 'STATE: AGENT TYPING...';
+        
+        // Simulate response
+        setTimeout(function() {
+          var typing = document.getElementById('typing-indicator');
+          if (typing) typing.remove();
+          
+          var agentRow = document.createElement('div');
+          agentRow.className = 'msg-row';
+          agentRow.innerHTML = '<div class="msg-avatar">C</div><div class="msg-bubble agent-bubble"><p>Thanks for reaching out! contextus helps businesses turn website visitors into qualified leads through AI-powered conversations. Would you like to know more about how it works?</p></div>';
+          messages.appendChild(agentRow);
+          messages.scrollTop = messages.scrollHeight;
+          
+          label.textContent = 'STATE: CONVERSATION ACTIVE';
+        }, 1500);
+      }
+
+      sendBtn.addEventListener('click', function() {
+        sendMessage(input.value);
+      });
+
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && input.value.trim()) {
+          e.preventDefault();
+          sendMessage(input.value);
+        }
+      });
+
+      pills.addEventListener('click', function(e) {
+        if (e.target.classList.contains('panel-pill')) {
+          sendMessage(e.target.getAttribute('data-msg'));
+        }
+      });
+    })();
+  </script>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- 10. MOBILE DEMO -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="mobile-demo">
+  <div class="section-label">10</div>
+  <h2>Mobile demo ★</h2>
+  <p>On mobile, the widget becomes a <strong>full-screen takeover</strong> — not a floating panel. This maximizes every pixel on narrow devices and creates an immersive, app-like chat experience modeled after WhatsApp and Google Chat.</p>
+
+  <div class="behavior" style="background: #e1f5ee; border-color: #0f6e56; margin-bottom: 1.5rem;">
+    <strong style="color: #0f6e56;">📱 Full-screen takeover:</strong> When opened on mobile, the chat fills 100% of the viewport — edge to edge, top to bottom. Messages anchor to the bottom (like WhatsApp), so new conversations start from the bottom and stack upward. When the virtual keyboard appears, the header hides and messages + input area push upward together — the last message stays in view while typing.
+  </div>
+
+  <!-- Mobile Phone Frame -->
+  <div class="mobile-demo-wrapper">
+    <div class="mobile-frame" id="mobile-frame">
+      <!-- Phone notch -->
+      <div class="mobile-notch"></div>
+      
+      <!-- Screen content -->
+      <div class="mobile-screen">
+        <!-- Simulated website content (visible when chat closed) -->
+        <div class="mobile-website" id="mobile-website">
+          <div class="mobile-nav">
+            <div class="mobile-nav-logo"></div>
+            <div class="mobile-nav-menu">☰</div>
+          </div>
+          <div class="mobile-hero">
+            <div class="mobile-hero-line w80"></div>
+            <div class="mobile-hero-line w60"></div>
+          </div>
+          <div class="mobile-content">
+            <div class="mobile-content-line"></div>
+            <div class="mobile-content-line w90"></div>
+            <div class="mobile-content-line w70"></div>
+            <div class="mobile-content-line"></div>
+            <div class="mobile-content-line w80"></div>
+          </div>
+        </div>
+        
+        <!-- FULL-SCREEN Chat Panel -->
+        <div class="mobile-fullscreen" id="mobile-fullscreen">
+          <div class="mobile-fs-header">
+            <button class="mobile-fs-back" id="mobile-back">
+              <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </button>
+            <div class="mobile-fs-avatar">C</div>
+            <div class="mobile-fs-info">
+              <div class="mobile-fs-name">Finfloo</div>
+              <div class="mobile-fs-status">AI assistant</div>
+            </div>
+            <button class="mobile-fs-close" id="mobile-close">
+              <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"/></svg>
+            </button>
+          </div>
+          
+          <div class="mobile-fs-messages" id="mobile-messages">
+            <div class="mobile-fs-messages-inner" id="mobile-messages-inner">
+              <div class="mobile-fs-msg">
+                <div class="mobile-fs-msg-avatar">C</div>
+                <div class="mobile-fs-msg-content">
+                  <div class="mobile-fs-msg-bubble">Hi there 👋<br><br>How can I help you today?</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mobile-fs-input-area">
+            <div class="mobile-fs-input-wrap">
+              <input type="text" class="mobile-fs-input" id="mobile-input" placeholder="Ask a question...">
+              <button class="mobile-fs-send" id="mobile-send">
+                <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+              </button>
+            </div>
+            <div class="mobile-fs-footer">
+              powered by <a href="#">contextus</a>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Simulated keyboard (shown when input focused) -->
+        <div class="mobile-keyboard-sim" id="mobile-keyboard-sim">
+          <div class="mobile-keyboard-row">
+            <span>Q</span><span>W</span><span>E</span><span>R</span><span>T</span><span>Y</span><span>U</span><span>I</span><span>O</span><span>P</span>
+          </div>
+          <div class="mobile-keyboard-row">
+            <span>A</span><span>S</span><span>D</span><span>F</span><span>G</span><span>H</span><span>J</span><span>K</span><span>L</span>
+          </div>
+          <div class="mobile-keyboard-row">
+            <span class="key-wide">⇧</span><span>Z</span><span>X</span><span>C</span><span>V</span><span>B</span><span>N</span><span>M</span><span class="key-wide">⌫</span>
+          </div>
+          <div class="mobile-keyboard-row">
+            <span class="key-wide">123</span><span class="key-space">space</span><span class="key-wide">return</span>
+          </div>
+        </div>
+
+        <!-- Mobile FAB with double ring pulse (only visible when chat closed) -->
+        <div class="mobile-fab-container" id="mobile-fab-container">
+          <div class="mobile-pulse-ring"></div>
+          <div class="mobile-pulse-ring"></div>
+          <div class="mobile-fab" id="mobile-fab">
+            <svg viewBox="0 0 24 24"><path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z"/></svg>
+            <div class="mobile-badge" id="mobile-badge">1</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Home indicator -->
+      <div class="mobile-home-indicator"></div>
+    </div>
+    
+    <div class="mobile-demo-label" id="mobile-label">TAP FAB TO OPEN FULL-SCREEN CHAT</div>
+  </div>
+  
+  <h3>Full-screen mobile specifications</h3>
+  <table class="spec-table">
+    <tr><th>Property</th><th>Value</th></tr>
+    <tr><td>Panel size</td><td>100vw × 100vh (full viewport)</td></tr>
+    <tr><td>Position</td><td>Fixed, inset: 0 (covers everything)</td></tr>
+    <tr><td>Background</td><td>#FFFFFF (or dark mode: #1a1a1a)</td></tr>
+    <tr><td>Z-index</td><td>2147483647 (maximum, above everything)</td></tr>
+    <tr><td>Animation</td><td>Slide up from bottom (300ms ease-out)</td></tr>
+    <tr><td>FAB pulse</td><td>Double ring pulse (2s cycle, 1s stagger) — grabs attention for new visitors</td></tr>
+  </table>
+
+  <h3>Mobile header</h3>
+  <table class="spec-table">
+    <tr><th>Element</th><th>Spec</th></tr>
+    <tr><td>Height</td><td>56px (matches mobile app bars)</td></tr>
+    <tr><td>Back button</td><td>44×44px touch target, left aligned</td></tr>
+    <tr><td>Avatar</td><td>32×32px, 8px radius</td></tr>
+    <tr><td>Close button</td><td>44×44px touch target, right aligned (optional, back is primary)</td></tr>
+    <tr><td>Background</td><td>#FFFFFF with bottom border or shadow</td></tr>
+  </table>
+
+  <h3>Mobile input area</h3>
+  <table class="spec-table">
+    <tr><th>Element</th><th>Spec</th></tr>
+    <tr><td>Input height</td><td>48px minimum (comfortable thumb typing)</td></tr>
+    <tr><td>Input radius</td><td>16px</td></tr>
+    <tr><td>Send button</td><td>34×34px, 8px radius, inside input</td></tr>
+    <tr><td>Safe area</td><td>Respect env(safe-area-inset-bottom) for notched devices</td></tr>
+    <tr><td>Footer text</td><td>Privacy policy link below input</td></tr>
+  </table>
+
+  <h3>Mobile-specific behaviors</h3>
+  <table class="spec-table">
+    <tr><th>Behavior</th><th>Description</th></tr>
+    <tr><td>FAB hidden</td><td>FAB disappears when full-screen chat is open</td></tr>
+    <tr><td>Back button</td><td>Primary dismiss action (familiar mobile pattern)</td></tr>
+    <tr><td>Swipe down</td><td>Optional: swipe down on header to dismiss</td></tr>
+    <tr><td>Keyboard</td><td>Header hides when keyboard opens; messages + input push upward together — last message stays in view (visualViewport API)</td></tr>
+    <tr><td>Status bar</td><td>Consider status bar color/style for seamless feel</td></tr>
+    <tr><td>History preserved</td><td>Conversation persists when closing/reopening</td></tr>
+  </table>
+
+  <h3>Breakpoint behavior</h3>
+  <div class="behavior">
+    <strong>Mobile (&lt;480px):</strong> Full-screen takeover. FAB opens immersive chat that covers entire viewport.<br><br>
+    <strong>Tablet/Desktop (≥480px):</strong> Floating panel pattern. FAB stays visible, panel floats above it.
+  </div>
+</div>
+
+<style>
+/* Mobile Demo Styles - Full Screen Takeover */
+.mobile-demo-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin: 1.5rem 0;
+}
+.mobile-frame {
+  width: 280px;
+  height: 580px;
+  background: #1a1a1a;
+  border-radius: 40px;
+  padding: 8px;
+  position: relative;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.4);
+}
+.mobile-notch {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90px;
+  height: 28px;
+  background: #1a1a1a;
+  border-radius: 0 0 16px 16px;
+  z-index: 100;
+}
+.mobile-screen {
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  border-radius: 32px;
+  overflow: hidden;
+  position: relative;
+}
+.mobile-home-indicator {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 4px;
+  background: #666;
+  border-radius: 2px;
+  z-index: 101;
+}
+
+/* Mobile website simulation */
+.mobile-website {
+  padding: 48px 16px 16px;
+  height: 100%;
+  transition: opacity 0.3s;
+}
+.mobile-website.hidden { opacity: 0.3; }
+.mobile-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.mobile-nav-logo {
+  width: 60px;
+  height: 20px;
+  background: #e0e0e0;
+  border-radius: 4px;
+}
+.mobile-nav-menu {
+  font-size: 18px;
+  color: #888;
+}
+.mobile-hero {
+  margin-bottom: 20px;
+}
+.mobile-hero-line {
+  height: 14px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+.mobile-hero-line.w80 { width: 80%; }
+.mobile-hero-line.w60 { width: 60%; }
+.mobile-content-line {
+  height: 8px;
+  background: #f5f5f5;
+  border-radius: 3px;
+  margin-bottom: 6px;
+  width: 100%;
+}
+.mobile-content-line.w90 { width: 90%; }
+.mobile-content-line.w80 { width: 80%; }
+.mobile-content-line.w70 { width: 70%; }
+
+/* Mobile FAB */
+.mobile-fab-container {
+  position: absolute;
+  bottom: 20px;
+  right: 16px;
+  width: 52px;
+  height: 52px;
+  z-index: 50;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.mobile-fab-container.hidden {
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+}
+
+/* Double ring pulse animation */
+@keyframes pulse-double {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+.mobile-pulse-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: #000;
+}
+.mobile-pulse-ring:nth-child(1) {
+  animation: pulse-double 2s ease-out infinite;
+}
+.mobile-pulse-ring:nth-child(2) {
+  animation: pulse-double 2s ease-out infinite 1s;
+}
+
+.mobile-fab {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  background: #000;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  z-index: 10;
+}
+.mobile-fab svg {
+  width: 22px;
+  height: 22px;
+  fill: #fff;
+}
+.mobile-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  background: #e53935;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 11;
+}
+
+/* FULL-SCREEN Chat Panel */
+.mobile-fullscreen {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  z-index: 90;
+  transform: translateY(100%);
+  transition: transform 0.3s ease-out;
+  border-radius: 32px;
+}
+.mobile-fullscreen.visible {
+  transform: translateY(0);
+}
+
+/* Full-screen header */
+.mobile-fs-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 44px 12px 12px;
+  background: #1a1a1a;
+  flex-shrink: 0;
+}
+.mobile-fs-back,
+.mobile-fs-close {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+.mobile-fs-back svg,
+.mobile-fs-close svg {
+  width: 20px;
+  height: 20px;
+  fill: #fff;
+}
+.mobile-fs-avatar {
+  width: 32px;
+  height: 32px;
+  background: #333;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  border: 1px solid #444;
+}
+.mobile-fs-info {
+  flex: 1;
+}
+.mobile-fs-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+}
+.mobile-fs-status {
+  font-size: 11px;
+  color: #888;
+}
+
+/* Full-screen messages */
+.mobile-fs-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.mobile-fs-messages::-webkit-scrollbar { width: 4px; }
+.mobile-fs-messages::-webkit-scrollbar-track { background: #1a1a1a; }
+.mobile-fs-messages::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+.mobile-fs-messages::-webkit-scrollbar-thumb:hover { background: #555; }
+
+/* Inner wrapper: margin-top auto anchors messages to bottom */
+.mobile-fs-messages-inner {
+  display: flex;
+  flex-direction: column;
+  margin-top: auto;
+  width: 100%;
+}
+.mobile-fs-msg {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.mobile-fs-msg.visitor {
+  justify-content: flex-end;
+}
+.mobile-fs-msg-avatar {
+  width: 28px;
+  height: 28px;
+  background: #333;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  border: 1px solid #444;
+}
+.mobile-fs-msg-content {
+  max-width: 80%;
+}
+.mobile-fs-msg-bubble {
+  background: #2a2a2a;
+  color: #fff;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border-top-left-radius: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.mobile-fs-msg-bubble.visitor-bubble {
+  background: #fff;
+  color: #000;
+  border-radius: 16px;
+  border-bottom-right-radius: 4px;
+}
+.mobile-fs-msg-meta {
+  font-size: 11px;
+  color: #666;
+  margin-top: 6px;
+  padding-left: 2px;
+}
+
+/* Typing indicator */
+.mobile-fs-typing {
+  display: flex;
+  gap: 4px;
+  padding: 8px 0;
+}
+.mobile-fs-typing span {
+  width: 6px;
+  height: 6px;
+  background: #666;
+  border-radius: 50%;
+  animation: typing-bounce 1.2s infinite;
+}
+.mobile-fs-typing span:nth-child(2) { animation-delay: 0.15s; }
+.mobile-fs-typing span:nth-child(3) { animation-delay: 0.3s; }
+
+/* Full-screen input area */
+.mobile-fs-input-area {
+  padding: 12px 16px;
+  padding-bottom: 32px;
+  background: #1a1a1a;
+  flex-shrink: 0;
+}
+.mobile-fs-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 10px 10px 10px 16px;
+}
+.mobile-fs-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 15px;
+  font-family: 'DM Sans', sans-serif;
+  color: #fff;
+  outline: none;
+}
+.mobile-fs-input::placeholder { color: #666; }
+.mobile-fs-send {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: #333;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.mobile-fs-send svg {
+  width: 18px;
+  height: 18px;
+  fill: #666;
+  transition: fill 0.15s;
+}
+.mobile-fs-send.active {
+  background: #fff;
+}
+.mobile-fs-send.active svg {
+  fill: #000;
+}
+
+.mobile-fs-footer {
+  text-align: center;
+  font-size: 11px;
+  color: #666;
+  margin-top: 10px;
+}
+.mobile-fs-footer a {
+  color: #888;
+  text-decoration: underline;
+}
+
+.mobile-demo-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: #888;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Keyboard-open state: header hides, messages shrink, input stays visible */
+.mobile-fullscreen.kbd-state {
+  bottom: 210px;
+  border-radius: 0;
+  top: 0;
+}
+.mobile-fullscreen.kbd-state .mobile-fs-header {
+  display: none;
+}
+.mobile-fullscreen.kbd-state .mobile-fs-input-area {
+  flex-shrink: 0;
+  border-top: 1px solid #333;
+}
+
+/* Simulated iOS keyboard */
+.mobile-keyboard-sim {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 210px;
+  background: #d1d5db;
+  border-radius: 0 0 32px 32px;
+  z-index: 95;
+  display: none;
+  flex-direction: column;
+  padding: 8px 4px 16px;
+  gap: 6px;
+}
+.mobile-keyboard-sim.visible {
+  display: flex;
+}
+.mobile-keyboard-row {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+.mobile-keyboard-row span {
+  flex: 1;
+  max-width: 24px;
+  height: 34px;
+  background: #fff;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+  box-shadow: 0 1px 0 #aaa;
+  font-family: 'DM Sans', sans-serif;
+}
+.mobile-keyboard-row span.key-wide {
+  max-width: 38px;
+  flex: 1.5;
+  font-size: 9px;
+  background: #adb5bd;
+  color: #000;
+}
+.mobile-keyboard-row span.key-space {
+  max-width: 120px;
+  flex: 5;
+}
+</style>
+
+<script>
+(function() {
+  var mfab = document.getElementById('mobile-fab');
+  var mfabContainer = document.getElementById('mobile-fab-container');
+  var mfullscreen = document.getElementById('mobile-fullscreen');
+  var mwebsite = document.getElementById('mobile-website');
+  var mback = document.getElementById('mobile-back');
+  var mclose = document.getElementById('mobile-close');
+  var minput = document.getElementById('mobile-input');
+  var msend = document.getElementById('mobile-send');
+  var mmessages = document.getElementById('mobile-messages');
+  var mmessagesInner = document.getElementById('mobile-messages-inner');
+  var mkeyboard = document.getElementById('mobile-keyboard-sim');
+  var mbadge = document.getElementById('mobile-badge');
+  var mlabel = document.getElementById('mobile-label');
+  var misOpen = false;
+
+  function mopen() {
+    misOpen = true;
+    mfullscreen.classList.add('visible');
+    mfabContainer.classList.add('hidden');
+    mwebsite.classList.add('hidden');
+    mbadge.style.display = 'none';
+    mlabel.textContent = 'TAP INPUT TO SIMULATE KEYBOARD';
+  }
+
+  function mcloseChat() {
+    misOpen = false;
+    mfullscreen.classList.remove('visible');
+    mfullscreen.classList.remove('kbd-state');
+    mkeyboard.classList.remove('visible');
+    mfabContainer.classList.remove('hidden');
+    mwebsite.classList.remove('hidden');
+    mlabel.textContent = 'TAP FAB TO OPEN FULL-SCREEN CHAT';
+  }
+
+  mfab.addEventListener('click', mopen);
+  mback.addEventListener('click', mcloseChat);
+  mclose.addEventListener('click', mcloseChat);
+
+  // Keyboard simulation: focus shows keyboard, header hides, messages stay visible
+  minput.addEventListener('focus', function() {
+    mfullscreen.classList.add('kbd-state');
+    mkeyboard.classList.add('visible');
+    mlabel.textContent = 'HEADER HIDDEN — MESSAGES STAY VISIBLE';
+    mmessages.scrollTop = mmessages.scrollHeight;
+  });
+  minput.addEventListener('blur', function() {
+    mfullscreen.classList.remove('kbd-state');
+    mkeyboard.classList.remove('visible');
+    mlabel.textContent = 'TAP INPUT TO SIMULATE KEYBOARD';
+  });
+
+  minput.addEventListener('input', function() {
+    if (minput.value.trim()) {
+      msend.classList.add('active');
+    } else {
+      msend.classList.remove('active');
+    }
+  });
+
+  function msendMessage(text) {
+    if (!text || !text.trim()) return;
+
+    // Add visitor message to inner wrapper
+    var vrow = document.createElement('div');
+    vrow.className = 'mobile-fs-msg visitor';
+    vrow.innerHTML = '<div class="mobile-fs-msg-content"><div class="mobile-fs-msg-bubble visitor-bubble">' + text.trim() + '</div></div>';
+    mmessagesInner.appendChild(vrow);
+
+    minput.value = '';
+    msend.classList.remove('active');
+
+    // Add typing indicator to inner wrapper
+    var trow = document.createElement('div');
+    trow.className = 'mobile-fs-msg';
+    trow.id = 'mobile-typing';
+    trow.innerHTML = '<div class="mobile-fs-msg-avatar">C</div><div class="mobile-fs-msg-content"><div class="mobile-fs-msg-bubble"><div class="mobile-fs-typing"><span></span><span></span><span></span></div></div></div>';
+    mmessagesInner.appendChild(trow);
+    mmessages.scrollTop = mmessages.scrollHeight;
+
+    mlabel.textContent = 'AGENT TYPING...';
+
+    setTimeout(function() {
+      var t = document.getElementById('mobile-typing');
+      if (t) t.remove();
+
+      var arow = document.createElement('div');
+      arow.className = 'mobile-fs-msg';
+      arow.innerHTML = '<div class="mobile-fs-msg-avatar">C</div><div class="mobile-fs-msg-content"><div class="mobile-fs-msg-bubble">Thanks for reaching out! contextus helps turn website visitors into qualified leads through AI-powered conversations. 🚀</div></div>';
+      mmessagesInner.appendChild(arow);
+      mmessages.scrollTop = mmessages.scrollHeight;
+
+      mlabel.textContent = 'HEADER HIDDEN — MESSAGES STAY VISIBLE';
+    }, 1200);
+  }
+
+  msend.addEventListener('click', function() { msendMessage(minput.value); });
+  minput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && minput.value.trim()) {
+      e.preventDefault();
+      msendMessage(minput.value);
+    }
+  });
+})();
+</script>
+
+<!-- ── Footer ── -->
+<div style="text-align:center;padding:2rem 0;border-top:0.5px solid #e0e0e0;margin-top:2rem;">
+  <p style="font-family:'DM Mono',monospace;font-size:11px;color:#bbb;letter-spacing:1px;">FROM CONTACT US TO CONTEXTUS</p>
+</div>
+
+</div>
+</body>
+</html>

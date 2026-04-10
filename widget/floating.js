@@ -113,9 +113,10 @@
     '.ctxf-close-btn svg{width:16px;height:16px;fill:#888}',
 
     // Messages area
-    '.ctxf-messages{flex:1;overflow-y:auto;padding:16px;min-height:0;scrollbar-width:thin;scrollbar-color:#e0e0e0 transparent;overscroll-behavior:contain}',
+    '.ctxf-messages{flex:1;overflow-y:auto;padding:16px;min-height:0;scrollbar-width:thin;scrollbar-color:#e0e0e0 transparent;overscroll-behavior:contain;display:flex;flex-direction:column}',
     '.ctxf-messages::-webkit-scrollbar{width:4px}',
     '.ctxf-messages::-webkit-scrollbar-thumb{background:#e0e0e0;border-radius:2px}',
+    '.ctxf-messages-inner{display:flex;flex-direction:column;margin-top:auto;width:100%}',
 
     // Message rows
     '.ctxf-msg{display:flex;gap:8px;align-items:flex-start;margin-bottom:12px;animation:ctxf-msg-in .15s ease forwards}',
@@ -221,12 +222,10 @@
       '.ctxf-powered a{color:#888}',
       '.ctxf-powered a:hover{color:#fff}',
 
-      // Keyboard-open state: input-area + footer cover the full panel
-      // Header and messages are hidden; input-area expands to fill remaining space
-      // so the input field sits at the bottom just above the keyboard.
+      // Keyboard-open state: header hides, messages shrink to fill remaining space,
+      // input stays pinned at the bottom just above the keyboard.
       '.ctxf-panel.ctxf-kbd .ctxf-header{display:none}',
-      '.ctxf-panel.ctxf-kbd .ctxf-messages{display:none}',
-      '.ctxf-panel.ctxf-kbd .ctxf-input-area{flex:1;display:flex;flex-direction:column;justify-content:flex-end;border-top:none}',
+      '.ctxf-panel.ctxf-kbd .ctxf-input-area{flex-shrink:0;border-top:none}',
     '}',
   ].join('');
 
@@ -295,7 +294,7 @@
           '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"/></svg>',
         '</button>',
       '</div>',
-      '<div class="ctxf-messages" id="ctxf-messages"></div>',
+      '<div class="ctxf-messages" id="ctxf-messages"><div class="ctxf-messages-inner" id="ctxf-messages-inner"></div></div>',
       '<div class="ctxf-input-area">',
         '<div class="ctxf-input-wrap">',
           '<input class="ctxf-input" id="ctxf-input" type="text" placeholder="Type a message..." autocomplete="off">',
@@ -313,13 +312,14 @@
 
     // ── Element refs ──────────────────────────────────────────────────────────────
 
-    var badgeEl   = shadow.getElementById('ctxf-badge');
-    var closeBtn  = shadow.getElementById('ctxf-close');
-    var backBtn   = shadow.getElementById('ctxf-back');
-    var inputEl   = shadow.getElementById('ctxf-input');
-    var sendBtn   = shadow.getElementById('ctxf-send');
-    var messagesEl= shadow.getElementById('ctxf-messages');
-    var pillsEl   = shadow.getElementById('ctxf-pills');
+    var badgeEl      = shadow.getElementById('ctxf-badge');
+    var closeBtn     = shadow.getElementById('ctxf-close');
+    var backBtn      = shadow.getElementById('ctxf-back');
+    var inputEl      = shadow.getElementById('ctxf-input');
+    var sendBtn      = shadow.getElementById('ctxf-send');
+    var messagesEl   = shadow.getElementById('ctxf-messages');
+    var msgsInnerEl  = shadow.getElementById('ctxf-messages-inner');
+    var pillsEl      = shadow.getElementById('ctxf-pills');
 
     // ── Open / close ──────────────────────────────────────────────────────────────
 
@@ -399,13 +399,13 @@
       }
 
       row.appendChild(bubble);
-      messagesEl.appendChild(row);
+      msgsInnerEl.appendChild(row);
       messagesEl.scrollTop = messagesEl.scrollHeight;
       return row;
     }
 
     function removeThinking() {
-      var el = messagesEl.querySelector('[data-thinking]');
+      var el = msgsInnerEl.querySelector('[data-thinking]');
       if (el) el.remove();
     }
 
@@ -503,7 +503,7 @@
               // Silent retry after 2 s — reset partial state, keep dots visible
               agentMsg.text = '';
               if (streamRow) { streamRow.remove(); streamRow = null; streamBubble = null; }
-              if (!messagesEl.querySelector('[data-thinking]')) {
+              if (!msgsInnerEl.querySelector('[data-thinking]')) {
                 appendMessage({ role: 'agent', isThinking: true });
               }
               await new Promise(function (r) { setTimeout(r, 2000); });
