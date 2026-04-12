@@ -9,9 +9,10 @@ from dotenv import load_dotenv
 import logging
 import os
 
-from app.routers import crawl, session, chat, brief, waitlist, jobs, config
+from app.routers import crawl, session, chat, brief, waitlist, jobs, config, events
 from app.services.database import init_db
 from app.services.telemetry import init_telemetry, instrument_app
+from app.services.analytics import init_amplitude, shutdown_amplitude
 
 load_dotenv()
 
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_telemetry()
+    init_amplitude()
     logger.info("[startup] Running init_db...")
     try:
         await init_db()
@@ -29,6 +31,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("[startup] init_db failed: %s — continuing without Neon", e)
     yield
+    shutdown_amplitude()
     logger.info("[shutdown] App shutting down")
 
 
@@ -61,6 +64,7 @@ app.include_router(brief.router, prefix="/api")
 app.include_router(waitlist.router, prefix="/api")
 app.include_router(jobs.router, prefix="/api")
 app.include_router(config.router, prefix="/api")
+app.include_router(events.router, prefix="/api")
 
 instrument_app(app)
 
