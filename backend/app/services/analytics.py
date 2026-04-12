@@ -32,6 +32,10 @@ def shutdown_amplitude():
 def track(event_type: str, kb_id: str, session_id: str | None = None, properties: dict | None = None):
     if not _client:
         return
+    # Amplitude requires user_id and device_id to be at least 5 characters
+    if not kb_id or len(kb_id) < 5:
+        logger.warning("Amplitude: skipping event=%s — kb_id too short (%r)", event_type, kb_id)
+        return
     try:
         from amplitude import BaseEvent
         props = dict(properties or {})
@@ -40,7 +44,8 @@ def track(event_type: str, kb_id: str, session_id: str | None = None, properties
         _client.track(BaseEvent(
             event_type=event_type,
             user_id=kb_id,
-            device_id=session_id,
+            # only set device_id when session_id meets the 5-char minimum
+            device_id=session_id if session_id and len(session_id) >= 5 else None,
             event_properties=props,
         ))
     except Exception:
