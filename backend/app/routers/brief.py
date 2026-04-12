@@ -6,6 +6,7 @@ from app.services.redis import get_session, get_knowledge_base
 from app.services.llm import generate_lead_brief
 from app.services.database import get_customer_config
 from app.services.webhook import fire_webhook
+from app.services import analytics
 
 router = APIRouter(tags=["brief"])
 
@@ -30,5 +31,12 @@ async def generate_brief(session_id: str):
     config = await get_customer_config(session.kb_id)
     if config and config.get("webhook_url"):
         asyncio.create_task(fire_webhook(config["webhook_url"], brief))
+
+    analytics.track(
+        event_type="brief_generated",
+        kb_id=session.kb_id,
+        session_id=session_id,
+        properties={"message_count": len(session.messages) // 2},
+    )
 
     return brief

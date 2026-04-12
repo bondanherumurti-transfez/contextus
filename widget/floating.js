@@ -22,6 +22,32 @@
     knowledgeBaseId: scriptEl && scriptEl.getAttribute('data-knowledge-base-id') || '',
   };
 
+  // ── Analytics ─────────────────────────────────────────────────────────────────
+
+  var CONTEXTUS_DOMAINS = ['getcontextus.dev', 'contextus-2d16.onrender.com', 'localhost'];
+
+  function trackEvent(name) {
+    if (!cfg.apiUrl || !cfg.knowledgeBaseId) return;
+    var sourceDomain = window.location.hostname;
+    var sourceType = CONTEXTUS_DOMAINS.some(function (d) { return sourceDomain.indexOf(d) !== -1; })
+      ? 'contextus'
+      : 'tenant';
+    try {
+      fetch(cfg.apiUrl + '/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name,
+          kb_id: cfg.knowledgeBaseId,
+          session_id: state.sessionId || null,
+          source_domain: sourceDomain,
+          source_type: sourceType,
+        }),
+        keepalive: true,
+      }).catch(function () {});
+    } catch (_) {}
+  }
+
   // ── Translations / content ────────────────────────────────────────────────────
 
   var PILLS = {
@@ -388,6 +414,7 @@
       // Only auto-focus on desktop — on mobile, programmatic focus would
       // immediately trigger the virtual keyboard and hide the panel header.
       if (!isMobile()) setTimeout(function () { inputEl.focus(); }, 300);
+      trackEvent('fab_open');
       emit('open', null);
     }
 
@@ -408,6 +435,7 @@
         panelEl.style.removeProperty('height');
       }
 
+      trackEvent('fab_close');
       emit('close', null);
     }
 

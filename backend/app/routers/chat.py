@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 import json
 import re
@@ -14,6 +14,7 @@ from app.services.redis import (
 )
 from app.services.llm import stream_chat_response, build_waitlist_system_prompt
 from app.services.telemetry import tracer
+from app.services import analytics
 
 router = APIRouter(tags=["chat"])
 
@@ -37,7 +38,7 @@ def detect_contact(text: str) -> dict | None:
 
 
 @router.post("/chat/{session_id}")
-async def send_chat_message(session_id: str, body: ChatRequest):
+async def send_chat_message(session_id: str, body: ChatRequest, request: Request):
     start_time = time.time()
     span = tracer.start_span("chat.request")
     span.set_attribute("session_id", session_id)
@@ -66,6 +67,18 @@ async def send_chat_message(session_id: str, body: ChatRequest):
 
     span.set_attribute("kb_id", session.kb_id)
     span.set_attribute("message_count", len(session.messages))
+
+    origin = request.headers.get("origin") or request.headers.get("referer") or ""
+    source_domain = origin.replace("https://", "").replace("http://", "").split("/")[0]
+    analytics.track(
+        event_type="message_sent",
+        kb_id=session.kb_id,
+        session_id=session_id,
+        properties={
+            "source_domain": source_domain,
+            "message_count": len(session.messages) // 2 + 1,
+        },
+    )
 
     contact = detect_contact(body.message)
     newly_captured = False
@@ -110,6 +123,12 @@ async def send_chat_message(session_id: str, body: ChatRequest):
 
             if newly_captured:
                 await extend_session_ttl(session_id, ttl=86400)
+                analytics.track(
+                    event_type="contact_captured",
+                    kb_id=session.kb_id,
+                    session_id=session_id,
+                    properties={"source_domain": source_domain},
+                )
 
             span.set_attribute("response_length", len(full_text))
             span.set_attribute(
