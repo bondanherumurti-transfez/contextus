@@ -96,6 +96,7 @@
 
     // Shadow host — covers viewport, passes clicks through
     ':host{all:initial;display:block;position:fixed;inset:0;pointer-events:none;z-index:2147483640;-webkit-font-smoothing:antialiased;color-scheme:light}',
+    '@media(max-width:479px){:host{z-index:2147483647}}',
 
     // ── FAB ──
     '.ctxf-fab{position:absolute;width:56px;height:56px;border-radius:16px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.15);transition:transform .2s ease,box-shadow .2s ease;pointer-events:auto;-webkit-tap-highlight-color:transparent;outline:none}',
@@ -628,7 +629,25 @@
 
     // ── FAB / close ───────────────────────────────────────────────────────────────
 
+    var pageTouchMoved = false;
+    var pageTouchMovedTime = 0;
+    var pageTouchStartY = 0;
+    document.addEventListener('touchstart', function (e) {
+      pageTouchMoved = false;
+      pageTouchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', function (e) {
+      var dy = Math.abs(e.touches[0].clientY - pageTouchStartY);
+      if (dy > 5) {
+        pageTouchMoved = true;
+        pageTouchMovedTime = Date.now();
+      }
+    }, { passive: true });
+
     fabEl.addEventListener('click', function () {
+      var now = Date.now();
+      if (pageTouchMoved && now - pageTouchMovedTime < 300) return;
       if (state.open) closePanel(); else openPanel();
     });
 
