@@ -8,18 +8,32 @@
     return scripts[scripts.length - 1] || null;
   })();
 
+  // Reads an attribute by name, falling back to a trimmed-name scan so that
+  // stray leading/trailing spaces in the attribute name (common with copy-paste
+  // into site builders or tag managers) don't silently drop the value.
+  function attr(el, name) {
+    if (!el) return null;
+    var val = el.getAttribute(name);
+    if (val !== null) return val;
+    var attrs = el.attributes;
+    for (var i = 0; i < attrs.length; i++) {
+      if (attrs[i].name.trim() === name) return attrs[i].value;
+    }
+    return null;
+  }
+
   var cfg = {
-    id:              scriptEl && scriptEl.getAttribute('data-contextus-id')      || '',
-    position:        scriptEl && scriptEl.getAttribute('data-position')           || 'bottom-right',
-    offset:          parseInt(scriptEl && scriptEl.getAttribute('data-offset') || '20', 10),
-    greeting:        scriptEl && scriptEl.getAttribute('data-greeting')           || 'Hi! 👋 How can I help you today?',
-    badge:           scriptEl && scriptEl.getAttribute('data-badge')              || '',
-    color:           scriptEl && scriptEl.getAttribute('data-color')              || '#000000',
-    lang:            scriptEl && scriptEl.getAttribute('data-lang')               || 'en',
-    autoOpen:        scriptEl && scriptEl.getAttribute('data-open') === 'true',
-    name:            scriptEl && scriptEl.getAttribute('data-name')               || 'contextus',
-    apiUrl:          scriptEl && scriptEl.getAttribute('data-api-url')            || 'https://contextus-2d16.onrender.com',
-    knowledgeBaseId: scriptEl && scriptEl.getAttribute('data-knowledge-base-id') || '',
+    id:              attr(scriptEl, 'data-contextus-id')      || '',
+    position:        attr(scriptEl, 'data-position')           || 'bottom-right',
+    offset:          parseInt(attr(scriptEl, 'data-offset') || '20', 10),
+    greeting:        attr(scriptEl, 'data-greeting')           || 'Hi! 👋 How can I help you today?',
+    badge:           attr(scriptEl, 'data-badge')              || '',
+    color:           attr(scriptEl, 'data-color')              || '#000000',
+    lang:            attr(scriptEl, 'data-lang')               || 'en',
+    autoOpen:        attr(scriptEl, 'data-open') === 'true',
+    name:            attr(scriptEl, 'data-name')               || 'contextus',
+    apiUrl:          attr(scriptEl, 'data-api-url')            || 'https://contextus-2d16.onrender.com',
+    knowledgeBaseId: attr(scriptEl, 'data-knowledge-base-id') || '',
   };
 
   // ── Analytics ─────────────────────────────────────────────────────────────────
