@@ -631,15 +631,18 @@
 
     var pageTouchMoved = false;
     var pageTouchMovedTime = 0;
+    var pageTouchStartX = 0;
     var pageTouchStartY = 0;
     document.addEventListener('touchstart', function (e) {
       pageTouchMoved = false;
+      pageTouchStartX = e.touches[0].clientX;
       pageTouchStartY = e.touches[0].clientY;
     }, { passive: true });
 
     document.addEventListener('touchmove', function (e) {
+      var dx = Math.abs(e.touches[0].clientX - pageTouchStartX);
       var dy = Math.abs(e.touches[0].clientY - pageTouchStartY);
-      if (dy > 5) {
+      if (dx > 5 || dy > 5) {
         pageTouchMoved = true;
         pageTouchMovedTime = Date.now();
       }
