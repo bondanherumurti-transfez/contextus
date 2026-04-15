@@ -29,6 +29,9 @@ Playwright end-to-end tests covering phase transitions, animation behavior, and 
 **Phase 3.7 — Floating widget: complete.**
 New embeddable floating chat widget (FAB + panel) built in vanilla JS with Shadow DOM isolation. Wired to the real backend via SSE streaming. Mobile-first with dark theme, virtual keyboard handling, and iOS auto-zoom prevention. 54 Playwright tests.
 
+**Phase 3.9 — Bubbles appearance: complete.**
+New `data-appearance="bubbles"` mode — pill-shaped quick-reply buttons float above the FAB before the panel is opened. Staggered entrance animation, session-driven pill refresh, one-way gate once conversation starts. 15 new Playwright tests.
+
 **Phase 3.8 — Test hardening: complete.**
 Backend unit + resilience tests (41 new), widget backend error handling tests (17 new), and GitHub Actions CI for the backend. No credentials required — all third-party calls mocked.
 
@@ -49,10 +52,11 @@ contextus/
 │   ├── widget.css                      # Widget styles
 │   ├── floating.js                     # Floating chat widget (Shadow DOM, FAB + panel)
 │   ├── floating-demo.html              # Floating widget local demo page
+│   ├── floating-bubbles-demo.html      # Bubbles appearance fixture (Playwright tests)
 │   ├── embed.js                        # Tier 2 inject script (placeholder)
 │   └── tests/
 │       ├── widget.spec.ts              # Playwright e2e tests — iframe widget (31 tests)
-│       ├── floating.spec.ts            # Playwright e2e tests — floating widget (62 tests)
+│       ├── floating.spec.ts            # Playwright e2e tests — floating widget (77 tests)
 │       └── helpers/
 │           └── mock-api.ts             # Route mock helpers (session, chat, hang, complete)
 ├── assets/
@@ -163,6 +167,7 @@ A self-contained floating chat button (FAB) + slide-up panel, injected via a sin
 | `data-name` | Widget header name (overridden by KB name from session API) |
 | `data-lang` | Language override (`en`, `id`) |
 | `data-auto-open` | Set to `"1"` to open on load |
+| `data-appearance` | Set to `"bubbles"` to enable floating quick-reply pills above the FAB |
 
 **JS API (via `window.contextus`):**
 
@@ -277,7 +282,7 @@ npm test
 | Pill interaction | Clicking pill triggers phase transition |
 | Backend error handling | Session 500/abort, chat 500 both attempts, dots removed, input re-enabled, error placeholder, retry-and-succeed, silent retry |
 
-**Floating widget — `floating.spec.ts` (62 tests)**
+**Floating widget — `floating.spec.ts` (77 tests)**
 
 | Group | Tests |
 |-------|-------|
@@ -293,6 +298,11 @@ npm test
 | Input font-size | ≥16px on desktop and mobile (iOS auto-zoom prevention) |
 | Eager session init | Brand name from KB, KB pills from session API, session ID reused (no extra `/api/session` call), fallbacks for empty name/pills |
 | Backend error handling | Session 500/abort, chat 500 both attempts, dots removed, input re-enabled, retry-and-succeed |
+| appearance=bubbles — initial render | Container exists in shadow DOM, exactly 3 buttons, all visible after entrance, non-empty `data-msg`, positioned above FAB, default mode has no bubbles |
+| appearance=bubbles — hide on open | FAB click hides bubbles, JS API `open()` hides bubbles |
+| appearance=bubbles — re-appear after close | Bubbles re-appear when panel is closed without sending a message |
+| appearance=bubbles — bubble click | Opens panel, auto-sends text, bubbles stay hidden after conversation starts |
+| appearance=bubbles — session pill refresh | Updates text when session returns custom pills, refreshed pills visible, does not update if conversation already started |
 
 ### CI
 
@@ -609,6 +619,7 @@ Fonts: **DM Sans** (400, 500, 700) + **DM Mono** (400, 500) — Google Fonts.
 | 3.6 — Widget tests + Analytics | **Done** | Playwright e2e tests, Vercel Web Analytics, GitHub Actions CI |
 | 3.7 — Floating widget | **Done** | Shadow DOM FAB widget, SSE streaming, mobile dark theme, keyboard handling, 54 tests |
 | 3.8 — Test hardening | **Done** | Backend unit/resilience tests (41), widget error tests (17), backend CI workflow |
+| 3.9 — Bubbles appearance | **Done** | `data-appearance="bubbles"` — floating pill FAB, staggered animation, session refresh, 15 tests |
 | 4 — Lead delivery | Not started | WhatsApp/email delivery of lead briefs |
 | 5 — Platform plugins | Not started | WordPress, Wix (build at traction) |
 
