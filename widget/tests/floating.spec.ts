@@ -1007,3 +1007,271 @@ test.describe('Scroll-to-bottom button', () => {
     expect(atBottom).toBe(false);
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// data-appearance="bubbles"
+// ══════════════════════════════════════════════════════════════════════════════
+
+const BUBBLES_URL = '/widget/floating-bubbles-demo.html';
+
+// Extend sel with bubbles-specific selectors
+const bsel = {
+  ...sel,
+  fabBubbles: '.ctxf-fab-bubbles',
+  fabBubble:  '.ctxf-fab-bubble',
+};
+
+/** Wait for fab bubbles to finish their staggered entrance (400ms delay + 3×110ms). */
+async function waitForBubblesVisible(page: Page): Promise<void> {
+  await page.waitForTimeout(800);
+}
+
+test.describe('appearance=bubbles — initial render', () => {
+  test('renders .ctxf-fab-bubbles container in shadow DOM', async ({ page }) => {
+    await page.goto(BUBBLES_URL);
+    await waitForBubblesVisible(page);
+    const count = await page.evaluate(() =>
+      document.querySelector('#ctxf-host')?.shadowRoot
+        ?.querySelectorAll('.ctxf-fab-bubbles').length ?? 0
+    );
+    expect(count).toBe(1);
+  });
+
+  test('renders exactly 3 .ctxf-fab-bubble buttons', async ({ page }) => {
+    await page.goto(BUBBLES_URL);
+    await waitForBubblesVisible(page);
+    const count = await page.evaluate(() =>
+      document.querySelector('#ctxf-host')?.shadowRoot
+        ?.querySelectorAll('.ctxf-fab-bubble').length ?? 0
+    );
+    expect(count).toBe(3);
+  });
+
+  test('all bubble buttons have ctxf-bubble-visible class after entrance', async ({ page }) => {
+    await page.goto(BUBBLES_URL);
+    await waitForBubblesVisible(page);
+    const allVisible = await page.evaluate(() => {
+      const btns = document.querySelector('#ctxf-host')?.shadowRoot
+        ?.querySelectorAll('.ctxf-fab-bubble') ?? [];
+      return Array.from(btns).every(b => b.classList.contains('ctxf-bubble-visible'));
+    });
+    expect(allVisible).toBe(true);
+  });
+
+  test('each bubble button has a non-empty data-msg attribute', async ({ page }) => {
+    await page.goto(BUBBLES_URL);
+    await waitForBubblesVisible(page);
+    const msgs = await page.evaluate(() =>
+      Array.from(
+        document.querySelector('#ctxf-host')?.shadowRoot
+          ?.querySelectorAll('.ctxf-fab-bubble') ?? []
+      ).map(b => (b as HTMLElement).dataset.msg ?? '')
+    );
+    expect(msgs).toHaveLength(3);
+    msgs.forEach(m => expect(m.length).toBeGreaterThan(0));
+  });
+
+  test('bubbles are positioned above the FAB (lower y value)', async ({ page }) => {
+    await page.goto(BUBBLES_URL);
+    await waitForBubblesVisible(page);
+    const fabBox     = await page.locator(bsel.fab).boundingBox();
+    const bubblesBox = await page.locator(bsel.fabBubbles).boundingBox();
+    expect(fabBox).not.toBeNull();
+    expect(bubblesBox).not.toBeNull();
+    // bubbles container bottom edge must sit above (smaller y) than FAB top edge
+    expect(bubblesBox!.y + bubblesBox!.height).toBeLessThan(fabBox!.y);
+  });
+
+  test('default mode (no data-appearance) does NOT render .ctxf-fab-bubbles', async ({ page }) => {
+    await page.goto(URL);
+    await page.waitForTimeout(500);
+    const count = await page.evaluate(() =>
+      document.querySelector('#ctxf-host')?.shadowRoot
+        ?.querySelectorAll('.ctxf-fab-bubbles').length ?? 0
+    );
+    expect(count).toBe(0);
+  });
+});
+
+test.describe('appearance=bubbles — hide on panel open', () => {
+  test('bubbles get ctxf-bubble-hiding class when FAB is clicked', async ({ page }) => {
+    await page.goto(BUBBLES_URL);
+    await waitForBubblesVisible(page);
+    await page.locator(bsel.fab).click();
+    await expect(page.locator(bsel.panel)).toHaveClass(/ctxf-open/);
+    const anyHiding = await page.evaluate(() =>
+      Array.from(
+        document.querySelector('#ctxf-host')?.shadowRoot
+          ?.querySelectorAll('.ctxf-fab-bubble') ?? []
+      ).some(b => b.classList.contains('ctxf-bubble-hiding'))
+    );
+    expect(anyHiding).toBe(true);
+  });
+
+  test('bubbles hide when panel is opened via JS API', async ({ page }) => {
+    await page.goto(BUBBLES_URL);
+    await waitForBubblesVisible(page);
+    await page.evaluate(() => (window as any).contextus.open());
+    await expect(page.locator(bsel.panel)).toHaveClass(/ctxf-open/);
+    const noneVisible = await page.evaluate(() =>
+      Array.from(
+        document.querySelector('#ctxf-host')?.shadowRoot
+          ?.querySelectorAll('.ctxf-fab-bubble') ?? []
+      ).every(b => !b.classList.contains('ctxf-bubble-visible') || b.classList.contains('ctxf-bubble-hiding'))
+    );
+    expect(noneVisible).toBe(true);
+  });
+});
+
+test.describe('appearance=bubbles — re-appear after close (no conversation)', () => {
+  test('bubbles re-appear after panel is closed without sending a message', async ({ page }) => {
+    await page.goto(BUBBLES_URL);
+    await waitForBubblesVisible(page);
+
+    // Open and immediately close without sending
+    await page.evaluate(() => (window as any).contextus.open());
+    await expect(page.locator(bsel.panel)).toHaveClass(/ctxf-open/);
+    await page.evaluate(() => (window as any).contextus.close());
+    await expect(page.locator(bsel.panel)).not.toHaveClass(/ctxf-open/);
+
+    // Wait for re-entrance animation (300ms delay + stagger)
+    await page.waitForTimeout(800);
+
+    const allVisible = await page.evaluate(() =>
+      Array.from(
+        document.querySelector('#ctxf-host')?.shadowRoot
+          ?.querySelectorAll('.ctxf-fab-bubble') ?? []
+      ).every(b => b.classList.contains('ctxf-bubble-visible') && !b.classList.contains('ctxf-bubble-hiding'))
+    );
+    expect(allVisible).toBe(true);
+  });
+});
+
+test.describe('appearance=bubbles — bubble click opens panel and sends message', () => {
+  test('clicking a bubble opens the panel', async ({ page }) => {
+    await mockSession(page);
+    await mockChat(page, 'Thanks for reaching out!');
+    await page.goto(BUBBLES_URL);
+    await waitForBubblesVisible(page);
+
+    await page.locator(bsel.fabBubble).first().click();
+    await expect(page.locator(bsel.panel)).toHaveClass(/ctxf-open/);
+  });
+
+  test('clicking a bubble auto-sends its text as a visitor message', async ({ page }) => {
+    await mockSession(page);
+    await mockChat(page, 'Thanks for reaching out!');
+    await page.goto(BUBBLES_URL);
+    await waitForBubblesVisible(page);
+
+    // Grab the pill text before clicking
+    const pillText = await page.evaluate(() =>
+      (document.querySelector('#ctxf-host')?.shadowRoot
+        ?.querySelector('.ctxf-fab-bubble') as HTMLElement | null)
+        ?.dataset.msg ?? ''
+    );
+    expect(pillText.length).toBeGreaterThan(0);
+
+    await page.locator(bsel.fabBubble).first().click();
+    await expect(page.locator(bsel.panel)).toHaveClass(/ctxf-open/);
+
+    // Visitor bubble should contain the pill text
+    await expect(page.locator(bsel.bubbleVisitor).first()).toContainText(pillText);
+  });
+
+  test('bubbles stay hidden after conversation starts (panel re-closed)', async ({ page }) => {
+    await mockSession(page);
+    await mockChat(page, 'Got it!');
+    await page.goto(BUBBLES_URL);
+    await waitForBubblesVisible(page);
+
+    // Click bubble → sends message → conversation started
+    await page.locator(bsel.fabBubble).first().click();
+    await expect(page.locator(bsel.panel)).toHaveClass(/ctxf-open/);
+    await expect(page.locator(bsel.bubbleVisitor).first()).toBeVisible();
+
+    // Close the panel
+    await page.evaluate(() => (window as any).contextus.close());
+    await expect(page.locator(bsel.panel)).not.toHaveClass(/ctxf-open/);
+
+    // Wait longer than the re-entrance delay
+    await page.waitForTimeout(800);
+
+    // Bubbles must NOT have re-appeared
+    const anyVisible = await page.evaluate(() =>
+      Array.from(
+        document.querySelector('#ctxf-host')?.shadowRoot
+          ?.querySelectorAll('.ctxf-fab-bubble') ?? []
+      ).some(b => b.classList.contains('ctxf-bubble-visible') && !b.classList.contains('ctxf-bubble-hiding'))
+    );
+    expect(anyVisible).toBe(false);
+  });
+});
+
+test.describe('appearance=bubbles — session pill refresh', () => {
+  test('bubbles update text when session returns custom pills', async ({ page }) => {
+    const customPills = ['Custom pill one', 'Custom pill two', 'Custom pill three'];
+    await mockSession(page, { session_id: 'test-bubbles', pills: customPills });
+    await page.goto(BUBBLES_URL);
+
+    // Wait for session fetch + re-render + entrance animation
+    await page.waitForTimeout(1000);
+
+    const msgs = await page.evaluate(() =>
+      Array.from(
+        document.querySelector('#ctxf-host')?.shadowRoot
+          ?.querySelectorAll('.ctxf-fab-bubble') ?? []
+      ).map(b => (b as HTMLElement).dataset.msg ?? '')
+    );
+    expect(msgs).toEqual(customPills);
+  });
+
+  test('refreshed bubble buttons still have ctxf-bubble-visible after session update', async ({ page }) => {
+    const customPills = ['Pill A', 'Pill B', 'Pill C'];
+    await mockSession(page, { session_id: 'test-bubbles', pills: customPills });
+    await page.goto(BUBBLES_URL);
+    await page.waitForTimeout(1000);
+
+    const allVisible = await page.evaluate(() =>
+      Array.from(
+        document.querySelector('#ctxf-host')?.shadowRoot
+          ?.querySelectorAll('.ctxf-fab-bubble') ?? []
+      ).every(b => b.classList.contains('ctxf-bubble-visible'))
+    );
+    expect(allVisible).toBe(true);
+  });
+
+  test('session pills do NOT update bubbles if conversation already started', async ({ page }) => {
+    // Slow session so we can click a bubble before it resolves
+    let resolveSession!: (value: unknown) => void;
+    await page.route('**/api/session', async route => {
+      await new Promise(r => { resolveSession = r; });
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ session_id: 'late-session', pills: ['Late pill 1', 'Late pill 2', 'Late pill 3'] }),
+      });
+    });
+    await mockChat(page, 'Hi!');
+    await page.goto(BUBBLES_URL);
+    await waitForBubblesVisible(page);
+
+    // Click bubble before session resolves — starts conversation
+    await page.locator(bsel.fabBubble).first().click();
+    await expect(page.locator(bsel.panel)).toHaveClass(/ctxf-open/);
+
+    // Now let the session resolve with new pills
+    await page.evaluate(() => {}); // flush microtasks
+    resolveSession(undefined);
+    await page.waitForTimeout(400);
+
+    // Bubbles should still be hidden (convoStarted=true), not re-rendered
+    const anyVisible = await page.evaluate(() =>
+      Array.from(
+        document.querySelector('#ctxf-host')?.shadowRoot
+          ?.querySelectorAll('.ctxf-fab-bubble') ?? []
+      ).some(b => b.classList.contains('ctxf-bubble-visible') && !b.classList.contains('ctxf-bubble-hiding'))
+    );
+    expect(anyVisible).toBe(false);
+  });
+});

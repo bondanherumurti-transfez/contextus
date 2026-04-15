@@ -34,6 +34,7 @@
     name:            attr(scriptEl, 'data-name')               || 'contextus',
     apiUrl:          attr(scriptEl, 'data-api-url')            || 'https://contextus-2d16.onrender.com',
     knowledgeBaseId: attr(scriptEl, 'data-knowledge-base-id') || '',
+    appearance:      attr(scriptEl, 'data-appearance')         || 'default',
   };
 
   // ── Analytics ─────────────────────────────────────────────────────────────────
@@ -82,6 +83,7 @@
     greeted: false,
     sessionId: null,
     savedScrollY: 0,
+    fabBubblesConvoStarted: false, // once true, bubbles never re-appear
   };
 
   // ── Event emitter ─────────────────────────────────────────────────────────────
@@ -192,6 +194,16 @@
     '.ctxf-scroll-btn.ctxf-visible{opacity:1;pointer-events:auto}',
     '.ctxf-scroll-btn svg{width:16px;height:16px;fill:#888}',
 
+    // ── FAB bubble pills (appearance="bubbles") ──
+    '.ctxf-fab-bubbles{position:absolute;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:auto}',
+    '.ctxf-fab-bubble{font-size:13px;color:#222;padding:12px 16px;background:#fff;border:.5px solid rgba(0,0,0,.06);border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.12),0 1px 4px rgba(0,0,0,.06);cursor:pointer;font-family:"DM Sans",sans-serif;text-align:left;line-height:1.4;max-width:260px;-webkit-tap-highlight-color:transparent;outline:none;opacity:0;transform:translateY(12px);transition:opacity .2s ease,transform .2s ease,box-shadow .15s ease}',
+    '.ctxf-fab-bubble::before{content:"→";margin-right:7px;opacity:.4;font-size:12px}',
+    '.ctxf-fab-bubble.ctxf-bubble-visible{opacity:1;transform:translateY(0)}',
+    '.ctxf-fab-bubble:hover{box-shadow:0 8px 28px rgba(0,0,0,.16),0 2px 6px rgba(0,0,0,.08);transform:translateY(-2px) scale(1.02)}',
+    '.ctxf-fab-bubble:active{transform:scale(.97)!important}',
+    '.ctxf-fab-bubble.ctxf-bubble-hiding{opacity:0!important;transform:translateY(10px)!important;pointer-events:none}',
+    '@keyframes ctxf-fab-bubbles-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}',
+
     // Quick reply pills
     '.ctxf-pills{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start;margin-top:10px}',
     '.ctxf-pill{font-size:11px;color:#666;padding:6px 12px;border:.5px solid #e0e0e0;border-radius:16px;background:#fff;cursor:pointer;transition:background .15s,border-color .15s;font-family:"DM Sans",sans-serif;-webkit-tap-highlight-color:transparent;outline:none;text-align:left}',
@@ -277,6 +289,10 @@
       // input stays pinned at the bottom just above the keyboard.
       '.ctxf-panel.ctxf-kbd .ctxf-header{display:none}',
       '.ctxf-panel.ctxf-kbd .ctxf-input-area{flex-shrink:0;border-top:none}',
+
+      // FAB bubble pills: white on dark background for contrast
+      '.ctxf-fab-bubble{background:#fff;color:#222;border:.5px solid rgba(0,0,0,.06);box-shadow:0 4px 24px rgba(0,0,0,.45),0 1px 6px rgba(0,0,0,.25)}',
+      '.ctxf-fab-bubble:hover{box-shadow:0 8px 32px rgba(0,0,0,.55),0 2px 8px rgba(0,0,0,.3)}',
     '}',
   ].join('');
 
@@ -376,6 +392,52 @@
     var scrollBtnEl  = shadow.getElementById('ctxf-scroll-btn');
     var pillsEl      = shadow.getElementById('ctxf-pills');
 
+    // ── FAB bubble pills (appearance="bubbles") ───────────────────────────────────
+
+    var fabBubblesEl = null;
+    var showFabBubbles = function () {};
+    var renderFabBubbles = function () {};
+
+    if (cfg.appearance === 'bubbles') {
+      fabBubblesEl = document.createElement('div');
+      fabBubblesEl.className = 'ctxf-fab-bubbles';
+      fabBubblesEl.style[isLeft ? 'left' : 'right'] = offset + 'px';
+      fabBubblesEl.style.bottom = (offset + 56 + 10) + 'px'; // 56 = FAB height, 10 = gap
+
+      renderFabBubbles = function (pills) {
+        fabBubblesEl.innerHTML = (pills || getPills()).map(function (p) {
+          return '<button class="ctxf-fab-bubble" data-msg="' + esc(p) + '">' + esc(p) + '</button>';
+        }).join('');
+      };
+
+      showFabBubbles = function () {
+        if (state.fabBubblesConvoStarted) return;
+        var btns = fabBubblesEl.querySelectorAll('.ctxf-fab-bubble');
+        btns.forEach(function (btn) {
+          btn.classList.remove('ctxf-bubble-visible', 'ctxf-bubble-hiding');
+        });
+        btns.forEach(function (btn, i) {
+          setTimeout(function () { btn.classList.add('ctxf-bubble-visible'); }, 80 + i * 110);
+        });
+      };
+
+      renderFabBubbles();
+      shadow.appendChild(fabBubblesEl);
+
+      // Pill click — open panel and auto-send the tapped message
+      fabBubblesEl.addEventListener('click', function (e) {
+        var btn = e.target.closest('.ctxf-fab-bubble');
+        if (!btn) return;
+        var msg = btn.getAttribute('data-msg');
+        state.fabBubblesConvoStarted = true;
+        openPanel();
+        setTimeout(function () { sendMessage(msg); }, 120);
+      });
+
+      // Staggered entrance on load
+      setTimeout(showFabBubbles, 400);
+    }
+
     // ── Scroll management ─────────────────────────────────────────────────────────
 
     var scrollPinned = true; // true = auto-scroll new messages to bottom
@@ -410,6 +472,14 @@
       fabEl.classList.add('ctxf-open');
       panelEl.classList.add('ctxf-open');
       badgeEl.classList.add('ctxf-hidden');
+
+      // Hide fab bubbles with exit animation
+      if (fabBubblesEl) {
+        fabBubblesEl.querySelectorAll('.ctxf-fab-bubble').forEach(function (btn) {
+          btn.classList.remove('ctxf-bubble-visible');
+          btn.classList.add('ctxf-bubble-hiding');
+        });
+      }
 
       // Lock body scroll on mobile — save scroll position first so page doesn't jump
       if (isMobile()) {
@@ -448,6 +518,11 @@
         window.scrollTo(0, state.savedScrollY || 0);
         panelEl.style.removeProperty('top');
         panelEl.style.removeProperty('height');
+      }
+
+      // Re-show fab bubbles if conversation hasn't started yet
+      if (fabBubblesEl && !state.fabBubblesConvoStarted) {
+        setTimeout(showFabBubbles, 300);
       }
 
       trackEvent('fab_close');
@@ -731,6 +806,12 @@
             pillsEl.innerHTML = data.pills.map(function (p) {
               return '<button class="ctxf-pill" data-msg="' + esc(p) + '">' + esc(p) + '</button>';
             }).join('');
+          }
+
+          // Also refresh fab bubble pills if still visible
+          if (fabBubblesEl && data.pills && data.pills.length && !state.fabBubblesConvoStarted) {
+            renderFabBubbles(data.pills);
+            showFabBubbles();
           }
         } catch (_) { /* fall through — sendMessage will create session lazily */ }
       })();

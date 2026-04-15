@@ -586,7 +586,7 @@ body { font-family: 'DM Sans', sans-serif; color: #000; background: #fff; font-s
     <span>contextus</span>
   </div>
   <h1>Floating Widget — Design Guideline</h1>
-  <div class="meta">VERSION 1.0 &middot; APRIL 2026 &middot; INTERNAL</div>
+  <div class="meta">VERSION 1.1 &middot; APRIL 2026 &middot; INTERNAL</div>
 </div>
 
 <!-- ── TOC ── -->
@@ -601,6 +601,7 @@ body { font-family: 'DM Sans', sans-serif; color: #000; background: #fff; font-s
   <a href="#embed"><span class="num">08</span>Embed script</a>
   <a href="#demo"><span class="num">09</span>Desktop demo</a>
   <a href="#mobile-demo"><span class="num">10</span>Mobile demo ★</a>
+  <a href="#floating-bubbles"><span class="num">11</span>Floating bubbles appearance ✦</a>
 </div>
 
 <!-- ══════════════════════════════════════ -->
@@ -2074,6 +2075,987 @@ window.contextus.on('lead', (data) =&gt; { ... });</div>
       msendMessage(minput.value);
     }
   });
+})();
+</script>
+
+<!-- ══════════════════════════════════════ -->
+<!-- 11. FLOATING BUBBLES APPEARANCE -->
+<!-- ══════════════════════════════════════ -->
+<div class="section" id="floating-bubbles">
+  <div class="section-label">11</div>
+  <h2>Floating bubbles appearance ✦</h2>
+  <p>An alternative FAB appearance mode where quick-reply pills "pop off the page" as standalone floating bubble cards stacked above the FAB — visible before the panel ever opens. Tapping a bubble opens the chat and auto-sends that message, giving visitors a frictionless one-tap entry into a contextual conversation.</p>
+
+  <div class="behavior" style="background: #f0f4ff; border-color: #3b5bdb;">
+    <strong style="color: #3b5bdb;">✦ New in v1.1:</strong> Floating bubbles is an opt-in appearance variant. Default behavior (pills inside the panel) is unchanged. Enable with <code>data-appearance="bubbles"</code> on the script tag.
+  </div>
+
+  <h3>How it works</h3>
+  <div class="behavior">
+    <strong>1. Page load</strong> — Three bubble pills appear above the FAB with a staggered entrance animation (bottom pill first, each 100ms apart).<br><br>
+    <strong>2. Pill tap</strong> — The bubbles animate out toward the FAB, the panel opens, and the pill text is auto-sent as a visitor message. The conversation starts immediately — no typing required.<br><br>
+    <strong>3. FAB tap (direct)</strong> — Panel opens normally with no pre-sent message. Bubbles animate out.<br><br>
+    <strong>4. Panel closed without conversation</strong> — Bubbles re-appear with entrance animation. Visitor gets another chance.<br><br>
+    <strong>5. Panel closed after conversation started</strong> — Bubbles stay hidden. Conversation context is preserved.
+  </div>
+
+  <h3>Configuration</h3>
+  <div class="code-block">&lt;script
+  src="https://widget.getcontextus.dev/floating.js"
+  data-contextus-id="YOUR_WIDGET_ID"
+  data-appearance="bubbles"
+  async
+&gt;&lt;/script&gt;</div>
+
+  <table class="spec-table">
+    <tr><th>Attribute</th><th>Value</th><th>Description</th></tr>
+    <tr><td>data-appearance</td><td>"bubbles"</td><td>Enables the floating bubbles mode. Omit or set "default" for standard behavior.</td></tr>
+  </table>
+
+  <h3>Bubble pill specifications</h3>
+  <table class="spec-table">
+    <tr><th>Property</th><th>Value</th></tr>
+    <tr><td>Background</td><td>#FFFFFF (light) / #2a2a2a (mobile dark)</td></tr>
+    <tr><td>Border radius</td><td>16px</td></tr>
+    <tr><td>Padding</td><td>12px 16px</td></tr>
+    <tr><td>Max width</td><td>220px</td></tr>
+    <tr><td>Font</td><td>13px / DM Sans / #222 (light) / #ddd (mobile dark)</td></tr>
+    <tr><td>Border</td><td>0.5px solid rgba(0,0,0,0.06)</td></tr>
+    <tr><td>Shadow (rest)</td><td>0 4px 20px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06)</td></tr>
+    <tr><td>Shadow (hover)</td><td>0 8px 28px rgba(0,0,0,0.16), 0 2px 6px rgba(0,0,0,0.08)</td></tr>
+    <tr><td>Gap between pills</td><td>8px</td></tr>
+    <tr><td>Horizontal alignment</td><td>Right-aligned with FAB (same offset)</td></tr>
+    <tr><td>Bottom position</td><td>FAB bottom offset + 56px (FAB height) + 14px (gap)</td></tr>
+  </table>
+
+  <h3>Bubble pill layout</h3>
+  <div class="code-block">          ┌──────────────────────────────────────────────────┐
+          │  Bagaimana saya dapat menghubungi tim Finfloo?   │  ← pill[0] (top)
+          └──────────────────────────────────────────────────┘
+          ┌──────────────────────────────────────────────────┐
+          │  Bagaimana Finfloo dapat membantu mengelola      │  ← pill[1]
+          │  pembukuan bisnis saya?                          │
+          └──────────────────────────────────────────────────┘
+          ┌──────────────────────────────────────────────────┐
+          │  Layanan perpajakan apa saja yang ditawarkan     │  ← pill[2] (bottom)
+          │  Finfloo?                                        │
+          └──────────────────────────────────────────────────┘
+                                    ┌────┐
+                                    │ 💬 │  ← FAB (56×56px)
+                                    └────┘</div>
+
+  <h3>State machine</h3>
+  <table class="spec-table">
+    <tr><th>State</th><th>Bubbles</th><th>FAB</th><th>Panel</th></tr>
+    <tr><td><strong>idle</strong> — page load, or panel closed pre-conversation</td><td>Visible, staggered entrance</td><td>Rest state</td><td>Hidden</td></tr>
+    <tr><td><strong>opening-from-bubble</strong> — pill tapped</td><td>Animate out → hidden</td><td>Opens (close icon)</td><td>Opens + auto-sends message</td></tr>
+    <tr><td><strong>opening-direct</strong> — FAB tapped</td><td>Animate out → hidden</td><td>Opens (close icon)</td><td>Opens normally</td></tr>
+    <tr><td><strong>conversation-active</strong> — first message sent</td><td>Hidden (permanently)</td><td>Open</td><td>Open, conversation in progress</td></tr>
+    <tr><td><strong>collapsed-post-chat</strong> — panel closed after conversation</td><td>Hidden (stay hidden)</td><td>Rest state</td><td>Hidden</td></tr>
+  </table>
+
+  <h3>Animations</h3>
+  <div class="anim-spec">
+    <div class="anim-item">
+      <div class="anim-item-label">Entrance (per pill)</div>
+      <div class="anim-item-value">translateY(12px) → 0 + fade</div>
+      <div class="anim-item-desc">200ms ease — staggered 100ms per pill (bottom first)</div>
+    </div>
+    <div class="anim-item">
+      <div class="anim-item-label">Exit (on open)</div>
+      <div class="anim-item-value">0 → translateY(10px) + fade out</div>
+      <div class="anim-item-desc">150ms ease — all pills together</div>
+    </div>
+    <div class="anim-item">
+      <div class="anim-item-label">Hover lift</div>
+      <div class="anim-item-value">translateY(-2px) scale(1.02)</div>
+      <div class="anim-item-desc">150ms ease + enhanced shadow</div>
+    </div>
+    <div class="anim-item">
+      <div class="anim-item-label">Press</div>
+      <div class="anim-item-value">scale(0.97)</div>
+      <div class="anim-item-desc">100ms ease</div>
+    </div>
+  </div>
+
+  <h3>Mobile behavior (dark theme)</h3>
+  <div class="behavior">
+    <strong>Same layout, dark palette:</strong> Bubble pills switch to the dark theme (#2a2a2a background, #ddd text, lighter border) to match the mobile full-screen dark chat panel.<br><br>
+    <strong>Pulse rings still animate:</strong> The FAB pulse rings continue to draw attention even with bubbles visible — they complement each other rather than conflict.<br><br>
+    <strong>Tap target:</strong> Each pill is at minimum 44px tall to meet iOS/Android touch guidelines. Long pill text wraps rather than truncating.<br><br>
+    <strong>Panel open on mobile:</strong> Bubbles animate out, full-screen takeover panel slides up as usual.
+  </div>
+
+  <h3>Source of pill content</h3>
+  <div class="behavior">
+    <strong>Same pipeline as standard pills</strong> — bubbles are populated from the same <code>pills[]</code> array returned by <code>/api/session</code>. Before the session resolves, fallback pills are shown. Once the session returns knowledge-base-specific suggestions, they replace the fallbacks in-place (with a subtle fade transition if bubbles are still visible).<br><br>
+    <strong>Always exactly 3 pills</strong> — the backend guarantees 3 entries. The UI should always render all 3.
+  </div>
+
+  <h3>Differences from standard pills</h3>
+  <table class="spec-table">
+    <tr><th>Aspect</th><th>Standard pills</th><th>Floating bubbles</th></tr>
+    <tr><td>Location</td><td>Inside panel, below input area</td><td>Outside panel, above FAB — visible before panel opens</td></tr>
+    <tr><td>Visibility timing</td><td>After panel opens</td><td>From page load, before any interaction</td></tr>
+    <tr><td>On click</td><td>Sends message (panel already open)</td><td>Opens panel AND auto-sends message</td></tr>
+    <tr><td>After first message</td><td>Hidden permanently</td><td>Hidden permanently</td></tr>
+    <tr><td>Style</td><td>Compact chip (6px 12px padding, 11px font)</td><td>Prominent card (12px 16px padding, 13px font, elevated shadow)</td></tr>
+    <tr><td>Hover effect</td><td>Background lighten only</td><td>Lift + scale + deeper shadow</td></tr>
+  </table>
+
+  <!-- Interactive Demo -->
+  <h3>Interactive demo</h3>
+  <p>Floating bubbles appear above the FAB. Click a bubble to open the chat with that message pre-sent, or click the FAB directly to open normally.</p>
+
+  <div class="fb-demo-container" id="fb-demo">
+    <div class="fb-demo-website">
+      <div class="fb-demo-website-header"><span></span><span></span><span></span></div>
+      <div class="fb-demo-website-content">
+        <div class="fb-demo-line" style="width:55%"></div>
+        <div class="fb-demo-line" style="width:85%"></div>
+        <div class="fb-demo-line" style="width:70%"></div>
+        <div class="fb-demo-line" style="width:40%"></div>
+      </div>
+    </div>
+
+    <!-- Floating bubble pills -->
+    <div class="fb-bubbles" id="fb-bubbles">
+      <div class="fb-bubble" data-msg="Bagaimana saya dapat menghubungi tim Finfloo?" id="fb-b0">Bagaimana saya dapat menghubungi tim Finfloo?</div>
+      <div class="fb-bubble" data-msg="Bagaimana Finfloo dapat membantu mengelola pembukuan bisnis saya?" id="fb-b1">Bagaimana Finfloo dapat membantu mengelola pembukuan bisnis saya?</div>
+      <div class="fb-bubble" data-msg="Layanan perpajakan apa saja yang ditawarkan Finfloo?" id="fb-b2">Layanan perpajakan apa saja yang ditawarkan Finfloo?</div>
+    </div>
+
+    <!-- Chat panel -->
+    <div class="fb-panel" id="fb-panel">
+      <div class="fb-panel-header">
+        <div class="fb-panel-avatar">C</div>
+        <div class="fb-panel-info">
+          <div class="fb-panel-name">contextus</div>
+          <div class="fb-panel-status">Powered by AI</div>
+        </div>
+        <button class="fb-panel-close" id="fb-close">
+          <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"/></svg>
+        </button>
+      </div>
+      <div class="fb-panel-messages" id="fb-messages"></div>
+      <div class="fb-panel-input-area">
+        <div class="fb-panel-input-wrap">
+          <input class="fb-panel-input" id="fb-input" type="text" placeholder="Type a message...">
+          <button class="fb-panel-send" id="fb-send">
+            <svg viewBox="0 0 16 16"><path d="M2.5 8L13.5 2.5L10 8L13.5 13.5L2.5 8Z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="fb-panel-footer">powered by <a href="#">contextus</a></div>
+    </div>
+
+    <!-- FAB -->
+    <div class="fab" id="fb-fab">
+      <svg class="icon-chat" viewBox="0 0 24 24"><path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H6L4 18V4H20V16Z"/></svg>
+      <svg class="icon-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"/></svg>
+    </div>
+
+    <div class="demo-label" id="fb-label">FLOATING BUBBLES VISIBLE — CLICK A BUBBLE OR THE FAB</div>
+  </div>
+
+  <!-- Mobile Phone Frame Demo -->
+  <h3>Mobile demo ★</h3>
+  <p>On mobile, bubbles render in the dark theme above the FAB with pulse rings. Tap a bubble to slide up the full-screen chat panel with that message auto-sent. Tap the FAB to open without a pre-sent message.</p>
+
+  <div class="fb-mob-wrapper">
+    <div class="fb-mob-frame">
+      <div class="fb-mob-notch"></div>
+      <div class="fb-mob-screen">
+
+        <!-- Simulated website -->
+        <div class="fb-mob-website" id="fbm-website">
+          <div class="fb-mob-nav">
+            <div class="fb-mob-nav-logo"></div>
+            <div class="fb-mob-nav-menu">☰</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:20px;">
+            <div style="width:75%;height:14px;background:#f0f0f0;border-radius:4px"></div>
+            <div style="width:55%;height:14px;background:#f0f0f0;border-radius:4px"></div>
+            <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+              <div style="width:90%;height:8px;background:#f5f5f5;border-radius:3px"></div>
+              <div style="width:80%;height:8px;background:#f5f5f5;border-radius:3px"></div>
+              <div style="width:65%;height:8px;background:#f5f5f5;border-radius:3px"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Full-screen dark chat panel -->
+        <div class="fb-mob-fullscreen" id="fbm-fullscreen">
+          <div class="fb-mob-fs-header">
+            <button class="fb-mob-fs-back" id="fbm-back">
+              <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </button>
+            <div class="fb-mob-fs-avatar">F</div>
+            <div class="fb-mob-fs-info">
+              <div class="fb-mob-fs-name">Finfloo</div>
+              <div class="fb-mob-fs-status">AI assistant</div>
+            </div>
+          </div>
+          <div class="fb-mob-fs-messages" id="fbm-messages">
+            <div class="fb-mob-fs-msgs-inner" id="fbm-msgs-inner"></div>
+          </div>
+          <div class="fb-mob-fs-input-area">
+            <div class="fb-mob-fs-input-wrap">
+              <input class="fb-mob-fs-input" id="fbm-input" placeholder="Tanya sesuatu...">
+              <button class="fb-mob-fs-send" id="fbm-send">
+                <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+              </button>
+            </div>
+            <div class="fb-mob-fs-footer">powered by <a href="#">contextus</a></div>
+          </div>
+        </div>
+
+        <!-- Dark bubble pills above FAB -->
+        <div class="fb-mob-bubbles" id="fbm-bubbles">
+          <div class="fb-mob-bubble" data-msg="Bagaimana saya dapat menghubungi tim Finfloo?">Bagaimana saya dapat menghubungi tim Finfloo?</div>
+          <div class="fb-mob-bubble" data-msg="Bagaimana Finfloo dapat membantu mengelola pembukuan bisnis saya?">Bagaimana Finfloo dapat membantu mengelola pembukuan bisnis saya?</div>
+          <div class="fb-mob-bubble" data-msg="Layanan perpajakan apa saja yang ditawarkan Finfloo?">Layanan perpajakan apa saja yang ditawarkan Finfloo?</div>
+        </div>
+
+        <!-- FAB with double pulse rings -->
+        <div class="fb-mob-fab-wrap" id="fbm-fab-wrap">
+          <div class="fb-mob-pulse-ring"></div>
+          <div class="fb-mob-pulse-ring"></div>
+          <div class="fb-mob-fab" id="fbm-fab">
+            <svg viewBox="0 0 24 24"><path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H6L4 18V4H20V16Z"/></svg>
+          </div>
+        </div>
+
+      </div>
+      <div class="fb-mob-home-bar"></div>
+    </div>
+    <div class="fb-mob-label" id="fbm-label">TAP A BUBBLE OR THE FAB TO OPEN CHAT</div>
+  </div>
+</div>
+
+<style>
+/* ── Floating Bubbles Demo ── */
+.fb-demo-container {
+  position: relative;
+  height: 460px;
+  background: linear-gradient(135deg, #f8f8f8 0%, #f0f0f0 100%);
+  border: 0.5px solid #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+}
+.fb-demo-website {
+  position: absolute;
+  top: 20px; left: 20px; right: 20px; bottom: 80px;
+  background: #fff;
+  border-radius: 8px;
+  border: 0.5px solid #e0e0e0;
+  padding: 20px;
+}
+.fb-demo-website-header { display: flex; gap: 6px; margin-bottom: 12px; }
+.fb-demo-website-header span { width: 8px; height: 8px; border-radius: 50%; background: #e0e0e0; }
+.fb-demo-website-content { display: flex; flex-direction: column; gap: 8px; }
+.fb-demo-line { height: 8px; background: #f0f0f0; border-radius: 4px; }
+
+/* Bubble pills container */
+.fb-bubbles {
+  position: absolute;
+  right: 20px;
+  bottom: 90px; /* above FAB */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: auto;
+}
+.fb-bubble {
+  background: #fff;
+  border-radius: 16px;
+  padding: 12px 16px;
+  max-width: 260px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #222;
+  font-family: 'DM Sans', sans-serif;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06);
+  border: 0.5px solid rgba(0,0,0,0.06);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.15s ease;
+}
+.fb-bubble.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.fb-bubble::before {
+  content: '→';
+  margin-right: 7px;
+  opacity: 0.4;
+  font-size: 12px;
+}
+.fb-bubble:hover {
+  box-shadow: 0 8px 28px rgba(0,0,0,0.16), 0 2px 6px rgba(0,0,0,0.08);
+  transform: translateY(-2px) scale(1.02);
+}
+.fb-bubble:active { transform: scale(0.97) !important; }
+.fb-bubble.hiding {
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+}
+
+/* Chat panel */
+.fb-panel {
+  position: absolute;
+  bottom: 90px;
+  right: 20px;
+  width: 300px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+  transform-origin: bottom right;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+  max-height: 340px;
+}
+.fb-panel.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.fb-panel-header {
+  padding: 12px 14px;
+  background: #fff;
+  border-bottom: 0.5px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.fb-panel-avatar {
+  width: 28px; height: 28px; background: #000; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #fff;
+}
+.fb-panel-info { flex: 1; }
+.fb-panel-name { font-size: 13px; font-weight: 500; color: #000; }
+.fb-panel-status { font-size: 11px; color: #888; }
+.fb-panel-close {
+  width: 26px; height: 26px; border: none; background: transparent;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; transition: background 0.15s;
+}
+.fb-panel-close:hover { background: #f0f0f0; }
+.fb-panel-close svg { width: 14px; height: 14px; fill: #888; }
+
+.fb-panel-messages {
+  flex: 1; overflow-y: auto; padding: 12px; min-height: 80px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.fb-panel-messages .msg-row { display: flex; gap: 8px; align-items: flex-start; }
+.fb-panel-messages .msg-row.visitor { justify-content: flex-end; }
+.fb-panel-messages .msg-avatar {
+  width: 22px; height: 22px; background: #000; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.fb-panel-messages .msg-bubble {
+  max-width: 75%; font-size: 13px; line-height: 1.5; color: #222;
+  animation: ctxf-msg-in 0.15s ease forwards;
+}
+@keyframes fb-msg-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.fb-panel-messages .msg-bubble.agent { padding: 2px 0; }
+.fb-panel-messages .msg-bubble.visitor {
+  background: #000; color: #fff; padding: 8px 12px;
+  border-radius: 12px; border-bottom-right-radius: 3px;
+}
+.fb-typing { display: flex; gap: 4px; padding: 6px 0; }
+.fb-typing span {
+  width: 5px; height: 5px; background: #bbb; border-radius: 50%;
+  animation: typing-bounce 1.2s infinite;
+}
+.fb-typing span:nth-child(2) { animation-delay: 0.15s; }
+.fb-typing span:nth-child(3) { animation-delay: 0.3s; }
+
+.fb-panel-input-area {
+  padding: 10px 14px 12px; border-top: 0.5px solid #e0e0e0; flex-shrink: 0;
+}
+.fb-panel-input-wrap {
+  display: flex; align-items: center; gap: 8px;
+  background: #f0f0f0; border: 0.5px solid #e0e0e0;
+  border-radius: 14px; padding: 8px 8px 8px 14px;
+}
+.fb-panel-input {
+  flex: 1; border: none; background: transparent;
+  font-size: 13px; font-family: 'DM Sans', sans-serif; color: #000; outline: none;
+}
+.fb-panel-input::placeholder { color: #bbb; }
+.fb-panel-send {
+  width: 30px; height: 30px; border: none; background: #e0e0e0;
+  border-radius: 7px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+}
+.fb-panel-send svg { width: 14px; height: 14px; fill: #999; transition: fill 0.15s; }
+.fb-panel-send.active { background: #000; }
+.fb-panel-send.active svg { fill: #fff; }
+.fb-panel-footer {
+  padding: 6px 14px; background: #fafafa; border-top: 0.5px solid #e0e0e0;
+  text-align: center; font-family: 'DM Mono', monospace; font-size: 10px; color: #bbb;
+  flex-shrink: 0;
+}
+.fb-panel-footer a { color: #888; text-decoration: none; }
+</style>
+
+<script>
+(function() {
+  var bubbles   = document.querySelectorAll('#fb-bubbles .fb-bubble');
+  var bubblesEl = document.getElementById('fb-bubbles');
+  var panel     = document.getElementById('fb-panel');
+  var fab       = document.getElementById('fb-fab');
+  var closeBtn  = document.getElementById('fb-close');
+  var input     = document.getElementById('fb-input');
+  var sendBtn   = document.getElementById('fb-send');
+  var messages  = document.getElementById('fb-messages');
+  var label     = document.getElementById('fb-label');
+
+  var isOpen = false;
+  var bubblesHidden = false;
+  var conversationStarted = false;
+
+  // Staggered entrance animation
+  function showBubbles() {
+    if (bubblesHidden) return;
+    bubbles.forEach(function(b) { b.classList.remove('hiding'); b.classList.remove('visible'); });
+    bubbles.forEach(function(b, i) {
+      setTimeout(function() { b.classList.add('visible'); }, 80 + i * 110);
+    });
+  }
+
+  function hideBubbles() {
+    bubbles.forEach(function(b) { b.classList.remove('visible'); b.classList.add('hiding'); });
+    setTimeout(function() {
+      bubbles.forEach(function(b) { b.classList.add('hiding'); });
+    }, 150);
+  }
+
+  function openPanel(autoMsg) {
+    if (isOpen) return;
+    isOpen = true;
+    hideBubbles();
+    fab.classList.add('open');
+    panel.classList.add('open');
+
+    // Greeting
+    appendMsg('agent', 'Hi! 👋 How can I help you today?');
+
+    if (autoMsg) {
+      conversationStarted = true;
+      bubblesHidden = true;
+      setTimeout(function() {
+        sendMessage(autoMsg);
+      }, 250);
+      label.textContent = 'BUBBLE TAPPED — PANEL OPENED + MESSAGE AUTO-SENT';
+    } else {
+      label.textContent = 'PANEL OPENED — TYPE A MESSAGE OR CLOSE';
+    }
+  }
+
+  function closePanel() {
+    if (!isOpen) return;
+    isOpen = false;
+    fab.classList.remove('open');
+    panel.classList.remove('open');
+    messages.innerHTML = '';
+
+    if (!conversationStarted) {
+      label.textContent = 'PANEL CLOSED — BUBBLES RE-APPEAR (NO MESSAGE SENT)';
+      setTimeout(showBubbles, 300);
+    } else {
+      label.textContent = 'CONVERSATION STARTED — BUBBLES STAY HIDDEN';
+    }
+  }
+
+  function appendMsg(role, text) {
+    var row = document.createElement('div');
+    row.className = 'msg-row' + (role === 'visitor' ? ' visitor' : '');
+    if (role === 'agent') {
+      row.innerHTML = '<div class="msg-avatar">C</div><div class="msg-bubble agent">' + text + '</div>';
+    } else {
+      row.innerHTML = '<div class="msg-bubble visitor">' + text + '</div>';
+    }
+    messages.appendChild(row);
+    messages.scrollTop = messages.scrollHeight;
+    return row;
+  }
+
+  function sendMessage(text) {
+    text = text && text.trim();
+    if (!text) return;
+    conversationStarted = true;
+    bubblesHidden = true;
+
+    appendMsg('visitor', text);
+    input.value = '';
+    sendBtn.classList.remove('active');
+
+    // Typing indicator
+    var trow = document.createElement('div');
+    trow.className = 'msg-row';
+    trow.innerHTML = '<div class="msg-avatar">C</div><div class="msg-bubble agent"><div class="fb-typing"><span></span><span></span><span></span></div></div>';
+    messages.appendChild(trow);
+    messages.scrollTop = messages.scrollHeight;
+    label.textContent = 'AGENT TYPING...';
+
+    setTimeout(function() {
+      trow.remove();
+      appendMsg('agent', 'Great question! contextus turns your website into a 24/7 AI-powered lead qualifier. Every visitor gets a personalized conversation — no forms, no friction.');
+      label.textContent = 'CONVERSATION ACTIVE — BUBBLES PERMANENTLY HIDDEN';
+    }, 1400);
+  }
+
+  // Bubble clicks
+  document.getElementById('fb-bubbles').addEventListener('click', function(e) {
+    var pill = e.target.closest('.fb-bubble');
+    if (!pill) return;
+    openPanel(pill.getAttribute('data-msg'));
+  });
+
+  // FAB click
+  fab.addEventListener('click', function() {
+    if (isOpen) closePanel(); else openPanel(null);
+  });
+
+  closeBtn.addEventListener('click', closePanel);
+
+  input.addEventListener('input', function() {
+    sendBtn.classList.toggle('active', !!input.value.trim());
+  });
+  sendBtn.addEventListener('click', function() { sendMessage(input.value); });
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && input.value.trim()) { e.preventDefault(); sendMessage(input.value); }
+  });
+
+  // Init
+  showBubbles();
+})();
+</script>
+
+<style>
+/* ── Mobile Floating Bubbles Demo ── */
+.fb-mob-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin: 1.5rem 0;
+}
+.fb-mob-frame {
+  width: 280px;
+  height: 580px;
+  background: #1a1a1a;
+  border-radius: 40px;
+  padding: 8px;
+  position: relative;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.4);
+}
+.fb-mob-notch {
+  position: absolute;
+  top: 8px; left: 50%; transform: translateX(-50%);
+  width: 90px; height: 28px;
+  background: #1a1a1a;
+  border-radius: 0 0 16px 16px;
+  z-index: 100;
+}
+.fb-mob-screen {
+  width: 100%; height: 100%;
+  background: #fff;
+  border-radius: 32px;
+  overflow: hidden;
+  position: relative;
+}
+.fb-mob-home-bar {
+  position: absolute;
+  bottom: 8px; left: 50%; transform: translateX(-50%);
+  width: 100px; height: 4px;
+  background: #666; border-radius: 2px;
+  z-index: 101;
+}
+
+/* Simulated website */
+.fb-mob-website {
+  padding: 48px 16px 16px;
+  transition: opacity 0.3s;
+}
+.fb-mob-website.hidden { opacity: 0.3; }
+.fb-mob-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.fb-mob-nav-logo {
+  width: 60px; height: 20px;
+  background: #e0e0e0; border-radius: 4px;
+}
+.fb-mob-nav-menu { font-size: 18px; color: #888; }
+
+/* Dark bubble pills */
+.fb-mob-bubbles {
+  position: absolute;
+  right: 14px;
+  bottom: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+  z-index: 40;
+}
+.fb-mob-bubble {
+  background: #fff;
+  color: #222;
+  border: 0.5px solid rgba(0,0,0,0.06);
+  border-radius: 14px;
+  padding: 10px 14px;
+  max-width: 200px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  font-family: 'DM Sans', sans-serif;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.45), 0 1px 6px rgba(0,0,0,0.25);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.15s ease;
+}
+.fb-mob-bubble.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.fb-mob-bubble::before {
+  content: '→';
+  margin-right: 7px;
+  opacity: 0.4;
+  font-size: 11px;
+}
+.fb-mob-bubble:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3); }
+.fb-mob-bubble:active { transform: scale(0.97) !important; }
+.fb-mob-bubble.hiding {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+
+/* FAB with pulse rings */
+.fb-mob-fab-wrap {
+  position: absolute;
+  bottom: 18px;
+  right: 14px;
+  width: 50px;
+  height: 50px;
+  z-index: 50;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.fb-mob-fab-wrap.hidden {
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+}
+@keyframes fb-mob-pulse {
+  0% { transform: scale(1); opacity: 0.45; }
+  100% { transform: scale(1.65); opacity: 0; }
+}
+.fb-mob-pulse-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: #000;
+}
+.fb-mob-pulse-ring:nth-child(1) { animation: fb-mob-pulse 2s ease-out infinite; }
+.fb-mob-pulse-ring:nth-child(2) { animation: fb-mob-pulse 2s ease-out infinite 1s; }
+.fb-mob-fab {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  background: #000;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  z-index: 10;
+}
+.fb-mob-fab svg { width: 22px; height: 22px; fill: #fff; }
+
+/* Full-screen dark panel */
+.fb-mob-fullscreen {
+  position: absolute;
+  inset: 0;
+  background: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  z-index: 90;
+  transform: translateY(100%);
+  transition: transform 0.3s ease-out;
+  border-radius: 32px;
+}
+.fb-mob-fullscreen.visible { transform: translateY(0); }
+
+.fb-mob-fs-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 44px 12px 12px;
+  background: #1a1a1a;
+  flex-shrink: 0;
+  border-bottom: 1px solid #333;
+}
+.fb-mob-fs-back {
+  width: 36px; height: 36px;
+  border: none; background: transparent; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px;
+}
+.fb-mob-fs-back svg { width: 20px; height: 20px; fill: #fff; }
+.fb-mob-fs-avatar {
+  width: 32px; height: 32px;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; color: #fff;
+}
+.fb-mob-fs-info { flex: 1; }
+.fb-mob-fs-name { font-size: 14px; font-weight: 500; color: #fff; }
+.fb-mob-fs-status { font-size: 11px; color: #888; }
+
+.fb-mob-fs-messages {
+  flex: 1; overflow-y: auto; padding: 16px;
+  background: #1a1a1a;
+  display: flex; flex-direction: column; min-height: 0;
+}
+.fb-mob-fs-msgs-inner {
+  display: flex; flex-direction: column;
+  margin-top: auto; width: 100%;
+  gap: 12px;
+}
+.fb-mob-msg { display: flex; gap: 8px; align-items: flex-start; }
+.fb-mob-msg.visitor { justify-content: flex-end; }
+.fb-mob-msg-av {
+  width: 26px; height: 26px;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff;
+  flex-shrink: 0;
+}
+.fb-mob-bubble-agent {
+  background: #2a2a2a;
+  color: #fff;
+  padding: 10px 13px;
+  border-radius: 14px;
+  border-top-left-radius: 3px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  max-width: 80%;
+}
+.fb-mob-bubble-visitor {
+  background: #fff;
+  color: #000;
+  padding: 10px 13px;
+  border-radius: 14px;
+  border-bottom-right-radius: 3px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  max-width: 80%;
+}
+.fb-mob-typing { display: flex; gap: 4px; padding: 4px 0; }
+.fb-mob-typing span {
+  width: 5px; height: 5px;
+  background: #666; border-radius: 50%;
+  animation: typing-bounce 1.2s infinite;
+}
+.fb-mob-typing span:nth-child(2) { animation-delay: 0.15s; }
+.fb-mob-typing span:nth-child(3) { animation-delay: 0.3s; }
+
+.fb-mob-fs-input-area {
+  padding: 10px 14px 24px;
+  background: #1a1a1a;
+  flex-shrink: 0;
+  border-top: 1px solid #333;
+}
+.fb-mob-fs-input-wrap {
+  display: flex; align-items: center; gap: 8px;
+  background: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 14px;
+  padding: 8px 8px 8px 14px;
+}
+.fb-mob-fs-input {
+  flex: 1; border: none; background: transparent;
+  font-size: 14px; font-family: 'DM Sans', sans-serif;
+  color: #fff; outline: none;
+}
+.fb-mob-fs-input::placeholder { color: #666; }
+.fb-mob-fs-send {
+  width: 34px; height: 34px;
+  border: none; background: #333;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+}
+.fb-mob-fs-send svg { width: 16px; height: 16px; fill: #666; transition: fill 0.15s; }
+.fb-mob-fs-send.active { background: #fff; }
+.fb-mob-fs-send.active svg { fill: #000; }
+
+.fb-mob-fs-footer {
+  text-align: center; font-size: 10px; color: #666;
+  margin-top: 8px; font-family: 'DM Mono', monospace;
+}
+.fb-mob-fs-footer a { color: #888; text-decoration: none; }
+
+.fb-mob-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; color: #888;
+  letter-spacing: 0.5px; text-transform: uppercase;
+  text-align: center;
+}
+</style>
+
+<script>
+(function() {
+  var mbubbles      = document.querySelectorAll('#fbm-bubbles .fb-mob-bubble');
+  var mbubblesEl    = document.getElementById('fbm-bubbles');
+  var mfullscreen   = document.getElementById('fbm-fullscreen');
+  var mfabWrap      = document.getElementById('fbm-fab-wrap');
+  var mfab          = document.getElementById('fbm-fab');
+  var mback         = document.getElementById('fbm-back');
+  var minput        = document.getElementById('fbm-input');
+  var msend         = document.getElementById('fbm-send');
+  var mmsgsInner    = document.getElementById('fbm-msgs-inner');
+  var mmessages     = document.getElementById('fbm-messages');
+  var mwebsite      = document.getElementById('fbm-website');
+  var mlabel        = document.getElementById('fbm-label');
+
+  var misOpen = false;
+  var mbubblesHidden = false;
+  var mconvoStarted = false;
+
+  function mshowBubbles() {
+    if (mbubblesHidden) return;
+    mbubbles.forEach(function(b) { b.classList.remove('hiding'); b.classList.remove('visible'); });
+    mbubbles.forEach(function(b, i) {
+      setTimeout(function() { b.classList.add('visible'); }, 80 + i * 110);
+    });
+  }
+
+  function mhideBubbles() {
+    mbubbles.forEach(function(b) {
+      b.classList.remove('visible');
+      b.classList.add('hiding');
+    });
+  }
+
+  function mopenPanel(autoMsg) {
+    if (misOpen) return;
+    misOpen = true;
+    mhideBubbles();
+    mfabWrap.classList.add('hidden');
+    mwebsite.classList.add('hidden');
+    mfullscreen.classList.add('visible');
+
+    // Greeting
+    mappendMsg('agent', 'Halo! 👋 Ada yang bisa saya bantu?');
+
+    if (autoMsg) {
+      mconvoStarted = true;
+      mbubblesHidden = true;
+      mlabel.textContent = 'BUBBLE DIKETUK — PANEL TERBUKA + PESAN TERKIRIM OTOMATIS';
+      setTimeout(function() { msendMessage(autoMsg); }, 260);
+    } else {
+      mlabel.textContent = 'PANEL TERBUKA — KETIK PESAN ATAU KEMBALI';
+    }
+  }
+
+  function mclosePanel() {
+    if (!misOpen) return;
+    misOpen = false;
+    mfullscreen.classList.remove('visible');
+    mfabWrap.classList.remove('hidden');
+    mwebsite.classList.remove('hidden');
+    mmsgsInner.innerHTML = '';
+
+    if (!mconvoStarted) {
+      mlabel.textContent = 'PANEL DITUTUP — BUBBLES MUNCUL KEMBALI';
+      setTimeout(mshowBubbles, 300);
+    } else {
+      mlabel.textContent = 'PERCAKAPAN DIMULAI — BUBBLES TETAP TERSEMBUNYI';
+    }
+  }
+
+  function mappendMsg(role, text) {
+    var row = document.createElement('div');
+    row.className = 'fb-mob-msg' + (role === 'visitor' ? ' visitor' : '');
+    if (role === 'agent') {
+      row.innerHTML = '<div class="fb-mob-msg-av">F</div><div class="fb-mob-bubble-agent">' + text + '</div>';
+    } else {
+      row.innerHTML = '<div class="fb-mob-bubble-visitor">' + text + '</div>';
+    }
+    mmsgsInner.appendChild(row);
+    mmessages.scrollTop = mmessages.scrollHeight;
+    return row;
+  }
+
+  function msendMessage(text) {
+    text = text && text.trim();
+    if (!text) return;
+    mconvoStarted = true;
+    mbubblesHidden = true;
+
+    mappendMsg('visitor', text);
+    minput.value = '';
+    msend.classList.remove('active');
+
+    var trow = document.createElement('div');
+    trow.className = 'fb-mob-msg';
+    trow.innerHTML = '<div class="fb-mob-msg-av">F</div><div class="fb-mob-bubble-agent"><div class="fb-mob-typing"><span></span><span></span><span></span></div></div>';
+    mmsgsInner.appendChild(trow);
+    mmessages.scrollTop = mmessages.scrollHeight;
+    mlabel.textContent = 'FINFLOO SEDANG MENGETIK...';
+
+    setTimeout(function() {
+      trow.remove();
+      mappendMsg('agent', 'Tentu! Tim Finfloo siap membantu. Silakan hubungi kami melalui email hello@finfloo.id atau WhatsApp di nomor yang tertera di website kami. 😊');
+      mlabel.textContent = 'PERCAKAPAN AKTIF — BUBBLES TERSEMBUNYI PERMANEN';
+    }, 1400);
+  }
+
+  // Bubble clicks
+  mbubblesEl.addEventListener('click', function(e) {
+    var pill = e.target.closest('.fb-mob-bubble');
+    if (!pill) return;
+    mopenPanel(pill.getAttribute('data-msg'));
+  });
+
+  mfab.addEventListener('click', function() { mopenPanel(null); });
+  mback.addEventListener('click', mclosePanel);
+
+  minput.addEventListener('input', function() {
+    msend.classList.toggle('active', !!minput.value.trim());
+  });
+  msend.addEventListener('click', function() { msendMessage(minput.value); });
+  minput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && minput.value.trim()) { e.preventDefault(); msendMessage(minput.value); }
+  });
+
+  // Init
+  mshowBubbles();
 })();
 </script>
 
