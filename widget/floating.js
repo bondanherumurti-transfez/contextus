@@ -197,6 +197,7 @@
     // ── FAB bubble pills (appearance="bubbles") ──
     '.ctxf-fab-bubbles{position:absolute;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:auto}',
     '.ctxf-fab-bubble{font-size:13px;color:#222;padding:12px 16px;background:#fff;border:.5px solid rgba(0,0,0,.06);border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.12),0 1px 4px rgba(0,0,0,.06);cursor:pointer;font-family:"DM Sans",sans-serif;text-align:left;line-height:1.4;max-width:260px;-webkit-tap-highlight-color:transparent;outline:none;opacity:0;transform:translateY(12px);transition:opacity .2s ease,transform .2s ease,box-shadow .15s ease}',
+    '.ctxf-fab-bubble:focus-visible{outline:2px solid #2563eb;outline-offset:2px;box-shadow:0 0 0 3px rgba(37,99,235,.25),0 4px 20px rgba(0,0,0,.12),0 1px 4px rgba(0,0,0,.06)}',
     '.ctxf-fab-bubble::before{content:"→";margin-right:7px;opacity:.4;font-size:12px}',
     '.ctxf-fab-bubble.ctxf-bubble-visible{opacity:1;transform:translateY(0)}',
     '.ctxf-fab-bubble:hover{box-shadow:0 8px 28px rgba(0,0,0,.16),0 2px 6px rgba(0,0,0,.08);transform:translateY(-2px) scale(1.02)}',
@@ -402,7 +403,7 @@
       fabBubblesEl = document.createElement('div');
       fabBubblesEl.className = 'ctxf-fab-bubbles';
       fabBubblesEl.style[isLeft ? 'left' : 'right'] = offset + 'px';
-      fabBubblesEl.style.bottom = (offset + 56 + 10) + 'px'; // 56 = FAB height, 10 = gap
+      fabBubblesEl.style.bottom = (offset + 56 + 14) + 'px'; // 56 = FAB height, 14 = gap
 
       renderFabBubbles = function (pills) {
         fabBubblesEl.innerHTML = (pills || getPills()).map(function (p) {
@@ -412,13 +413,18 @@
 
       showFabBubbles = function () {
         if (state.fabBubblesConvoStarted) return;
+        fabBubblesEl.style.pointerEvents = 'auto'; // restore before re-entrance
         var btns = fabBubblesEl.querySelectorAll('.ctxf-fab-bubble');
-        btns.forEach(function (btn) {
-          btn.classList.remove('ctxf-bubble-visible', 'ctxf-bubble-hiding');
-        });
-        btns.forEach(function (btn, i) {
-          setTimeout(function () { btn.classList.add('ctxf-bubble-visible'); }, 80 + i * 110);
-        });
+        var i;
+        for (i = 0; i < btns.length; i++) {
+          btns[i].classList.remove('ctxf-bubble-visible', 'ctxf-bubble-hiding');
+        }
+        // Stagger bottom-first (pill[2] animates at 80ms, pill[0] last)
+        for (i = 0; i < btns.length; i++) {
+          (function (btn, reverseIndex) {
+            setTimeout(function () { btn.classList.add('ctxf-bubble-visible'); }, 80 + reverseIndex * 110);
+          })(btns[i], btns.length - 1 - i);
+        }
       };
 
       renderFabBubbles();
@@ -429,6 +435,7 @@
         var btn = e.target.closest('.ctxf-fab-bubble');
         if (!btn) return;
         var msg = btn.getAttribute('data-msg');
+        if (!msg || !msg.trim()) return; // guard against empty data-msg
         state.fabBubblesConvoStarted = true;
         openPanel();
         setTimeout(function () { sendMessage(msg); }, 120);
@@ -473,12 +480,15 @@
       panelEl.classList.add('ctxf-open');
       badgeEl.classList.add('ctxf-hidden');
 
-      // Hide fab bubbles with exit animation
+      // Hide fab bubbles with exit animation; disable pointer events on container
+      // so it doesn't intercept clicks on the panel (e.g. the send button).
       if (fabBubblesEl) {
-        fabBubblesEl.querySelectorAll('.ctxf-fab-bubble').forEach(function (btn) {
-          btn.classList.remove('ctxf-bubble-visible');
-          btn.classList.add('ctxf-bubble-hiding');
-        });
+        fabBubblesEl.style.pointerEvents = 'none';
+        var fabBubbleButtons = fabBubblesEl.querySelectorAll('.ctxf-fab-bubble');
+        for (var i = 0; i < fabBubbleButtons.length; i++) {
+          fabBubbleButtons[i].classList.remove('ctxf-bubble-visible');
+          fabBubbleButtons[i].classList.add('ctxf-bubble-hiding');
+        }
       }
 
       // Lock body scroll on mobile — save scroll position first so page doesn't jump
@@ -568,6 +578,10 @@
     function sendMessage(text) {
       text = text && text.trim();
       if (!text || state.phase === 'thinking') return;
+
+      // Mark conversation started so bubbles stay hidden regardless of how the
+      // first message was sent (bubble click, typed input, or in-panel pill).
+      if (fabBubblesEl) state.fabBubblesConvoStarted = true;
 
       state.phase = 'active';
       state.pillsVisible = false;

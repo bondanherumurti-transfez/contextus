@@ -1021,9 +1021,9 @@ const bsel = {
   fabBubble:  '.ctxf-fab-bubble',
 };
 
-/** Wait for fab bubbles to finish their staggered entrance (400ms delay + 3×110ms). */
+/** Wait for fab bubbles to finish their staggered entrance by observing visible-state classes. */
 async function waitForBubblesVisible(page: Page): Promise<void> {
-  await page.waitForTimeout(800);
+  await expect(page.locator(`${bsel.fabBubble}.ctxf-bubble-visible`)).toHaveCount(3);
 }
 
 test.describe('appearance=bubbles — initial render', () => {
@@ -1198,6 +1198,35 @@ test.describe('appearance=bubbles — bubble click opens panel and sends message
     await page.waitForTimeout(800);
 
     // Bubbles must NOT have re-appeared
+    const anyVisible = await page.evaluate(() =>
+      Array.from(
+        document.querySelector('#ctxf-host')?.shadowRoot
+          ?.querySelectorAll('.ctxf-fab-bubble') ?? []
+      ).some(b => b.classList.contains('ctxf-bubble-visible') && !b.classList.contains('ctxf-bubble-hiding'))
+    );
+    expect(anyVisible).toBe(false);
+  });
+
+  test('bubbles stay hidden after conversation started by typing (not bubble click)', async ({ page }) => {
+    await mockSession(page);
+    await mockChat(page, 'Got it!');
+    await page.goto(BUBBLES_URL);
+    await waitForBubblesVisible(page);
+
+    // Open via FAB click, type and send a message manually
+    await page.locator(bsel.fab).click();
+    await expect(page.locator(bsel.panel)).toHaveClass(/ctxf-open/);
+    await page.locator(bsel.input).fill('Hello from typed input');
+    await page.locator(bsel.send).click();
+    await expect(page.locator(bsel.bubbleVisitor).first()).toBeVisible();
+
+    // Close the panel
+    await page.evaluate(() => (window as any).contextus.close());
+    await expect(page.locator(bsel.panel)).not.toHaveClass(/ctxf-open/);
+
+    // Wait longer than the re-entrance delay — bubbles must NOT re-appear
+    await page.waitForTimeout(800);
+
     const anyVisible = await page.evaluate(() =>
       Array.from(
         document.querySelector('#ctxf-host')?.shadowRoot
