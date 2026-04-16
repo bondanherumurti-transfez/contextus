@@ -413,6 +413,7 @@
       };
 
       showFabBubbles = function () {
+        if (state.open) return;
         if (state.fabBubblesConvoStarted) return;
         fabBubblesEl.style.pointerEvents = 'auto'; // restore before re-entrance
         var btns = fabBubblesEl.querySelectorAll('.ctxf-fab-bubble');
