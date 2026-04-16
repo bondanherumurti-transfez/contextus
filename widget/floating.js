@@ -41,23 +41,24 @@
 
   var CONTEXTUS_DOMAINS = ['getcontextus.dev', 'contextus-2d16.onrender.com', 'localhost'];
 
-  function trackEvent(name) {
+  function trackEvent(name, meta) {
     if (!cfg.apiUrl || !cfg.knowledgeBaseId) return;
     var sourceDomain = window.location.hostname;
     var sourceType = CONTEXTUS_DOMAINS.some(function (d) { return sourceDomain.indexOf(d) !== -1; })
       ? 'contextus'
       : 'tenant';
     try {
+      var payload = Object.assign({
+        name: name,
+        kb_id: cfg.knowledgeBaseId,
+        session_id: state.sessionId || null,
+        source_domain: sourceDomain,
+        source_type: sourceType,
+      }, meta || {});
       fetch(cfg.apiUrl + '/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: name,
-          kb_id: cfg.knowledgeBaseId,
-          session_id: state.sessionId || null,
-          source_domain: sourceDomain,
-          source_type: sourceType,
-        }),
+        body: JSON.stringify(payload),
         keepalive: true,
       }).catch(function () {});
     } catch (_) {}
@@ -412,6 +413,7 @@
       };
 
       showFabBubbles = function () {
+        if (state.open) return;
         if (state.fabBubblesConvoStarted) return;
         fabBubblesEl.style.pointerEvents = 'auto'; // restore before re-entrance
         var btns = fabBubblesEl.querySelectorAll('.ctxf-fab-bubble');
@@ -436,6 +438,9 @@
         if (!btn) return;
         var msg = btn.getAttribute('data-msg');
         if (!msg || !msg.trim()) return; // guard against empty data-msg
+        var btns = fabBubblesEl.querySelectorAll('.ctxf-fab-bubble');
+        var index = Array.prototype.indexOf.call(btns, btn);
+        trackEvent('pill_click', { label: msg, index: index, source: 'fab_bubble' });
         state.fabBubblesConvoStarted = true;
         openPanel();
         setTimeout(function () { sendMessage(msg); }, 120);
@@ -764,7 +769,11 @@
 
     pillsEl.addEventListener('click', function (e) {
       var pill = e.target.closest('.ctxf-pill');
-      if (pill) sendMessage(pill.dataset.msg);
+      if (!pill) return;
+      var pills = pillsEl.querySelectorAll('.ctxf-pill');
+      var index = Array.prototype.indexOf.call(pills, pill);
+      trackEvent('pill_click', { label: pill.dataset.msg, index: index, source: 'in_panel' });
+      sendMessage(pill.dataset.msg);
     });
 
     // ── Mobile: visual viewport adjustment (keyboard show/hide) ──────────────────
