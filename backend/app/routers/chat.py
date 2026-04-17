@@ -15,6 +15,7 @@ from app.services.redis import (
 from app.services.llm import stream_chat_response, build_waitlist_system_prompt
 from app.services.telemetry import tracer
 from app.services import analytics
+from app.services.database import archive_session
 
 router = APIRouter(tags=["chat"])
 
@@ -120,6 +121,7 @@ async def send_chat_message(session_id: str, body: ChatRequest, request: Request
                 Message(role="assistant", text=full_text, timestamp=int(time.time()))
             )
             await save_session(session_id, session)
+            await archive_session(session)
 
             if newly_captured:
                 await extend_session_ttl(session_id, ttl=86400)

@@ -1,10 +1,11 @@
 import os
 import time
+import json
 import logging
 import asyncpg
 from dotenv import load_dotenv
 
-from app.models import KnowledgeBase
+from app.models import KnowledgeBase, Session
 
 load_dotenv()
 
@@ -61,6 +62,19 @@ async def init_db():
             await conn.execute("""
                 ALTER TABLE customer_configs
                 ADD COLUMN IF NOT EXISTS webhook_url TEXT
+            """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS sessions (
+                    session_id       TEXT PRIMARY KEY,
+                    kb_id            TEXT,
+                    messages         JSONB        NOT NULL DEFAULT '[]',
+                    message_count    INTEGER      NOT NULL DEFAULT 0,
+                    contact_captured BOOLEAN      NOT NULL DEFAULT FALSE,
+                    contact_value    TEXT,
+                    brief_sent       BOOLEAN      NOT NULL DEFAULT FALSE,
+                    created_at       BIGINT,
+                    updated_at       TIMESTAMPTZ  NOT NULL DEFAULT now()
+                )
             """)
         logger.info("[db] Neon DB tables ready")
     except Exception as e:
@@ -146,3 +160,47 @@ async def get_customer_config(kb_id: str) -> dict | None:
     except Exception as e:
         logger.error("get_customer_config error: %s", e)
     return None
+
+
+# ── Sessions ─────────────────────────────────────────────────────────────────
+
+async def archive_session(data: Session) -> None:
+    if not DATABASE_URL:
+        return
+    try:
+        pool = await get_pool()
+        messages_json = json.dumps([m.model_dump() for m in data.messages])
+        async with pool.acquire() as conn:
+            await conn.execute("""
+                INSERT INTO sessions (
+                    session_id, kb_id, messages, message_count,
+                    contact_captured, contact_value, brief_sent, created_at, updated_at
+                ) VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, now())
+                ON CONFLICT (session_id) DO UPDATE SET
+                    messages         = EXCLUDED.messages,
+                    message_count    = EXCLUDED.message_count,
+                    contact_captured = EXCLUDED.contact_captured,
+                    contact_value    = EXCLUDED.contact_value,
+                    brief_sent       = EXCLUDED.brief_sent,
+                    updated_at       = now()
+            """,
+                data.session_id, data.kb_id, messages_json, len(data.messages),
+                data.contact_captured, data.contact_value, data.brief_sent,
+                data.created_at,
+            )
+    except Exception as e:
+        logger.error("[db] archive_session error: %s", e)
+
+
+async def db_mark_brief_sent(session_id: str) -> None:
+    if not DATABASE_URL:
+        return
+    try:
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(
+                "UPDATE sessions SET brief_sent = true, updated_at = now() WHERE session_id = $1",
+                session_id,
+            )
+    except Exception as e:
+        logger.error("[db] db_mark_brief_sent error: %s", e)

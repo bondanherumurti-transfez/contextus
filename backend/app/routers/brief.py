@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from app.models import LeadBrief
 from app.services.redis import get_session, get_knowledge_base
 from app.services.llm import generate_lead_brief
-from app.services.database import get_customer_config
+from app.services.database import get_customer_config, db_mark_brief_sent
 from app.services.webhook import fire_webhook
 from app.services import analytics
 
@@ -31,6 +31,8 @@ async def generate_brief(session_id: str):
     config = await get_customer_config(session.kb_id)
     if config and config.get("webhook_url"):
         asyncio.create_task(fire_webhook(config["webhook_url"], brief))
+
+    asyncio.create_task(db_mark_brief_sent(session_id))
 
     analytics.track(
         event_type="brief_generated",
