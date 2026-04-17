@@ -381,6 +381,7 @@ BACKEND (Render — free tier, sleeps on inactivity)
   ├── GET    /api/crawl/{job_id}     — Poll crawl status + result
   ├── POST   /api/crawl/demo         — Seed/refresh demo KB (no TTL)
   ├── POST   /api/crawl/{job_id}/enrich — Enrich KB with manual answers
+  ├── PATCH  /api/crawl/{job_id}/pills — Override quick-reply pills with custom values
   ├── POST   /api/session            — Create chat session from KB
   ├── GET    /api/session/{id}       — Get session state
   ├── POST   /api/chat/{session_id}  — Send message, receive SSE stream
@@ -470,6 +471,7 @@ COUNT() GROUP BY fallback_triggered
 | `GET` | `/api/crawl/{job_id}` | Poll crawl status and results |
 | `POST` | `/api/crawl/demo` | Seed the permanent demo knowledge base |
 | `POST` | `/api/crawl/{job_id}/enrich` | Add manual answers to enrich a thin/empty KB |
+| `PATCH` | `/api/crawl/{job_id}/pills` | Override quick-reply pills with custom values |
 | `POST` | `/api/session` | Create chat session from KB |
 | `GET` | `/api/session/{id}` | Get session state |
 | `POST` | `/api/chat/{session_id}` | Send message, receive SSE stream |
@@ -549,6 +551,36 @@ uvicorn app.main:app --reload
   "contact": { "email": "...", "phone": "...", "whatsapp": "..." }
 }
 ```
+
+### Updating pills manually
+
+Override the quick-reply pills on any knowledge base without re-crawling:
+
+```bash
+# Ephemeral KB (30-min TTL — no auth required)
+curl -X PATCH https://contextus-2d16.onrender.com/api/crawl/{job_id}/pills \
+  -H "Content-Type: application/json" \
+  -d '{"pills": ["What do you offer?", "What are your prices?", "How do I get started?"]}'
+
+# Permanent KB (customer-seeded — X-Admin-Secret required)
+curl -X PATCH https://contextus-2d16.onrender.com/api/crawl/{kb_id}/pills \
+  -H "Content-Type: application/json" \
+  -H "X-Admin-Secret: your-admin-secret" \
+  -d '{"pills": ["What do you offer?", "What are your prices?", "How do I get started?"]}'
+```
+
+**Rules:**
+- Exactly **3 pills** required — the widget always renders 3 buttons
+- Changes take effect on the **next session** created from this KB
+- Permanent KBs require `X-Admin-Secret`; missing or wrong secret → `401`. Unset `ADMIN_SECRET` env var → `500`
+- DB errors during permanence check → `503` (retry later)
+
+**Response:**
+```json
+{ "job_id": "abc123", "suggested_pills": ["...", "...", "..."] }
+```
+
+---
 
 ### Render wake-up
 
