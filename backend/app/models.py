@@ -83,6 +83,10 @@ class EnrichRequest(BaseModel):
     answers: dict[str, str]
 
 
+class UpdatePillsRequest(BaseModel):
+    pills: list[str]
+
+
 class SessionRequest(BaseModel):
     knowledge_base_id: str
 

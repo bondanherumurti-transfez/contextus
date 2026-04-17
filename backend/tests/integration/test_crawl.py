@@ -228,15 +228,144 @@ def test_enrich_updates_quality_tier(mock_assess, mock_generate, mock_save, mock
     mock_get_kb.return_value = kb
     mock_assess.return_value = "rich"
     mock_generate.return_value = CompanyProfile(
-        name="Enriched", 
-        industry="Tech", 
-        services=["widgets"], 
-        summary="Updated", 
+        name="Enriched",
+        industry="Tech",
+        services=["widgets"],
+        summary="Updated",
         gaps=[]
     )
-    
+
     response = client.post("/api/crawl/test_job_123/enrich", json={
         "answers": {"services": "We sell widgets"}
     })
     assert response.status_code == 200
     assert kb.quality_tier == "rich"
+
+
+# ---------------------------------------------------------
+# Tests for PATCH /api/crawl/{job_id}/pills
+# ---------------------------------------------------------
+
+CUSTOM_PILLS = ["What do you offer?", "What are your prices?", "How do I get started?"]
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.save_knowledge_base", new_callable=AsyncMock)
+def test_update_pills_valid(mock_save, mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = None  # ephemeral KB — no auth needed
+    with patch.dict("os.environ", {"DATABASE_URL": "postgres://fake"}):
+        response = client.patch("/api/crawl/test_job_123/pills", json={"pills": CUSTOM_PILLS})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["suggested_pills"] == CUSTOM_PILLS
+    assert data["job_id"] == "test_job_123"
+
+
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+def test_update_pills_not_found(mock_get_kb):
+    mock_get_kb.return_value = None
+    response = client.patch("/api/crawl/no_such_job/pills", json={"pills": CUSTOM_PILLS})
+    assert response.status_code == 404
+
+
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+def test_update_pills_job_not_complete(mock_get_kb):
+    mock_get_kb.return_value = make_kb(status="crawling")
+    response = client.patch("/api/crawl/test_job_123/pills", json={"pills": CUSTOM_PILLS})
+    assert response.status_code == 400
+    assert "not complete" in response.json()["detail"]
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+def test_update_pills_too_few(mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = None
+    with patch.dict("os.environ", {"DATABASE_URL": "postgres://fake"}):
+        response = client.patch("/api/crawl/test_job_123/pills", json={"pills": ["Only one pill"]})
+    assert response.status_code == 400
+    assert "3 pills" in response.json()["detail"]
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+def test_update_pills_too_many(mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = None
+    with patch.dict("os.environ", {"DATABASE_URL": "postgres://fake"}):
+        response = client.patch("/api/crawl/test_job_123/pills", json={"pills": CUSTOM_PILLS + ["Extra pill"]})
+    assert response.status_code == 400
+    assert "3 pills" in response.json()["detail"]
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+def test_update_pills_empty_list(mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = None
+    with patch.dict("os.environ", {"DATABASE_URL": "postgres://fake"}):
+        response = client.patch("/api/crawl/test_job_123/pills", json={"pills": []})
+    assert response.status_code == 400
+    assert "3 pills" in response.json()["detail"]
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.save_knowledge_base", new_callable=AsyncMock)
+def test_update_pills_permanent_kb_requires_admin_secret(mock_save, mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = make_kb(status="complete")  # found in Neon = permanent
+    with patch.dict("os.environ", {"DATABASE_URL": "postgres://fake", "ADMIN_SECRET": "secret123"}):
+        response = client.patch("/api/crawl/test_job_123/pills", json={"pills": CUSTOM_PILLS})
+    assert response.status_code == 401
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.save_knowledge_base", new_callable=AsyncMock)
+def test_update_pills_permanent_kb_valid_admin_secret(mock_save, mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = make_kb(status="complete")  # found in Neon = permanent
+    with patch.dict("os.environ", {"DATABASE_URL": "postgres://fake", "ADMIN_SECRET": "secret123"}):
+        response = client.patch(
+            "/api/crawl/test_job_123/pills",
+            json={"pills": CUSTOM_PILLS},
+            headers={"x-admin-secret": "secret123"},
+        )
+    assert response.status_code == 200
+    assert response.json()["suggested_pills"] == CUSTOM_PILLS
+    mock_save.assert_awaited_once()
+    call_kwargs = mock_save.call_args
+    assert call_kwargs.kwargs.get("permanent") is True
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.save_knowledge_base", new_callable=AsyncMock)
+def test_update_pills_permanent_kb_missing_admin_secret_env(mock_save, mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = make_kb(status="complete")  # found in Neon = permanent
+    with patch.dict("os.environ", {"DATABASE_URL": "postgres://fake"}, clear=False):
+        # Ensure ADMIN_SECRET is unset
+        import os
+        os.environ.pop("ADMIN_SECRET", None)
+        response = client.patch(
+            "/api/crawl/test_job_123/pills",
+            json={"pills": CUSTOM_PILLS},
+            headers={"x-admin-secret": "anything"},
+        )
+    assert response.status_code == 500
+    assert "misconfiguration" in response.json()["detail"]
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+def test_update_pills_db_error_returns_503(mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.side_effect = Exception("Neon connection failed")
+    with patch.dict("os.environ", {"DATABASE_URL": "postgres://fake"}):
+        response = client.patch("/api/crawl/test_job_123/pills", json={"pills": CUSTOM_PILLS})
+    assert response.status_code == 503
+    assert "retry" in response.json()["detail"]
