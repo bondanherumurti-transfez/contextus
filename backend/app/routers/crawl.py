@@ -9,10 +9,11 @@ from app.models import (
     CrawlRequest,
     CrawlResponse,
     EnrichRequest,
+    UpdatePillsRequest,
     Chunk,
 )
 from app.services.redis import save_knowledge_base, get_knowledge_base, check_rate_limit
-from app.services.database import save_customer_config
+from app.services.database import save_customer_config, db_get_knowledge_base
 from app.services.crawler import crawl_site, validate_url
 from app.services.chunker import chunk_pages
 from app.services.llm import generate_company_profile, assess_quality_tier, select_pills
@@ -210,3 +211,37 @@ async def enrich_knowledge_base(job_id: str, body: EnrichRequest):
     await save_knowledge_base(job_id, kb)
 
     return kb.company_profile
+
+
+@router.patch("/crawl/{job_id}/pills")
+async def update_pills(
+    job_id: str,
+    body: UpdatePillsRequest,
+    x_admin_secret: str | None = Header(default=None),
+):
+    kb = await get_knowledge_base(job_id)
+    if not kb:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if kb.status != "complete":
+        raise HTTPException(status_code=400, detail="Job not complete yet")
+
+    if len(body.pills) != 3:
+        raise HTTPException(status_code=400, detail="Exactly 3 pills required")
+
+    # Permanent KBs (found in Neon) require admin auth
+    try:
+        permanent = await db_get_knowledge_base(job_id)
+    except Exception:
+        permanent = None
+
+    if permanent is not None:
+        import os
+        admin_secret = os.getenv("ADMIN_SECRET", "")
+        if admin_secret and x_admin_secret != admin_secret:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+
+    kb.suggested_pills = body.pills
+    await save_knowledge_base(job_id, kb)
+
+    return {"job_id": job_id, "suggested_pills": kb.suggested_pills}

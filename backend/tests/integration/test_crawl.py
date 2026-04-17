@@ -228,15 +228,107 @@ def test_enrich_updates_quality_tier(mock_assess, mock_generate, mock_save, mock
     mock_get_kb.return_value = kb
     mock_assess.return_value = "rich"
     mock_generate.return_value = CompanyProfile(
-        name="Enriched", 
-        industry="Tech", 
-        services=["widgets"], 
-        summary="Updated", 
+        name="Enriched",
+        industry="Tech",
+        services=["widgets"],
+        summary="Updated",
         gaps=[]
     )
-    
+
     response = client.post("/api/crawl/test_job_123/enrich", json={
         "answers": {"services": "We sell widgets"}
     })
     assert response.status_code == 200
     assert kb.quality_tier == "rich"
+
+
+# ---------------------------------------------------------
+# Tests for PATCH /api/crawl/{job_id}/pills
+# ---------------------------------------------------------
+
+CUSTOM_PILLS = ["What do you offer?", "What are your prices?", "How do I get started?"]
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.save_knowledge_base", new_callable=AsyncMock)
+def test_update_pills_valid(mock_save, mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = None  # ephemeral KB — no auth needed
+    response = client.patch("/api/crawl/test_job_123/pills", json={"pills": CUSTOM_PILLS})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["suggested_pills"] == CUSTOM_PILLS
+    assert data["job_id"] == "test_job_123"
+
+
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+def test_update_pills_not_found(mock_get_kb):
+    mock_get_kb.return_value = None
+    response = client.patch("/api/crawl/no_such_job/pills", json={"pills": CUSTOM_PILLS})
+    assert response.status_code == 404
+
+
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+def test_update_pills_job_not_complete(mock_get_kb):
+    mock_get_kb.return_value = make_kb(status="crawling")
+    response = client.patch("/api/crawl/test_job_123/pills", json={"pills": CUSTOM_PILLS})
+    assert response.status_code == 400
+    assert "not complete" in response.json()["detail"]
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+def test_update_pills_too_few(mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = None
+    response = client.patch("/api/crawl/test_job_123/pills", json={"pills": ["Only one pill"]})
+    assert response.status_code == 400
+    assert "3 pills" in response.json()["detail"]
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+def test_update_pills_too_many(mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = None
+    response = client.patch("/api/crawl/test_job_123/pills", json={"pills": CUSTOM_PILLS + ["Extra pill"]})
+    assert response.status_code == 400
+    assert "3 pills" in response.json()["detail"]
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+def test_update_pills_empty_list(mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = None
+    response = client.patch("/api/crawl/test_job_123/pills", json={"pills": []})
+    assert response.status_code == 400
+    assert "3 pills" in response.json()["detail"]
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.save_knowledge_base", new_callable=AsyncMock)
+def test_update_pills_permanent_kb_requires_admin_secret(mock_save, mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = make_kb(status="complete")  # found in Neon = permanent
+    with patch.dict("os.environ", {"ADMIN_SECRET": "secret123"}):
+        response = client.patch("/api/crawl/test_job_123/pills", json={"pills": CUSTOM_PILLS})
+    assert response.status_code == 401
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.save_knowledge_base", new_callable=AsyncMock)
+def test_update_pills_permanent_kb_valid_admin_secret(mock_save, mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = make_kb(status="complete")  # found in Neon = permanent
+    with patch.dict("os.environ", {"ADMIN_SECRET": "secret123"}):
+        response = client.patch(
+            "/api/crawl/test_job_123/pills",
+            json={"pills": CUSTOM_PILLS},
+            headers={"x-admin-secret": "secret123"},
+        )
+    assert response.status_code == 200
+    assert response.json()["suggested_pills"] == CUSTOM_PILLS
