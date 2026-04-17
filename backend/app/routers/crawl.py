@@ -229,6 +229,9 @@ async def update_pills(
     if len(body.pills) != 3:
         raise HTTPException(status_code=400, detail="Exactly 3 pills required")
 
+    if any(not p.strip() for p in body.pills):
+        raise HTTPException(status_code=400, detail="Pills must be non-empty strings")
+
     # Permanent KBs (found in Neon) require admin auth. Fail closed on DB errors
     # so a Neon outage cannot be used to bypass auth.
     import os as _os

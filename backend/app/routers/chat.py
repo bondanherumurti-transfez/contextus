@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
+import asyncio
 import json
 import re
 import time
@@ -121,7 +122,7 @@ async def send_chat_message(session_id: str, body: ChatRequest, request: Request
                 Message(role="assistant", text=full_text, timestamp=int(time.time()))
             )
             await save_session(session_id, session)
-            await archive_session(session)
+            asyncio.create_task(archive_session(session))
 
             if newly_captured:
                 await extend_session_ttl(session_id, ttl=86400)

@@ -66,13 +66,13 @@ async def init_db():
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS sessions (
                     session_id       TEXT PRIMARY KEY,
-                    kb_id            TEXT,
+                    kb_id            TEXT         NOT NULL,
                     messages         JSONB        NOT NULL DEFAULT '[]',
                     message_count    INTEGER      NOT NULL DEFAULT 0,
                     contact_captured BOOLEAN      NOT NULL DEFAULT FALSE,
                     contact_value    TEXT,
                     brief_sent       BOOLEAN      NOT NULL DEFAULT FALSE,
-                    created_at       BIGINT,
+                    created_at       BIGINT       NOT NULL,
                     updated_at       TIMESTAMPTZ  NOT NULL DEFAULT now()
                 )
             """)
