@@ -48,9 +48,10 @@ async def mock_stream(*args, **kwargs):
 @patch("app.routers.chat.get_session", new_callable=AsyncMock)
 @patch("app.routers.chat.get_knowledge_base", new_callable=AsyncMock)
 @patch("app.routers.chat.save_session", new_callable=AsyncMock)
+@patch("app.routers.chat.archive_session", new_callable=AsyncMock)
 @patch("app.routers.chat.stream_chat_response")
 @patch("app.routers.chat.redis.get", new_callable=AsyncMock)
-def test_chat_valid_message(mock_redis_get, mock_stream_res, mock_save, mock_get_kb, mock_get_session):
+def test_chat_valid_message(mock_redis_get, mock_stream_res, mock_archive, mock_save, mock_get_kb, mock_get_session):
     mock_get_session.return_value = make_session()
     mock_get_kb.return_value = make_kb()
     mock_redis_get.return_value = None  # no waitlist prefill
@@ -108,9 +109,11 @@ def test_chat_message_limit_exceeded(mock_get_kb, mock_get_session):
 
 @patch("app.routers.chat.get_session", new_callable=AsyncMock)
 @patch("app.routers.chat.get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.chat.save_session", new_callable=AsyncMock)
+@patch("app.routers.chat.archive_session", new_callable=AsyncMock)
 @patch("app.routers.chat.stream_chat_response")
 @patch("app.routers.chat.redis.get", new_callable=AsyncMock)
-def test_chat_message_limit_ok(mock_redis_get, mock_stream, mock_get_kb, mock_get_session):
+def test_chat_message_limit_ok(mock_redis_get, mock_stream, mock_archive, mock_save, mock_get_kb, mock_get_session):
     mock_get_session.return_value = make_session(messages=29)
     mock_get_kb.return_value = make_kb()
     mock_redis_get.return_value = None  # no waitlist prefill
@@ -182,10 +185,11 @@ def test_chat_no_contact():
 @patch("app.routers.chat.get_session", new_callable=AsyncMock)
 @patch("app.routers.chat.get_knowledge_base", new_callable=AsyncMock)
 @patch("app.routers.chat.save_session", new_callable=AsyncMock)
+@patch("app.routers.chat.archive_session", new_callable=AsyncMock)
 @patch("app.routers.chat.stream_chat_response")
 @patch("app.routers.chat.redis.get", new_callable=AsyncMock)
 def test_chat_saves_user_and_assistant_message(
-    mock_redis_get, mock_stream, mock_save, mock_get_kb, mock_get_session
+    mock_redis_get, mock_stream, mock_archive, mock_save, mock_get_kb, mock_get_session
 ):
     s = make_session(messages=0)
     mock_get_session.return_value = s
@@ -215,3 +219,84 @@ def test_chat_saves_user_and_assistant_message(
 
 
 # SSE formats are covered by test_chat_valid_message checking the line structure.
+
+
+# -----------------
+# Archive tests
+# -----------------
+@patch("app.routers.chat.get_session", new_callable=AsyncMock)
+@patch("app.routers.chat.get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.chat.save_session", new_callable=AsyncMock)
+@patch("app.routers.chat.archive_session", new_callable=AsyncMock)
+@patch("app.routers.chat.stream_chat_response")
+@patch("app.routers.chat.redis.get", new_callable=AsyncMock)
+def test_archive_session_called_after_message(
+    mock_redis_get, mock_stream, mock_archive, mock_save, mock_get_kb, mock_get_session
+):
+    s = make_session(messages=0)
+    mock_get_session.return_value = s
+    mock_get_kb.return_value = make_kb()
+    mock_redis_get.return_value = None
+
+    async def mock_gen(*args, **kwargs):
+        yield "Answer"
+
+    mock_stream.side_effect = mock_gen
+
+    client.post("/api/chat/test_session", json={"message": "Hello"})
+
+    assert mock_archive.called
+    archived = mock_archive.call_args[0][0]
+    assert archived.session_id == "test_session"
+    assert len(archived.messages) == 2
+
+
+@patch("app.routers.chat.get_session", new_callable=AsyncMock)
+@patch("app.routers.chat.get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.chat.save_session", new_callable=AsyncMock)
+@patch("app.routers.chat.archive_session", new_callable=AsyncMock)
+@patch("app.routers.chat.stream_chat_response")
+@patch("app.routers.chat.redis.get", new_callable=AsyncMock)
+def test_archive_session_called_once_per_turn(
+    mock_redis_get, mock_stream, mock_archive, mock_save, mock_get_kb, mock_get_session
+):
+    mock_get_session.return_value = make_session(messages=2)
+    mock_get_kb.return_value = make_kb()
+    mock_redis_get.return_value = None
+
+    async def mock_gen(*args, **kwargs):
+        yield "Reply"
+
+    mock_stream.side_effect = mock_gen
+
+    client.post("/api/chat/test_session", json={"message": "Another turn"})
+
+    assert mock_archive.call_count == 1
+
+
+@patch("app.routers.chat.get_session", new_callable=AsyncMock)
+@patch("app.routers.chat.get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.chat.save_session", new_callable=AsyncMock)
+@patch("app.routers.chat.archive_session", new_callable=AsyncMock)
+@patch("app.routers.chat.stream_chat_response")
+@patch("app.routers.chat.redis.get", new_callable=AsyncMock)
+def test_archive_session_receives_updated_session(
+    mock_redis_get, mock_stream, mock_archive, mock_save, mock_get_kb, mock_get_session
+):
+    """archive_session should receive the session with contact_captured=True when contact is detected."""
+    s = make_session(messages=0)
+    mock_get_session.return_value = s
+    mock_get_kb.return_value = make_kb()
+    mock_redis_get.return_value = None
+
+    async def mock_gen(*args, **kwargs):
+        yield "Got it"
+
+    mock_stream.side_effect = mock_gen
+
+    with patch("app.routers.chat.extend_session_ttl", new_callable=AsyncMock):
+        client.post("/api/chat/test_session", json={"message": "Email me at user@example.com"})
+
+    archived = mock_archive.call_args[0][0]
+    assert archived.contact_captured is True
+    assert "user@example.com" in archived.contact_value

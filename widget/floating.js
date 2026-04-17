@@ -48,13 +48,13 @@
       ? 'contextus'
       : 'tenant';
     try {
-      var payload = Object.assign({
+      var payload = Object.assign({}, meta || {}, {
         name: name,
         kb_id: cfg.knowledgeBaseId,
         session_id: state.sessionId || null,
         source_domain: sourceDomain,
         source_type: sourceType,
-      }, meta || {});
+      });
       fetch(cfg.apiUrl + '/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -770,10 +770,12 @@
     pillsEl.addEventListener('click', function (e) {
       var pill = e.target.closest('.ctxf-pill');
       if (!pill) return;
+      var msg = (pill.dataset.msg || '').trim();
+      if (!msg) return;
       var pills = pillsEl.querySelectorAll('.ctxf-pill');
       var index = Array.prototype.indexOf.call(pills, pill);
-      trackEvent('pill_click', { label: pill.dataset.msg, index: index, source: 'in_panel' });
-      sendMessage(pill.dataset.msg);
+      trackEvent('pill_click', { label: msg, index: index, source: 'in_panel' });
+      sendMessage(msg);
     });
 
     // ── Mobile: visual viewport adjustment (keyboard show/hide) ──────────────────
