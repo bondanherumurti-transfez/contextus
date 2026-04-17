@@ -229,19 +229,31 @@ async def update_pills(
     if len(body.pills) != 3:
         raise HTTPException(status_code=400, detail="Exactly 3 pills required")
 
-    # Permanent KBs (found in Neon) require admin auth
-    try:
-        permanent = await db_get_knowledge_base(job_id)
-    except Exception:
-        permanent = None
+    # Permanent KBs (found in Neon) require admin auth. Fail closed on DB errors
+    # so a Neon outage cannot be used to bypass auth.
+    import os as _os
+    permanent = False
+    if _os.getenv("DATABASE_URL", ""):
+        try:
+            permanent = await db_get_knowledge_base(job_id) is not None
+        except Exception:
+            raise HTTPException(
+                status_code=503,
+                detail="Unable to verify knowledge base persistence; please retry later",
+            )
 
-    if permanent is not None:
+    if permanent:
         import os
         admin_secret = os.getenv("ADMIN_SECRET", "")
-        if admin_secret and x_admin_secret != admin_secret:
+        if not admin_secret:
+            raise HTTPException(status_code=500, detail="Server misconfiguration: ADMIN_SECRET not set")
+        if x_admin_secret != admin_secret:
             raise HTTPException(status_code=401, detail="Unauthorized")
 
     kb.suggested_pills = body.pills
-    await save_knowledge_base(job_id, kb)
+    if permanent:
+        await save_knowledge_base(job_id, kb, permanent=True, ttl=None)
+    else:
+        await save_knowledge_base(job_id, kb)
 
     return {"job_id": job_id, "suggested_pills": kb.suggested_pills}
