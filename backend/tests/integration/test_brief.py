@@ -49,6 +49,10 @@ def mock_lead_brief(with_contact=False):
         open_questions="budget?",
         suggested_approach="email",
         quality_score="high",
+        qualification="qualified",
+        qualification_reason="Visitor asked follow-up questions and shared context.",
+        scope_match="true",
+        red_flags=[],
         contact={"email": "test@test.com", "phone": None, "whatsapp": None} if with_contact else None,
         metadata={"model": "anthropic/claude-sonnet-4"}
     )
@@ -66,6 +70,7 @@ def test_brief_valid(mock_generate, mock_get_kb, mock_get_session):
     data = response.json()
     assert data["who"] == "tester"
     assert data["quality_score"] in ["high", "medium", "low"]
+    assert data["qualification"] in ["qualified", "out_of_scope", "unclear", "suspicious"]
     assert data["session_id"] == "test_session"
 
 @patch("app.routers.brief.get_session", new_callable=AsyncMock)
@@ -200,12 +205,14 @@ def test_webhook_payload_shape(
     required_keys = {
         "session_id", "created_at", "who", "need",
         "signals", "open_questions", "suggested_approach",
-        "quality_score", "contact", "metadata",
+        "quality_score", "qualification", "qualification_reason",
+        "scope_match", "red_flags", "contact", "metadata",
     }
     assert required_keys == set(payload.keys())
 
-    # Quality score is one of the three valid values
+    # quality_score is derived from qualification
     assert payload["quality_score"] in ("high", "medium", "low")
+    assert payload["qualification"] in ("qualified", "out_of_scope", "unclear", "suspicious")
 
     # contact has exactly email / phone / whatsapp keys (not null dict)
     contact = payload["contact"]

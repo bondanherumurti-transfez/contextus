@@ -192,7 +192,7 @@ class TestBriefPipeline:
         """Generated brief contains all expected fields."""
         r = httpx.post(f"{server}/api/brief/{session_with_messages}", timeout=30)
         data = r.json()
-        for field in ("who", "need", "signals", "open_questions", "suggested_approach", "quality_score"):
+        for field in ("who", "need", "signals", "open_questions", "suggested_approach", "quality_score", "qualification"):
             assert field in data, f"Missing field: {field}"
             assert data[field], f"Empty field: {field}"
 
@@ -200,3 +200,8 @@ class TestBriefPipeline:
         """Quality score is one of the expected values."""
         r = httpx.post(f"{server}/api/brief/{session_with_messages}", timeout=30)
         assert r.json()["quality_score"] in ("high", "medium", "low")
+
+    def test_brief_qualification_is_valid(self, server, session_with_messages):
+        """Qualification label is one of the expected values."""
+        r = httpx.post(f"{server}/api/brief/{session_with_messages}", timeout=30)
+        assert r.json()["qualification"] in ("qualified", "out_of_scope", "unclear", "suspicious")
