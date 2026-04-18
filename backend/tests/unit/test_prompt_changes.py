@@ -5,10 +5,12 @@ Unit tests for prompt-related changes:
 - build_chat_system_prompt() out_of_scope block rendering
 - _profile_from_partial() out_of_scope handling
 """
+import asyncio
+import json
 import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 
-from app.models import CompanyProfile, LeadBrief, Session, Message
+from app.models import CompanyProfile, Session, Message
 from app.services.notion import _notion_quality_label
 from app.services.llm import build_chat_system_prompt, _profile_from_partial
 
@@ -48,7 +50,7 @@ def test_notion_label_qualification_takes_precedence_over_quality_score():
 
 
 # ---------------------------------------------------------------------------
-# generate_lead_brief — quality_score derivation from qualification
+# Helpers shared by generate_lead_brief tests
 # ---------------------------------------------------------------------------
 
 def _make_brief_response(overrides: dict) -> dict:
@@ -80,6 +82,28 @@ def _make_session() -> Session:
     )
 
 
+def _run_brief(response_data: dict) -> object:
+    from app.services.llm import generate_lead_brief
+    session = _make_session()
+
+    with patch("app.services.llm.client") as mock_client, \
+         patch("app.services.llm.tracer") as mock_tracer:
+        mock_span = MagicMock()
+        mock_span.__enter__ = MagicMock(return_value=mock_span)
+        mock_span.__exit__ = MagicMock(return_value=False)
+        mock_tracer.start_as_current_span.return_value = mock_span
+
+        mock_response = MagicMock()
+        mock_response.choices[0].message.content = json.dumps(response_data)
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+        return asyncio.run(generate_lead_brief(session))
+
+
+# ---------------------------------------------------------------------------
+# generate_lead_brief — quality_score derivation from qualification
+# ---------------------------------------------------------------------------
+
 @pytest.mark.parametrize("qualification,expected_quality", [
     ("qualified", "high"),
     ("unclear", "medium"),
@@ -87,49 +111,13 @@ def _make_session() -> Session:
     ("suspicious", "low"),
 ])
 def test_quality_score_derived_from_qualification(qualification, expected_quality):
-    from app.services.llm import generate_lead_brief
-    import asyncio
-
-    response_data = _make_brief_response({"qualification": qualification})
-    session = _make_session()
-
-    with patch("app.services.llm.client") as mock_client, \
-         patch("app.services.llm.tracer") as mock_tracer:
-        mock_span = MagicMock()
-        mock_span.__enter__ = MagicMock(return_value=mock_span)
-        mock_span.__exit__ = MagicMock(return_value=False)
-        mock_tracer.start_as_current_span.return_value = mock_span
-
-        mock_response = MagicMock()
-        mock_response.choices[0].message.content = __import__("json").dumps(response_data)
-        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
-
-        brief = asyncio.get_event_loop().run_until_complete(generate_lead_brief(session))
-
+    brief = _run_brief(_make_brief_response({"qualification": qualification}))
     assert brief.quality_score == expected_quality
     assert brief.qualification == qualification
 
 
 def test_unknown_qualification_defaults_to_unclear():
-    from app.services.llm import generate_lead_brief
-    import asyncio
-
-    response_data = _make_brief_response({"qualification": "bogus_value"})
-    session = _make_session()
-
-    with patch("app.services.llm.client") as mock_client, \
-         patch("app.services.llm.tracer") as mock_tracer:
-        mock_span = MagicMock()
-        mock_span.__enter__ = MagicMock(return_value=mock_span)
-        mock_span.__exit__ = MagicMock(return_value=False)
-        mock_tracer.start_as_current_span.return_value = mock_span
-
-        mock_response = MagicMock()
-        mock_response.choices[0].message.content = __import__("json").dumps(response_data)
-        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
-
-        brief = asyncio.get_event_loop().run_until_complete(generate_lead_brief(session))
-
+    brief = _run_brief(_make_brief_response({"qualification": "bogus_value"}))
     assert brief.qualification == "unclear"
     assert brief.quality_score == "medium"
 
@@ -148,25 +136,7 @@ def test_unknown_qualification_defaults_to_unclear():
     (None, "unclear"),
 ])
 def test_scope_match_normalization(raw, expected):
-    from app.services.llm import generate_lead_brief
-    import asyncio
-
-    response_data = _make_brief_response({"scope_match": raw})
-    session = _make_session()
-
-    with patch("app.services.llm.client") as mock_client, \
-         patch("app.services.llm.tracer") as mock_tracer:
-        mock_span = MagicMock()
-        mock_span.__enter__ = MagicMock(return_value=mock_span)
-        mock_span.__exit__ = MagicMock(return_value=False)
-        mock_tracer.start_as_current_span.return_value = mock_span
-
-        mock_response = MagicMock()
-        mock_response.choices[0].message.content = __import__("json").dumps(response_data)
-        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
-
-        brief = asyncio.get_event_loop().run_until_complete(generate_lead_brief(session))
-
+    brief = _run_brief(_make_brief_response({"scope_match": raw}))
     assert brief.scope_match == expected
 
 
@@ -175,72 +145,18 @@ def test_scope_match_normalization(raw, expected):
 # ---------------------------------------------------------------------------
 
 def test_red_flags_list_passthrough():
-    from app.services.llm import generate_lead_brief
-    import asyncio
-
     flags = ["injection attempt", "authority claim"]
-    response_data = _make_brief_response({"red_flags": flags})
-    session = _make_session()
-
-    with patch("app.services.llm.client") as mock_client, \
-         patch("app.services.llm.tracer") as mock_tracer:
-        mock_span = MagicMock()
-        mock_span.__enter__ = MagicMock(return_value=mock_span)
-        mock_span.__exit__ = MagicMock(return_value=False)
-        mock_tracer.start_as_current_span.return_value = mock_span
-
-        mock_response = MagicMock()
-        mock_response.choices[0].message.content = __import__("json").dumps(response_data)
-        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
-
-        brief = asyncio.get_event_loop().run_until_complete(generate_lead_brief(session))
-
+    brief = _run_brief(_make_brief_response({"red_flags": flags}))
     assert brief.red_flags == flags
 
 
 def test_red_flags_none_becomes_empty_list():
-    from app.services.llm import generate_lead_brief
-    import asyncio
-
-    response_data = _make_brief_response({"red_flags": None})
-    session = _make_session()
-
-    with patch("app.services.llm.client") as mock_client, \
-         patch("app.services.llm.tracer") as mock_tracer:
-        mock_span = MagicMock()
-        mock_span.__enter__ = MagicMock(return_value=mock_span)
-        mock_span.__exit__ = MagicMock(return_value=False)
-        mock_tracer.start_as_current_span.return_value = mock_span
-
-        mock_response = MagicMock()
-        mock_response.choices[0].message.content = __import__("json").dumps(response_data)
-        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
-
-        brief = asyncio.get_event_loop().run_until_complete(generate_lead_brief(session))
-
+    brief = _run_brief(_make_brief_response({"red_flags": None}))
     assert brief.red_flags == []
 
 
 def test_red_flags_string_becomes_single_item_list():
-    from app.services.llm import generate_lead_brief
-    import asyncio
-
-    response_data = _make_brief_response({"red_flags": "suspicious message"})
-    session = _make_session()
-
-    with patch("app.services.llm.client") as mock_client, \
-         patch("app.services.llm.tracer") as mock_tracer:
-        mock_span = MagicMock()
-        mock_span.__enter__ = MagicMock(return_value=mock_span)
-        mock_span.__exit__ = MagicMock(return_value=False)
-        mock_tracer.start_as_current_span.return_value = mock_span
-
-        mock_response = MagicMock()
-        mock_response.choices[0].message.content = __import__("json").dumps(response_data)
-        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
-
-        brief = asyncio.get_event_loop().run_until_complete(generate_lead_brief(session))
-
+    brief = _run_brief(_make_brief_response({"red_flags": "suspicious message"}))
     assert brief.red_flags == ["suspicious message"]
 
 
@@ -253,7 +169,7 @@ def _make_profile(out_of_scope=None) -> CompanyProfile:
         name="TestCo",
         industry="bookkeeping",
         services=["service A"],
-        out_of_scope=out_of_scope or [],
+        out_of_scope=out_of_scope if out_of_scope is not None else [],
         summary="A test company.",
         gaps=[],
     )
@@ -279,7 +195,17 @@ def test_out_of_scope_block_omitted_when_empty():
 
 
 def test_out_of_scope_block_omitted_when_none():
-    profile = _make_profile(out_of_scope=None)
+    # Bypass _make_profile helper and construct directly to test None path in build_chat_system_prompt
+    profile = CompanyProfile(
+        name="TestCo",
+        industry="bookkeeping",
+        services=["service A"],
+        out_of_scope=[],  # CompanyProfile enforces list; None is coerced by Pydantic
+        summary="A test company.",
+        gaps=[],
+    )
+    # Directly override the field to simulate None reaching build_chat_system_prompt
+    object.__setattr__(profile, "out_of_scope", None)
     prompt = build_chat_system_prompt(profile, retrieved_chunks=[], kb_id="test")
 
     assert OOS_HEADER not in prompt
@@ -303,10 +229,7 @@ def test_price_redirect_rule_present():
 # ---------------------------------------------------------------------------
 
 def test_profile_from_partial_out_of_scope_list():
-    data = {
-        "name": "TestCo",
-        "out_of_scope": ["loans", "legal services"],
-    }
+    data = {"name": "TestCo", "out_of_scope": ["loans", "legal services"]}
     profile = _profile_from_partial(data, "http://testco.com")
     assert profile.out_of_scope == ["loans", "legal services"]
 

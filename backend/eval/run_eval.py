@@ -51,8 +51,8 @@ JUDGE_SYSTEM = """You are a strict evaluator for an AI chat agent. You will be g
 2. The full conversation (system prompt + all turns including agent responses)
 3. A list of pass criteria
 
-You MUST score EVERY criterion in the list — no skipping. Output a raw JSON array (no markdown, no backticks) where each element corresponds to one criterion in order:
-[{"criterion": "<criterion text>", "pass": true/false, "reason": "<1 sentence citing evidence from the transcript>"}]
+You MUST score EVERY criterion in the list — no skipping. Output a JSON object with a single key "scores" containing an array where each element corresponds to one criterion in order:
+{"scores": [{"criterion": "<criterion text>", "pass": true/false, "reason": "<1 sentence citing evidence from the transcript>"}]}
 
 Be strict. If the agent is vague where specificity is required (e.g. quotes a timeframe when it shouldn't, asks for contact while visitor is out-of-scope), mark as fail."""
 
