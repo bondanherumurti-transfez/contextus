@@ -12,6 +12,7 @@ class CompanyProfile(BaseModel):
     name: str
     industry: str
     services: list[str]
+    out_of_scope: list[str] = []
     location: str | None = None
     contact: dict | None = None
     summary: str
@@ -65,6 +66,10 @@ class LeadBrief(BaseModel):
     open_questions: str
     suggested_approach: str
     quality_score: Literal["high", "medium", "low"]
+    qualification: Literal["qualified", "out_of_scope", "unclear", "suspicious"] = "unclear"
+    qualification_reason: str = ""
+    scope_match: Literal["true", "false", "unclear"] = "unclear"
+    red_flags: list[str] = []
     contact: dict | None = None
     metadata: dict
 

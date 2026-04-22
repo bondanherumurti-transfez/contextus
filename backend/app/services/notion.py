@@ -46,6 +46,20 @@ async def post_waitlist_to_notion(data: dict):
             logger.error("Notion waitlist post failed %s: %s", res.status_code, res.text)
 
 
+_QUAL_TO_QUALITY = {
+    "qualified": "High",
+    "unclear": "Medium",
+    "out_of_scope": "Low",
+    "suspicious": "Low",
+}
+
+
+def _notion_quality_label(data: dict) -> str:
+    if qual := data.get("qualification"):
+        return _QUAL_TO_QUALITY.get(qual, "Medium")
+    return (data.get("quality_score") or "medium").capitalize()
+
+
 async def post_lead_brief_to_notion(data: dict, notion_db_id: str | None = None):
     """Post a lead brief to NOTION_DB_LEADS (or per-customer DB). Works for both organic and waitlist sessions."""
     database_id = notion_db_id or os.getenv("NOTION_DB_LEADS", "")
@@ -67,7 +81,7 @@ async def post_lead_brief_to_notion(data: dict, notion_db_id: str | None = None)
             "Signals":            {"rich_text": txt(data.get("signals"))},
             "Open Questions":     {"rich_text": txt(data.get("open_questions"))},
             "Suggested Approach": {"rich_text": txt(data.get("suggested_approach"))},
-            "Quality":            {"select": {"name": (data.get("quality_score") or "medium").capitalize()}},
+            "Quality":            {"select": {"name": _notion_quality_label(data)}},
             "Email":              {"email": contact.get("email") or data.get("email") or None},
             "Phone":              {"phone_number": contact.get("phone") or contact.get("whatsapp") or data.get("phone") or None},
             "Website":            {"url": data.get("website") or None},

@@ -32,6 +32,9 @@ New embeddable floating chat widget (FAB + panel) built in vanilla JS with Shado
 **Phase 3.9 — Bubbles appearance: complete.**
 New `data-appearance="bubbles"` mode — pill-shaped quick-reply buttons float above the FAB before the panel is opened. Staggered entrance animation, session-driven pill refresh, one-way gate once conversation starts. 15 new Playwright tests.
 
+**Phase 3.10 — Session archiving: complete.**
+Non-empty chat sessions are now archived to Neon Postgres on every conversation turn via write-through from Redis. `brief_sent` is marked in Neon after brief generation. Redis TTLs unchanged — Neon is the persistent analysis layer. 8 new backend tests.
+
 **Phase 3.8 — Test hardening: complete.**
 Backend unit + resilience tests (41 new), widget backend error handling tests (17 new), and GitHub Actions CI for the backend. No credentials required — all third-party calls mocked.
 
@@ -330,6 +333,10 @@ pytest tests/e2e/test_server.py -v   # real uvicorn, no credentials
 
 Pure logic tests for `select_pills()` — pill priority algorithm (gap → service → industry → fallback), language support, duplicate prevention, and 3-pill cap.
 
+**Unit — `tests/unit/test_archive_session.py` (5 tests)**
+
+Session archiving: `archive_session` upserts correct fields, skips when `DATABASE_URL` unset, swallows DB errors non-fatally. `db_mark_brief_sent` updates `brief_sent = true`, skips when no DB.
+
 **Unit — `tests/unit/test_third_party_resilience.py` (28 tests)**
 
 | Section | Tests |
@@ -388,10 +395,16 @@ BACKEND (Render — free tier, sleeps on inactivity)
   ├── POST   /api/brief/{session_id} — Generate lead brief from session
   └── GET    /api/health             — Health check (used for wake-up ping)
 
-STORAGE (Upstash Redis)
+STORAGE (Upstash Redis — hot cache)
   kb:{job_id}       → knowledge base — 30min TTL (no TTL for demo)
-  session:{id}      → chat session — 30min TTL
+  session:{id}      → chat session — 30min TTL (extended to 24h after contact captured)
   rate:{ip}:crawl   → rate limit counter — 1hr TTL (30 crawls/hr)
+
+STORAGE (Neon Postgres — persistent archive)
+  knowledge_bases   → permanent customer KBs
+  customer_configs  → KB config, allowed origins, webhook URLs
+  sessions          → all non-empty sessions, archived on every turn for analysis
+                      (message_count, contact_captured, brief_sent, messages JSONB)
 ```
 
 ### Crawler
@@ -425,7 +438,7 @@ The crawler runs in two stages with automatic fallback:
 |-----------|------------|
 | Framework | FastAPI (Python 3.12) |
 | LLM | OpenRouter via OpenAI SDK |
-| Storage | Upstash Redis (TTL-based) |
+| Storage | Upstash Redis (hot cache) + Neon Postgres (persistent archive) |
 | Streaming | SSE (Server-Sent Events) |
 | Crawler | httpx + BeautifulSoup → Firecrawl fallback |
 | Observability | OpenTelemetry + Honeycomb |
@@ -470,7 +483,7 @@ COUNT() GROUP BY fallback_triggered
 | `POST` | `/api/crawl` | Start crawling a URL, returns `job_id` |
 | `GET` | `/api/crawl/{job_id}` | Poll crawl status and results |
 | `POST` | `/api/crawl/demo` | Seed the permanent demo knowledge base |
-| `POST` | `/api/crawl/{job_id}/enrich` | Add manual answers to enrich a thin/empty KB |
+| `POST` | `/api/crawl/{job_id}/enrich` | Add manual Q&A pairs to any complete KB; regenerates company profile |
 | `PATCH` | `/api/crawl/{job_id}/pills` | Override quick-reply pills with custom values |
 | `POST` | `/api/session` | Create chat session from KB |
 | `GET` | `/api/session/{id}` | Get session state |
@@ -510,6 +523,7 @@ uvicorn app.main:app --reload
 | `MODEL_BRIEF` | Model for lead brief generation | No (default: `anthropic/claude-sonnet-4`) |
 | `SITE_URL` | Site URL for OpenRouter attribution | No |
 | `ALLOWED_ORIGINS` | CORS allowed origins (comma-separated) | No |
+| `DATABASE_URL` | Neon Postgres connection string for persistent session archiving | No — archiving disabled if unset |
 
 ### Data models
 
@@ -552,6 +566,46 @@ uvicorn app.main:app --reload
 }
 ```
 
+### Enriching a knowledge base manually
+
+Add Q&A pairs to any complete knowledge base without re-crawling. Each answer is appended as a new chunk and the company profile is regenerated from all chunks (original + enriched). Useful for filling gaps the crawler couldn't find — contact details, pricing context, out-of-scope clarifications.
+
+```bash
+# Ephemeral KB (30-min TTL — no auth required)
+curl -X POST https://contextus-2d16.onrender.com/api/crawl/{job_id}/enrich \
+  -H "Content-Type: application/json" \
+  -d '{
+    "answers": {
+      "What is your WhatsApp contact?": "wa.me/628123456789",
+      "Do you offer investment advisory?": "No, we only provide bookkeeping and tax services."
+    }
+  }'
+
+# Permanent KB (customer-seeded — X-Admin-Secret required)
+curl -X POST https://contextus-2d16.onrender.com/api/crawl/{kb_id}/enrich \
+  -H "Content-Type: application/json" \
+  -H "X-Admin-Secret: your-admin-secret" \
+  -d '{
+    "answers": {
+      "What is your WhatsApp contact?": "wa.me/628123456789",
+      "Do you offer investment advisory?": "No, we only provide bookkeeping and tax services."
+    }
+  }'
+```
+
+**Rules:**
+- The KB must be in `complete` status — enriching a crawl still in progress → `400`
+- Keys in `answers` become the chunk source label (`interview:<key>`); values are the chunk text
+- Blank or whitespace-only answers are silently skipped
+- If all answers are blank/empty **and** the KB has no existing profile → `400`
+- Permanent KBs require `X-Admin-Secret`; missing or wrong secret → `401`. Unset `ADMIN_SECRET` env var → `500`
+- DB errors during permanence check → `503` (retry later)
+- Enrichment is **additive** — re-enriching appends new chunks; old chunks are not removed
+
+**Response:** the regenerated `CompanyProfile` object.
+
+---
+
 ### Updating pills manually
 
 Override the quick-reply pills on any knowledge base without re-crawling:
@@ -571,6 +625,7 @@ curl -X PATCH https://contextus-2d16.onrender.com/api/crawl/{kb_id}/pills \
 
 **Rules:**
 - Exactly **3 pills** required — the widget always renders 3 buttons
+- Each pill must be a **non-empty, non-whitespace string** — blank pills are rejected with `400`
 - Changes take effect on the **next session** created from this KB
 - Permanent KBs require `X-Admin-Secret`; missing or wrong secret → `401`. Unset `ADMIN_SECRET` env var → `500`
 - DB errors during permanence check → `503` (retry later)
@@ -652,6 +707,7 @@ Fonts: **DM Sans** (400, 500, 700) + **DM Mono** (400, 500) — Google Fonts.
 | 3.7 — Floating widget | **Done** | Shadow DOM FAB widget, SSE streaming, mobile dark theme, keyboard handling, 54 tests |
 | 3.8 — Test hardening | **Done** | Backend unit/resilience tests (41), widget error tests (17), backend CI workflow |
 | 3.9 — Bubbles appearance | **Done** | `data-appearance="bubbles"` — floating pill FAB, staggered animation, session refresh, 15 tests |
+| 3.10 — Session archiving | **Done** | Write-through to Neon on every turn; `brief_sent` flagged after brief; 8 new tests |
 | 4 — Lead delivery | Not started | WhatsApp/email delivery of lead briefs |
 | 5 — Platform plugins | Not started | WordPress, Wix (build at traction) |
 
