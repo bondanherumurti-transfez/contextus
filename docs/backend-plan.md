@@ -229,6 +229,18 @@ def retrieve_chunks(query: str, chunks: list[Chunk], top_k: int = 5) -> list[Chu
 - Re-save with fresh 30-min TTL
 - Return updated `company_profile`
 
+**PATCH /api/crawl/{job_id}/pills**
+- Body: `{ "pills": [string, string, string] }` — exactly 3 required
+- Admin-gated for permanent KBs (`x-admin-secret` header)
+- Overwrites `kb.suggested_pills` and re-saves
+
+**PATCH /api/crawl/{job_id}/custom-instructions**
+- Body: `{ "custom_instructions": string | null }`
+- Admin-gated for permanent KBs (`x-admin-secret` header)
+- Sets `kb.company_profile.custom_instructions` — injected into the chat system prompt as a `# Client instructions` block (placed just before the lead qualification prompt)
+- Pass `null` to clear instructions
+- Use case: per-client overrides like language, tone, or persona (e.g. "Always respond in Bahasa Indonesia.")
+
 ### Step 8 — Session routes (`app/routers/session.py`)
 
 **POST /api/session**
