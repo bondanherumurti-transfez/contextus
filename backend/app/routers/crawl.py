@@ -226,10 +226,18 @@ async def enrich_knowledge_base(
             )
             kb.chunks.append(chunk)
 
+    if not body.answers or not any(v.strip() for v in body.answers.values()):
+        if not kb.company_profile:
+            raise HTTPException(status_code=400, detail="No answers provided and knowledge base has no company profile")
+        return kb.company_profile
+
     if kb.chunks:
         new_profile = await generate_company_profile(kb.chunks, f"enriched:{job_id}")
         kb.company_profile = new_profile
         kb.quality_tier = assess_quality_tier(kb.chunks)
+
+    if not kb.company_profile:
+        raise HTTPException(status_code=400, detail="No answers provided and knowledge base has no company profile")
 
     await save_knowledge_base(job_id, kb, permanent=permanent, ttl=None if permanent else 1800)
 

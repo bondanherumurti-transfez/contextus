@@ -69,8 +69,8 @@ PROFILE_SYSTEM_PROMPT = """You are a business analyst. Extract company informati
 }
 
 Rules:
-- Be concise and factual. Only include information explicitly mentioned in the content.
-- For out_of_scope: infer from the industry. A tax firm is NOT a lender. A web agency does NOT host servers long-term. Think about what confused visitors might ask for. Return 3-6 items. If genuinely uncertain, return [].
+- Be concise and factual. Only include information explicitly mentioned in the content, except where noted below.
+- For out_of_scope: infer from the industry even if not explicitly stated — this is the one field where inference is expected. A tax firm is NOT a lender. A web agency does NOT host servers long-term. Think about what confused visitors might ask for. Return 3-6 items. If genuinely uncertain, return [].
 - For pill_suggestions: max 6 words per question, conversational tone, generate in the website's primary language.
 - service_questions based on services[]
 - gap_questions based on gaps[]
