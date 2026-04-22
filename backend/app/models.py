@@ -68,7 +68,7 @@ class LeadBrief(BaseModel):
     quality_score: Literal["high", "medium", "low"]
     qualification: Literal["qualified", "out_of_scope", "unclear", "suspicious"] = "unclear"
     qualification_reason: str = ""
-    scope_match: str = "unclear"
+    scope_match: Literal["true", "false", "unclear"] = "unclear"
     red_flags: list[str] = []
     contact: dict | None = None
     metadata: dict
