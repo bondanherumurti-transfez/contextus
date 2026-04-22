@@ -242,6 +242,82 @@ def test_enrich_updates_quality_tier(mock_assess, mock_generate, mock_save, mock
     assert kb.quality_tier == "rich"
 
 
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.save_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.generate_company_profile")
+@patch("app.routers.crawl.assess_quality_tier")
+def test_enrich_permanent_kb_requires_admin_secret(mock_assess, mock_generate, mock_save, mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = make_kb(status="complete")  # found in Neon = permanent
+    with patch.dict("os.environ", {"DATABASE_URL": "postgres://fake", "ADMIN_SECRET": "secret123"}):
+        response = client.post("/api/crawl/test_job_123/enrich", json={
+            "answers": {"services": "We sell widgets"}
+        })
+    assert response.status_code == 401
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.save_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.generate_company_profile")
+@patch("app.routers.crawl.assess_quality_tier")
+def test_enrich_permanent_kb_valid_admin_secret_saves_to_neon(mock_assess, mock_generate, mock_save, mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = make_kb(status="complete")  # found in Neon = permanent
+    mock_assess.return_value = "rich"
+    mock_generate.return_value = CompanyProfile(
+        name="Enriched", industry="Tech", services=["widgets"], summary="Updated", gaps=[]
+    )
+    with patch.dict("os.environ", {"DATABASE_URL": "postgres://fake", "ADMIN_SECRET": "secret123"}):
+        response = client.post(
+            "/api/crawl/test_job_123/enrich",
+            json={"answers": {"services": "We sell widgets"}},
+            headers={"x-admin-secret": "secret123"},
+        )
+    assert response.status_code == 200
+    mock_save.assert_awaited_once()
+    call_kwargs = mock_save.call_args
+    assert call_kwargs.kwargs.get("permanent") is True
+    assert call_kwargs.kwargs.get("ttl") is None
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+def test_enrich_db_error_returns_503(mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.side_effect = Exception("Neon connection failed")
+    with patch.dict("os.environ", {"DATABASE_URL": "postgres://fake"}):
+        response = client.post("/api/crawl/test_job_123/enrich", json={
+            "answers": {"services": "We sell widgets"}
+        })
+    assert response.status_code == 503
+    assert "retry" in response.json()["detail"]
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.save_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.generate_company_profile")
+@patch("app.routers.crawl.assess_quality_tier")
+def test_enrich_ephemeral_kb_saves_to_redis_with_ttl(mock_assess, mock_generate, mock_save, mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = None  # not in Neon = ephemeral
+    mock_assess.return_value = "thin"
+    mock_generate.return_value = CompanyProfile(
+        name="Enriched", industry="Tech", services=["widgets"], summary="Updated", gaps=[]
+    )
+    with patch.dict("os.environ", {"DATABASE_URL": "postgres://fake"}):
+        response = client.post("/api/crawl/test_job_123/enrich", json={
+            "answers": {"services": "We sell widgets"}
+        })
+    assert response.status_code == 200
+    mock_save.assert_awaited_once()
+    call_kwargs = mock_save.call_args
+    assert call_kwargs.kwargs.get("permanent") is False
+    assert call_kwargs.kwargs.get("ttl") == 1800
+
+
 # ---------------------------------------------------------
 # Tests for PATCH /api/crawl/{job_id}/pills
 # ---------------------------------------------------------

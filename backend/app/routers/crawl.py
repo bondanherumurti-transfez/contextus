@@ -183,13 +183,36 @@ async def get_crawl_status(job_id: str):
 
 
 @router.post("/crawl/{job_id}/enrich", response_model=CompanyProfile)
-async def enrich_knowledge_base(job_id: str, body: EnrichRequest):
+async def enrich_knowledge_base(
+    job_id: str,
+    body: EnrichRequest,
+    x_admin_secret: str | None = Header(default=None),
+):
     kb = await get_knowledge_base(job_id)
     if not kb:
         raise HTTPException(status_code=404, detail="Job not found")
 
     if kb.status != "complete":
         raise HTTPException(status_code=400, detail="Job not complete yet")
+
+    import os as _os
+    permanent = False
+    if _os.getenv("DATABASE_URL", ""):
+        try:
+            permanent = await db_get_knowledge_base(job_id) is not None
+        except Exception:
+            raise HTTPException(
+                status_code=503,
+                detail="Unable to verify knowledge base persistence; please retry later",
+            )
+
+    if permanent:
+        import os
+        admin_secret = os.getenv("ADMIN_SECRET", "")
+        if not admin_secret:
+            raise HTTPException(status_code=500, detail="Server misconfiguration: ADMIN_SECRET not set")
+        if x_admin_secret != admin_secret:
+            raise HTTPException(status_code=401, detail="Unauthorized")
 
     from nanoid import generate as gen_id
 
@@ -208,7 +231,7 @@ async def enrich_knowledge_base(job_id: str, body: EnrichRequest):
         kb.company_profile = new_profile
         kb.quality_tier = assess_quality_tier(kb.chunks)
 
-    await save_knowledge_base(job_id, kb)
+    await save_knowledge_base(job_id, kb, permanent=permanent, ttl=None if permanent else 1800)
 
     return kb.company_profile
 
