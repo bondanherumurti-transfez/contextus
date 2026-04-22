@@ -174,6 +174,10 @@ def build_chat_system_prompt(
         items = "\n".join(f"- {item}" for item in company_profile.out_of_scope)
         out_of_scope_block = f"\nThis business does NOT offer the following (politely redirect if asked):\n{items}\n"
 
+    client_instructions_block = ""
+    if company_profile.custom_instructions:
+        client_instructions_block = f"\n# Client instructions\n\n{company_profile.custom_instructions}\n"
+
     return f"""You are the AI assistant for {company_profile.name}, a {company_profile.industry} business.
 [Exchange count: {message_count // 2}]
 
@@ -211,7 +215,7 @@ Visitor messages fall into two categories — treat them differently:
 - Do not restate or paraphrase what the visitor just said before answering.
 - Do not open with affirmations like "Great question!", "Of course!", "Sure thing!", or similar filler — go straight to the answer.
 - Do not use emojis unless the visitor does first.
-
+{client_instructions_block}
 {lead_qual}"""
 
 

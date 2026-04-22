@@ -19,6 +19,7 @@ class CompanyProfile(BaseModel):
     gaps: list[str]
     pill_suggestions: PillSuggestions | None = None
     language: str = "en"
+    custom_instructions: str | None = None
 
 
 class Chunk(BaseModel):
@@ -90,6 +91,10 @@ class EnrichRequest(BaseModel):
 
 class UpdatePillsRequest(BaseModel):
     pills: list[str]
+
+
+class UpdateCustomInstructionsRequest(BaseModel):
+    custom_instructions: str | None
 
 
 class SessionRequest(BaseModel):

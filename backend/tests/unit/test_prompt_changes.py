@@ -256,3 +256,24 @@ def test_profile_from_partial_out_of_scope_empty_string_defaults_to_empty():
     data = {"name": "TestCo", "out_of_scope": ""}
     profile = _profile_from_partial(data, "http://testco.com")
     assert profile.out_of_scope == []
+
+
+# ---------------------------------------------------------------------------
+# build_chat_system_prompt — custom_instructions block rendering
+# ---------------------------------------------------------------------------
+
+def test_custom_instructions_block_renders_when_set():
+    profile = _make_profile()
+    profile.custom_instructions = "Always respond in Bahasa Indonesia."
+    prompt = build_chat_system_prompt(profile, retrieved_chunks=[], kb_id="test")
+
+    assert "# Client instructions" in prompt
+    assert "Always respond in Bahasa Indonesia." in prompt
+
+
+def test_custom_instructions_block_omitted_when_none():
+    profile = _make_profile()
+    profile.custom_instructions = None
+    prompt = build_chat_system_prompt(profile, retrieved_chunks=[], kb_id="test")
+
+    assert "# Client instructions" not in prompt

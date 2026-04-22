@@ -31,13 +31,15 @@ Drop `temperature=0.7` → `0.4` in `stream_chat_response`. 0.7 is creative writ
 
 ---
 
-## Step 2 — Add `custom_instructions` to CompanyProfile (next session)
+## Step 2 — Add `custom_instructions` to CompanyProfile ✓ Done
 
-Files: `backend/app/models.py`, `backend/app/services/llm.py`, `backend/app/routers/crawl.py`, `backend/app/services/database.py`.
+Files changed: `backend/app/models.py`, `backend/app/services/llm.py`, `backend/app/routers/crawl.py`.
 
-- Add `custom_instructions: str | None = None` to `CompanyProfile` model
-- Inject as a `# Client instructions` block in `build_chat_system_prompt`, placed just before the `{lead_qual}` block
-- Expose via crawl request body and persist in Neon alongside the profile
+- Added `custom_instructions: str | None = None` to `CompanyProfile` model
+- Injected as a `# Client instructions` block in `build_chat_system_prompt`, placed just before the `{lead_qual}` block
+- Exposed via a new dedicated endpoint `PATCH /api/crawl/{job_id}/custom-instructions` (Option B — separate endpoint, not bundled into enrich, so instructions can be updated without re-running enrichment)
+- Persisted automatically via `model_dump_json()` — no database.py changes needed
+- Pass `null` to clear instructions
 
 ---
 

@@ -10,6 +10,7 @@ from app.models import (
     CrawlResponse,
     EnrichRequest,
     UpdatePillsRequest,
+    UpdateCustomInstructionsRequest,
     Chunk,
 )
 from app.services.redis import save_knowledge_base, get_knowledge_base, check_rate_limit
@@ -291,3 +292,47 @@ async def update_pills(
         await save_knowledge_base(job_id, kb)
 
     return {"job_id": job_id, "suggested_pills": kb.suggested_pills}
+
+
+@router.patch("/crawl/{job_id}/custom-instructions")
+async def update_custom_instructions(
+    job_id: str,
+    body: UpdateCustomInstructionsRequest,
+    x_admin_secret: str | None = Header(default=None),
+):
+    kb = await get_knowledge_base(job_id)
+    if not kb:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if kb.status != "complete":
+        raise HTTPException(status_code=400, detail="Job not complete yet")
+
+    if not kb.company_profile:
+        raise HTTPException(status_code=400, detail="No company profile on this knowledge base")
+
+    import os as _os
+    permanent = False
+    if _os.getenv("DATABASE_URL", ""):
+        try:
+            permanent = await db_get_knowledge_base(job_id) is not None
+        except Exception:
+            raise HTTPException(
+                status_code=503,
+                detail="Unable to verify knowledge base persistence; please retry later",
+            )
+
+    if permanent:
+        import os
+        admin_secret = os.getenv("ADMIN_SECRET", "")
+        if not admin_secret:
+            raise HTTPException(status_code=500, detail="Server misconfiguration: ADMIN_SECRET not set")
+        if x_admin_secret != admin_secret:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+
+    kb.company_profile.custom_instructions = body.custom_instructions
+    if permanent:
+        await save_knowledge_base(job_id, kb, permanent=True, ttl=None)
+    else:
+        await save_knowledge_base(job_id, kb)
+
+    return {"job_id": job_id, "custom_instructions": kb.company_profile.custom_instructions}
