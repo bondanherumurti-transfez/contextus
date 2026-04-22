@@ -483,7 +483,7 @@ COUNT() GROUP BY fallback_triggered
 | `POST` | `/api/crawl` | Start crawling a URL, returns `job_id` |
 | `GET` | `/api/crawl/{job_id}` | Poll crawl status and results |
 | `POST` | `/api/crawl/demo` | Seed the permanent demo knowledge base |
-| `POST` | `/api/crawl/{job_id}/enrich` | Add manual answers to enrich a thin/empty KB |
+| `POST` | `/api/crawl/{job_id}/enrich` | Add manual Q&A pairs to any complete KB; regenerates company profile |
 | `PATCH` | `/api/crawl/{job_id}/pills` | Override quick-reply pills with custom values |
 | `POST` | `/api/session` | Create chat session from KB |
 | `GET` | `/api/session/{id}` | Get session state |
@@ -565,6 +565,46 @@ uvicorn app.main:app --reload
   "contact": { "email": "...", "phone": "...", "whatsapp": "..." }
 }
 ```
+
+### Enriching a knowledge base manually
+
+Add Q&A pairs to any complete knowledge base without re-crawling. Each answer is appended as a new chunk and the company profile is regenerated from all chunks (original + enriched). Useful for filling gaps the crawler couldn't find — contact details, pricing context, out-of-scope clarifications.
+
+```bash
+# Ephemeral KB (30-min TTL — no auth required)
+curl -X POST https://contextus-2d16.onrender.com/api/crawl/{job_id}/enrich \
+  -H "Content-Type: application/json" \
+  -d '{
+    "answers": {
+      "What is your WhatsApp contact?": "wa.me/628123456789",
+      "Do you offer investment advisory?": "No, we only provide bookkeeping and tax services."
+    }
+  }'
+
+# Permanent KB (customer-seeded — X-Admin-Secret required)
+curl -X POST https://contextus-2d16.onrender.com/api/crawl/{kb_id}/enrich \
+  -H "Content-Type: application/json" \
+  -H "X-Admin-Secret: your-admin-secret" \
+  -d '{
+    "answers": {
+      "What is your WhatsApp contact?": "wa.me/628123456789",
+      "Do you offer investment advisory?": "No, we only provide bookkeeping and tax services."
+    }
+  }'
+```
+
+**Rules:**
+- The KB must be in `complete` status — enriching a crawl still in progress → `400`
+- Keys in `answers` become the chunk source label (`interview:<key>`); values are the chunk text
+- Blank or whitespace-only answers are silently skipped
+- If all answers are blank/empty **and** the KB has no existing profile → `400`
+- Permanent KBs require `X-Admin-Secret`; missing or wrong secret → `401`. Unset `ADMIN_SECRET` env var → `500`
+- DB errors during permanence check → `503` (retry later)
+- Enrichment is **additive** — re-enriching appends new chunks; old chunks are not removed
+
+**Response:** the regenerated `CompanyProfile` object.
+
+---
 
 ### Updating pills manually
 
