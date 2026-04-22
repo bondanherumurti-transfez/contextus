@@ -22,6 +22,29 @@ from app.services.turnstile import verify_turnstile
 
 router = APIRouter(tags=["crawl"])
 
+CUSTOM_INSTRUCTIONS_MAX_LEN = 2000
+
+
+async def _check_permanent_and_auth(job_id: str, x_admin_secret: str | None) -> bool:
+    """Return True if KB is permanent (Neon), enforcing admin auth. Fail closed on DB errors."""
+    import os
+    permanent = False
+    if os.getenv("DATABASE_URL", ""):
+        try:
+            permanent = await db_get_knowledge_base(job_id) is not None
+        except Exception:
+            raise HTTPException(
+                status_code=503,
+                detail="Unable to verify knowledge base persistence; please retry later",
+            )
+    if permanent:
+        admin_secret = os.getenv("ADMIN_SECRET", "")
+        if not admin_secret:
+            raise HTTPException(status_code=500, detail="Server misconfiguration: ADMIN_SECRET not set")
+        if x_admin_secret != admin_secret:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+    return permanent
+
 
 DEMO_URL = "https://getcontextus.dev"
 DEMO_JOB_ID = "demo"
@@ -196,24 +219,7 @@ async def enrich_knowledge_base(
     if kb.status != "complete":
         raise HTTPException(status_code=400, detail="Job not complete yet")
 
-    import os as _os
-    permanent = False
-    if _os.getenv("DATABASE_URL", ""):
-        try:
-            permanent = await db_get_knowledge_base(job_id) is not None
-        except Exception:
-            raise HTTPException(
-                status_code=503,
-                detail="Unable to verify knowledge base persistence; please retry later",
-            )
-
-    if permanent:
-        import os
-        admin_secret = os.getenv("ADMIN_SECRET", "")
-        if not admin_secret:
-            raise HTTPException(status_code=500, detail="Server misconfiguration: ADMIN_SECRET not set")
-        if x_admin_secret != admin_secret:
-            raise HTTPException(status_code=401, detail="Unauthorized")
+    permanent = await _check_permanent_and_auth(job_id, x_admin_secret)
 
     from nanoid import generate as gen_id
 
@@ -264,26 +270,7 @@ async def update_pills(
     if any(not p.strip() for p in body.pills):
         raise HTTPException(status_code=400, detail="Pills must be non-empty strings")
 
-    # Permanent KBs (found in Neon) require admin auth. Fail closed on DB errors
-    # so a Neon outage cannot be used to bypass auth.
-    import os as _os
-    permanent = False
-    if _os.getenv("DATABASE_URL", ""):
-        try:
-            permanent = await db_get_knowledge_base(job_id) is not None
-        except Exception:
-            raise HTTPException(
-                status_code=503,
-                detail="Unable to verify knowledge base persistence; please retry later",
-            )
-
-    if permanent:
-        import os
-        admin_secret = os.getenv("ADMIN_SECRET", "")
-        if not admin_secret:
-            raise HTTPException(status_code=500, detail="Server misconfiguration: ADMIN_SECRET not set")
-        if x_admin_secret != admin_secret:
-            raise HTTPException(status_code=401, detail="Unauthorized")
+    permanent = await _check_permanent_and_auth(job_id, x_admin_secret)
 
     kb.suggested_pills = body.pills
     if permanent:
@@ -310,26 +297,17 @@ async def update_custom_instructions(
     if not kb.company_profile:
         raise HTTPException(status_code=400, detail="No company profile on this knowledge base")
 
-    import os as _os
-    permanent = False
-    if _os.getenv("DATABASE_URL", ""):
-        try:
-            permanent = await db_get_knowledge_base(job_id) is not None
-        except Exception:
-            raise HTTPException(
-                status_code=503,
-                detail="Unable to verify knowledge base persistence; please retry later",
-            )
+    value = body.custom_instructions.strip() if body.custom_instructions else None
+    if value is not None and len(value) > CUSTOM_INSTRUCTIONS_MAX_LEN:
+        raise HTTPException(
+            status_code=400,
+            detail=f"custom_instructions exceeds maximum length of {CUSTOM_INSTRUCTIONS_MAX_LEN} characters",
+        )
+    value = value or None
 
-    if permanent:
-        import os
-        admin_secret = os.getenv("ADMIN_SECRET", "")
-        if not admin_secret:
-            raise HTTPException(status_code=500, detail="Server misconfiguration: ADMIN_SECRET not set")
-        if x_admin_secret != admin_secret:
-            raise HTTPException(status_code=401, detail="Unauthorized")
+    permanent = await _check_permanent_and_auth(job_id, x_admin_secret)
 
-    kb.company_profile.custom_instructions = body.custom_instructions
+    kb.company_profile.custom_instructions = value
     if permanent:
         await save_knowledge_base(job_id, kb, permanent=True, ttl=None)
     else:

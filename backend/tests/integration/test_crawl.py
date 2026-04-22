@@ -538,3 +538,64 @@ def test_update_custom_instructions_permanent_kb_valid_admin_secret_saves_to_neo
     call_kwargs = mock_save.call_args
     assert call_kwargs.kwargs.get("permanent") is True
     assert call_kwargs.kwargs.get("ttl") is None
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+def test_update_custom_instructions_db_error_returns_503(mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.side_effect = Exception("Neon connection failed")
+    with patch.dict("os.environ", {"DATABASE_URL": "postgres://fake"}):
+        response = client.patch(
+            "/api/crawl/test_job_123/custom-instructions",
+            json={"custom_instructions": "test"},
+        )
+    assert response.status_code == 503
+    assert "retry" in response.json()["detail"]
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.save_knowledge_base", new_callable=AsyncMock)
+def test_update_custom_instructions_permanent_kb_missing_admin_secret_env(mock_save, mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = make_kb(status="complete")
+    with patch.dict("os.environ", {"DATABASE_URL": "postgres://fake"}, clear=False):
+        import os
+        os.environ.pop("ADMIN_SECRET", None)
+        response = client.patch(
+            "/api/crawl/test_job_123/custom-instructions",
+            json={"custom_instructions": "test"},
+            headers={"x-admin-secret": "anything"},
+        )
+    assert response.status_code == 500
+    assert "misconfiguration" in response.json()["detail"]
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.save_knowledge_base", new_callable=AsyncMock)
+def test_update_custom_instructions_whitespace_only_treated_as_none(mock_save, mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = None
+    with patch.dict("os.environ", {"DATABASE_URL": "postgres://fake"}):
+        response = client.patch(
+            "/api/crawl/test_job_123/custom-instructions",
+            json={"custom_instructions": "   "},
+        )
+    assert response.status_code == 200
+    assert response.json()["custom_instructions"] is None
+
+
+@patch("app.routers.crawl.db_get_knowledge_base", new_callable=AsyncMock)
+@patch("app.routers.crawl.get_knowledge_base", new_callable=AsyncMock)
+def test_update_custom_instructions_too_long_returns_400(mock_get_kb, mock_db_get):
+    mock_get_kb.return_value = make_kb(status="complete")
+    mock_db_get.return_value = None
+    with patch.dict("os.environ", {"DATABASE_URL": "postgres://fake"}):
+        response = client.patch(
+            "/api/crawl/test_job_123/custom-instructions",
+            json={"custom_instructions": "x" * 2001},
+        )
+    assert response.status_code == 400
+    assert "exceeds maximum length" in response.json()["detail"]
