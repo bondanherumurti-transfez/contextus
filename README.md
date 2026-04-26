@@ -38,6 +38,9 @@ Non-empty chat sessions are now archived to Neon Postgres on every conversation 
 **Phase 3.8 — Test hardening: complete.**
 Backend unit + resilience tests (41 new), widget backend error handling tests (17 new), and GitHub Actions CI for the backend. No credentials required — all third-party calls mocked.
 
+**Phase 0 (Portal) — Schema foundations: complete.**
+Neon schema additions for the contextus portal: `users`, `user_sites`, `briefs` tables; `customer_configs.greeting` column; `sessions(kb_id)` and `sessions(updated_at DESC)` indexes. All changes are `IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS` — idempotent and non-breaking. Portal OAuth env vars added to `.env.example`. Unblocks Phase 1 (Google OAuth auth endpoints).
+
 ---
 
 ## Project structure
@@ -387,8 +390,13 @@ BACKEND (Render — free tier, sleeps on inactivity)
   ├── POST   /api/crawl              — Start crawl job
   ├── GET    /api/crawl/{job_id}     — Poll crawl status + result
   ├── POST   /api/crawl/demo         — Seed/refresh demo KB (no TTL)
+  ├── POST   /api/crawl/seed         — Seed permanent customer KB (admin-protected)
   ├── POST   /api/crawl/{job_id}/enrich — Enrich KB with manual answers
   ├── PATCH  /api/crawl/{job_id}/pills — Override quick-reply pills with custom values
+  ├── PATCH  /api/crawl/{job_id}/custom-instructions — Set custom chat agent instructions
+  ├── PUT    /api/config/{kb_id}/webhook — Set webhook URL for a KB (admin-protected)
+  ├── GET    /api/config/{kb_id}     — Get KB config (admin-protected)
+  ├── POST   /api/events             — Track widget UI events (fire-and-forget)
   ├── POST   /api/session            — Create chat session from KB
   ├── GET    /api/session/{id}       — Get session state
   ├── POST   /api/chat/{session_id}  — Send message, receive SSE stream
@@ -483,8 +491,13 @@ COUNT() GROUP BY fallback_triggered
 | `POST` | `/api/crawl` | Start crawling a URL, returns `job_id` |
 | `GET` | `/api/crawl/{job_id}` | Poll crawl status and results |
 | `POST` | `/api/crawl/demo` | Seed the permanent demo knowledge base |
+| `POST` | `/api/crawl/seed` | Seed a permanent customer KB (admin-protected, stores in Neon) |
 | `POST` | `/api/crawl/{job_id}/enrich` | Add manual Q&A pairs to any complete KB; regenerates company profile |
 | `PATCH` | `/api/crawl/{job_id}/pills` | Override quick-reply pills with custom values |
+| `PATCH` | `/api/crawl/{job_id}/custom-instructions` | Set custom instructions that guide chat agent behavior |
+| `PUT` | `/api/config/{kb_id}/webhook` | Set webhook URL for a KB (admin-protected) |
+| `GET` | `/api/config/{kb_id}` | Get KB config including webhook URL (admin-protected) |
+| `POST` | `/api/events` | Track widget UI events (fab_open, fab_close, pill_click) — fire-and-forget |
 | `POST` | `/api/session` | Create chat session from KB |
 | `GET` | `/api/session/{id}` | Get session state |
 | `POST` | `/api/chat/{session_id}` | Send message, receive SSE stream |
@@ -633,6 +646,42 @@ curl -X PATCH https://contextus-2d16.onrender.com/api/crawl/{kb_id}/pills \
 **Response:**
 ```json
 { "job_id": "abc123", "suggested_pills": ["...", "...", "..."] }
+```
+
+---
+
+### Setting custom chat agent instructions
+
+Override the chat agent's default behavior for any knowledge base:
+
+```bash
+# Ephemeral KB (30-min TTL — no auth required)
+curl -X PATCH https://contextus-2d16.onrender.com/api/crawl/{job_id}/custom-instructions \
+  -H "Content-Type: application/json" \
+  -d '{"custom_instructions": "Always respond in Indonesian. Focus only on pricing questions."}'
+
+# Permanent KB (customer-seeded — X-Admin-Secret required)
+curl -X PATCH https://contextus-2d16.onrender.com/api/crawl/{kb_id}/custom-instructions \
+  -H "Content-Type: application/json" \
+  -H "X-Admin-Secret: your-admin-secret" \
+  -d '{"custom_instructions": "Always respond in Indonesian. Focus only on pricing questions."}'
+
+# Clear custom instructions (revert to default behavior)
+curl -X PATCH https://contextus-2d16.onrender.com/api/crawl/{job_id}/custom-instructions \
+  -H "Content-Type: application/json" \
+  -d '{"custom_instructions": null}'
+```
+
+**Rules:**
+- The KB must be in `complete` status with a company profile — otherwise → `400`
+- Max 2000 characters — exceeding this → `400`
+- Pass `null` or empty string to clear (revert to default agent behavior)
+- Permanent KBs require `X-Admin-Secret`; missing or wrong secret → `401`
+- Instructions are injected into the chat agent system prompt on every turn
+
+**Response:**
+```json
+{ "job_id": "abc123", "custom_instructions": "Always respond in Indonesian." }
 ```
 
 ---
