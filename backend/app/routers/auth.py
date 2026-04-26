@@ -2,12 +2,14 @@ import os
 import secrets
 import time
 import logging
+from urllib.parse import urlencode
 
 import httpx
 from authlib.integrations.httpx_client import AsyncOAuth2Client
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from pydantic import BaseModel
 
 from app.services.portal_db import (
     UserRow,
@@ -31,11 +33,12 @@ PORTAL_ENV_VARS = [
     "GOOGLE_OAUTH_REDIRECT_URI",
     "PORTAL_FRONTEND_URL",
     "PORTAL_SESSION_SECRET",
+    "DATABASE_URL",
 ]
 
-GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
 
 SESSION_COOKIE = "contextus_portal_session"
 STATE_COOKIE = "contextus_oauth_state"
@@ -76,7 +79,12 @@ async def get_current_user(request: Request) -> UserRow:
     except (BadSignature, SignatureExpired):
         raise HTTPException(401, {"error": "unauthenticated"})
 
-    user = await db_get_user_by_id(payload["user_id"])
+    try:
+        user = await db_get_user_by_id(payload["user_id"])
+    except Exception as e:
+        logger.error("get_current_user: DB error: %s", e)
+        raise HTTPException(503, {"error": "service temporarily unavailable"})
+
     if not user:
         raise HTTPException(401, {"error": "unauthenticated"})
     return user
@@ -87,7 +95,12 @@ async def get_current_user_for_kb(
     user: UserRow = Depends(get_current_user),
 ) -> None:
     """Tenant isolation guard — attach to any portal endpoint that takes a kb_id."""
-    has_access = await db_user_has_kb_access(user["user_id"], kb_id)
+    try:
+        has_access = await db_user_has_kb_access(user["user_id"], kb_id)
+    except Exception as e:
+        logger.error("get_current_user_for_kb: DB error: %s", e)
+        raise HTTPException(503, {"error": "service temporarily unavailable"})
+
     if not has_access:
         raise HTTPException(403, {"error": "forbidden"})
 
@@ -109,7 +122,6 @@ async def google_start():
         "state": state,
         "access_type": "online",
     }
-    from urllib.parse import urlencode
     google_url = f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
 
     resp = RedirectResponse(google_url, status_code=302)
@@ -172,17 +184,21 @@ async def google_callback(request: Request, code: str | None = None, state: str 
     #    via POST /api/crawl/seed with owner_email before their first login.
     #    Atomically set google_sub on match to prevent this path running twice.
     # 3. Neither match → insert new user.
-    user = await db_get_user_by_google_sub(google_sub)
-    if user:
-        await db_update_user_login(user["user_id"], display_name, now)
-    else:
-        seeded_user = await db_get_user_by_email_no_sub(email)
-        if seeded_user:
-            await db_set_google_sub(seeded_user["user_id"], google_sub)
-            await db_update_user_login(seeded_user["user_id"], display_name, now)
-            user = seeded_user
+    try:
+        user = await db_get_user_by_google_sub(google_sub)
+        if user:
+            await db_update_user_login(user["user_id"], display_name, now)
         else:
-            user = await db_create_user(email, google_sub, display_name)
+            seeded_user = await db_get_user_by_email_no_sub(email)
+            if seeded_user:
+                await db_set_google_sub(seeded_user["user_id"], google_sub)
+                await db_update_user_login(seeded_user["user_id"], display_name, now)
+                user = seeded_user
+            else:
+                user = await db_create_user(email, google_sub, display_name)
+    except Exception as e:
+        logger.error("google_callback: DB error during user upsert: %s", e)
+        raise HTTPException(503, {"error": "service temporarily unavailable"})
 
     # ⑤ Issue session cookie
     signed_session = _serializer().dumps({"user_id": user["user_id"]})
@@ -227,10 +243,6 @@ def _require_admin(x_admin_secret: str | None) -> None:
         raise HTTPException(401, {"error": "unauthorized"})
 
 
-from fastapi import Header
-from pydantic import BaseModel
-
-
 class SiteClaimRequest(BaseModel):
     email: str
     kb_id: str
@@ -243,7 +255,10 @@ async def claim_site(
 ):
     """Link a user (by email) to a kb_id. Creates user row if email not found."""
     _require_admin(x_admin_secret)
-    await db_claim_site(body.email, body.kb_id)
+    try:
+        await db_claim_site(body.email, body.kb_id)
+    except ValueError as e:
+        raise HTTPException(404, {"error": str(e)})
     return {"email": body.email, "kb_id": body.kb_id, "status": "claimed"}
 
 

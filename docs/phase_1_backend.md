@@ -302,7 +302,7 @@ router = APIRouter(prefix="/api/portal")
 #### `GET /api/portal/sites`
 
 ```python
-@router.get("/api/portal/sites")
+@router.get("/sites")
 async def list_sites(user: UserRow = Depends(get_current_user)):
     sites = await db_get_user_sites(user["user_id"])
     return {"sites": sites}
