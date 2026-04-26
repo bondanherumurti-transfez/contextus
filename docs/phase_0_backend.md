@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS users (
 Notes:
 - `user_id` is a nanoid with `usr_` prefix, e.g. `usr_abc123` — generate at insertion time using the existing nanoid helper (or add `nanoid` import if not present)
 - `google_sub` is nullable on creation because `POST /api/crawl/seed` can pre-create users by email before they ever sign in via Google
-- `UNIQUE` constraint on both `email` and `google_sub` — Postgres enforces this even with nulls (only one null per unique column in Postgres; `google_sub` nulls are fine here because the constraint is deferred until the column is set)
+- `UNIQUE` constraint on both `email` and `google_sub` — in Postgres, this ensures non-`NULL` `google_sub` values are unique; multiple rows with `NULL` `google_sub` are allowed until the column is populated
 
 ### 1b. `user_sites` table
 

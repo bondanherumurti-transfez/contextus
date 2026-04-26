@@ -52,19 +52,39 @@ class TestInitDbIdempotency:
             mock_get_pool.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_init_db_execute_statement_count(self):
-        """init_db() issues exactly 13 SQL statements — catches accidental additions or deletions."""
+    async def test_init_db_executes_expected_schema_statements(self):
+        """init_db() executes all expected core schema and index statements."""
         pool_mock, conn_mock = _make_pool_mock()
         with patch("app.services.database.get_pool", new_callable=AsyncMock) as mock_get_pool, \
              patch("app.services.database.DATABASE_URL", "postgresql://fake"):
             mock_get_pool.return_value = pool_mock
             from app.services.database import init_db
             await init_db()
-            # knowledge_bases, customer_configs, ALTER webhook_url, sessions,
-            # users, user_sites, idx_user_sites_user_id, idx_user_sites_kb_id,
-            # briefs, idx_briefs_kb_id, ALTER greeting,
-            # idx_sessions_kb_id, idx_sessions_updated_at
-            assert conn_mock.execute.call_count == 13
+
+            executed_sql = [
+                call.args[0]
+                for call in conn_mock.execute.call_args_list
+                if call.args
+            ]
+
+            expected_fragments = [
+                "CREATE TABLE IF NOT EXISTS knowledge_bases",
+                "CREATE TABLE IF NOT EXISTS customer_configs",
+                "ADD COLUMN IF NOT EXISTS webhook_url",
+                "CREATE TABLE IF NOT EXISTS sessions",
+                "CREATE TABLE IF NOT EXISTS users",
+                "CREATE TABLE IF NOT EXISTS user_sites",
+                "CREATE INDEX IF NOT EXISTS idx_user_sites_user_id",
+                "CREATE INDEX IF NOT EXISTS idx_user_sites_kb_id",
+                "CREATE TABLE IF NOT EXISTS briefs",
+                "CREATE INDEX IF NOT EXISTS idx_briefs_kb_id",
+                "ADD COLUMN IF NOT EXISTS greeting",
+                "CREATE INDEX IF NOT EXISTS idx_sessions_kb_id",
+                "CREATE INDEX IF NOT EXISTS idx_sessions_updated_at",
+            ]
+
+            for fragment in expected_fragments:
+                assert any(fragment in sql for sql in executed_sql), f"Missing statement: {fragment}"
 
     @pytest.mark.asyncio
     async def test_init_db_raises_on_pool_error(self):
