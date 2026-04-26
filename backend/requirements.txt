@@ -17,3 +17,5 @@ opentelemetry-exporter-otlp>=1.20.0
 opentelemetry-instrumentation-fastapi>=0.41b0
 opentelemetry-instrumentation-httpx>=0.41b0
 amplitude-analytics>=1.1.1
+authlib>=1.0.0
+itsdangerous>=2.0.0

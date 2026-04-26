@@ -41,6 +41,9 @@ Backend unit + resilience tests (41 new), widget backend error handling tests (1
 **Phase 0 (Portal) — Schema foundations: complete.**
 Neon schema additions for the contextus portal: `users`, `user_sites`, `briefs` tables; `customer_configs.greeting` column; `sessions(kb_id)` and `sessions(updated_at DESC)` indexes. All changes are `IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS` — idempotent and non-breaking. Portal OAuth env vars added to `.env.example`. Unblocks Phase 1 (Google OAuth auth endpoints).
 
+**Phase 1 (Portal) — Auth + sites endpoint: complete.**
+Google OAuth flow with CSRF-protected state cookie, HTTP-only signed session cookie (`itsdangerous`, 30-day TTL), `get_current_user` and `get_current_user_for_kb` FastAPI dependencies. Seed-then-login path: users pre-seeded by email get `google_sub` set on first Google login. Admin endpoints for site ownership claim/revoke (supports finfloo handover). `GET /api/portal/sites` returns all kb_ids the user has access to via a single LEFT JOIN query. 32 new tests (unit + integration).
+
 ---
 
 ## Project structure
