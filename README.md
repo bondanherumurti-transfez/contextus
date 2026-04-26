@@ -38,6 +38,9 @@ Non-empty chat sessions are now archived to Neon Postgres on every conversation 
 **Phase 3.8 — Test hardening: complete.**
 Backend unit + resilience tests (41 new), widget backend error handling tests (17 new), and GitHub Actions CI for the backend. No credentials required — all third-party calls mocked.
 
+**Phase 0 (Portal) — Schema foundations: complete.**
+Neon schema additions for the contextus portal: `users`, `user_sites`, `briefs` tables; `customer_configs.greeting` column; `sessions(kb_id)` and `sessions(updated_at DESC)` indexes. All changes are `IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS` — idempotent and non-breaking. Portal OAuth env vars added to `.env.example`. Unblocks Phase 1 (Google OAuth auth endpoints).
+
 ---
 
 ## Project structure

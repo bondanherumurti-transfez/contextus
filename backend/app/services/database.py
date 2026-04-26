@@ -76,6 +76,51 @@ async def init_db():
                     updated_at       TIMESTAMPTZ  NOT NULL DEFAULT now()
                 )
             """)
+            # ── Portal schema ─────────────────────────────────────────────
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id       TEXT PRIMARY KEY,
+                    email         TEXT NOT NULL UNIQUE,
+                    google_sub    TEXT UNIQUE,
+                    display_name  TEXT,
+                    created_at    BIGINT NOT NULL,
+                    last_login_at BIGINT NOT NULL
+                )
+            """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS user_sites (
+                    user_id    TEXT NOT NULL REFERENCES users(user_id),
+                    kb_id      TEXT NOT NULL REFERENCES customer_configs(kb_id),
+                    created_at BIGINT NOT NULL,
+                    PRIMARY KEY (user_id, kb_id)
+                )
+            """)
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_user_sites_user_id ON user_sites (user_id)
+            """)
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_user_sites_kb_id ON user_sites (kb_id)
+            """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS briefs (
+                    session_id TEXT PRIMARY KEY REFERENCES sessions(session_id),
+                    kb_id      TEXT   NOT NULL,
+                    data       JSONB  NOT NULL,
+                    created_at BIGINT NOT NULL
+                )
+            """)
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_briefs_kb_id ON briefs (kb_id)
+            """)
+            await conn.execute("""
+                ALTER TABLE customer_configs ADD COLUMN IF NOT EXISTS greeting TEXT
+            """)
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_sessions_kb_id ON sessions (kb_id)
+            """)
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_sessions_updated_at ON sessions (updated_at DESC)
+            """)
         logger.info("[db] Neon DB tables ready")
     except Exception as e:
         logger.error("[db] Neon init failed: %s", e)
