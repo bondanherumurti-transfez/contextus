@@ -110,3 +110,23 @@ class SessionResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+
+
+class UserResponse(BaseModel):
+    user_id: str
+    email: str
+    display_name: str | None
+
+
+class SiteItem(BaseModel):
+    kb_id: str
+    url: str | None
+    name: str | None
+    token: str
+    created_at: int
+    last_crawled_at: int | None
+    pages_indexed: int | None
+
+
+class SitesResponse(BaseModel):
+    sites: list[SiteItem]
