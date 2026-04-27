@@ -206,7 +206,9 @@ async def google_callback(
                 await db_update_user_login(seeded_user["user_id"], display_name, now)
                 user = seeded_user
             else:
-                user = await db_create_user(email, google_sub, display_name)
+                logger.warning("google_callback: sign-in rejected — email not pre-seeded: %s", email)
+                portal_url = os.getenv("PORTAL_FRONTEND_URL", "")
+                return RedirectResponse(f"{portal_url}/login?error=not_invited", status_code=302)
     except Exception as e:
         logger.error("google_callback: DB error during user upsert: %s", e)
         raise HTTPException(503, {"error": "service temporarily unavailable"})
