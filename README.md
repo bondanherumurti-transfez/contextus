@@ -46,6 +46,58 @@ Google OAuth flow with CSRF-protected state cookie, HTTP-only signed session coo
 
 ---
 
+## Portal: inviting a user (pre-seed method)
+
+The portal is invite-only. Users must be pre-seeded before they can sign in with Google.
+
+### Step 1 — Pre-seed the user and link them to a KB
+
+```bash
+curl -X POST https://contextus-2d16.onrender.com/api/admin/sites/claim \
+  -H "x-admin-secret: <ADMIN_SECRET>" \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "owner@example.com", "kb_id": "finfloo" }'
+```
+
+This does two things atomically:
+- Inserts a row in `users` (with `google_sub = NULL`) if the email doesn't exist yet
+- Inserts a row in `user_sites` linking the user to the KB
+
+### Step 2 — User signs in with Google
+
+The user visits the portal and clicks "Sign in with Google". On the OAuth callback:
+- Their email is matched against the pre-seeded `users` row
+- `google_sub` is set on the row (one-time, atomic)
+- A 30-day session cookie is issued
+- They land on the portal and see their linked KB(s)
+
+If the email is **not** pre-seeded, the callback redirects to `/login?error=not_invited`.
+
+### Revoking access / ownership handover
+
+```bash
+# Remove a user's access to a KB
+curl -X DELETE https://contextus-2d16.onrender.com/api/admin/sites/claim \
+  -H "x-admin-secret: <ADMIN_SECRET>" \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "owner@example.com", "kb_id": "finfloo" }'
+```
+
+To hand over a KB to a new owner: claim with the new email, then revoke the old one.
+
+### Local dev (finfloo anchor)
+
+To link your own account to finfloo during development:
+
+```bash
+curl -X POST http://localhost:8000/api/admin/sites/claim \
+  -H "x-admin-secret: <ADMIN_SECRET>" \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "bondan@transfez.com", "kb_id": "finfloo" }'
+```
+
+---
+
 ## Project structure
 
 ```
