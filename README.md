@@ -59,7 +59,7 @@ curl -X POST https://contextus-2d16.onrender.com/api/admin/sites/claim \
   -d '{ "email": "owner@example.com", "kb_id": "finfloo" }'
 ```
 
-This does two things atomically:
+This does two things:
 - Inserts a row in `users` (with `google_sub = NULL`) if the email doesn't exist yet
 - Inserts a row in `user_sites` linking the user to the KB
 
@@ -93,7 +93,7 @@ To link your own account to finfloo during development:
 curl -X POST http://localhost:8000/api/admin/sites/claim \
   -H "x-admin-secret: <ADMIN_SECRET>" \
   -H "Content-Type: application/json" \
-  -d '{ "email": "bondan@transfez.com", "kb_id": "finfloo" }'
+  -d '{ "email": "developer@example.com", "kb_id": "finfloo" }'
 ```
 
 ---

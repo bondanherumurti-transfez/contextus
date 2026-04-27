@@ -89,6 +89,7 @@ class TestGoogleCallback:
         )
         assert resp.status_code == 302
         assert "/login?error=auth_failed" in resp.headers["location"]
+        assert "contextus_portal_session" not in resp.cookies
 
     def test_state_mismatch_returns_400(self, client):
         state_cookie = _signed_state("correct-state")
@@ -181,13 +182,12 @@ class TestGoogleCallback:
         state_cookie = _signed_state(state)
         mock_oauth, mock_http = self._patch_oauth(
             {"access_token": "tok000"},
-            {"sub": "sub-xyz", "email": "x@test.com", "name": "X"},
+            {"sub": "google-sub-abc", "email": "bondan@test.com", "name": "Bondan"},
         )
         with patch("app.routers.auth.AsyncOAuth2Client", return_value=mock_oauth), \
              patch("app.routers.auth.httpx.AsyncClient", return_value=mock_http), \
-             patch("app.routers.auth.db_get_user_by_google_sub", new_callable=AsyncMock, return_value=None), \
-             patch("app.routers.auth.db_get_user_by_email_no_sub", new_callable=AsyncMock, return_value=None), \
-             patch("app.routers.auth.db_create_user", new_callable=AsyncMock, return_value=FAKE_USER):
+             patch("app.routers.auth.db_get_user_by_google_sub", new_callable=AsyncMock, return_value=FAKE_USER), \
+             patch("app.routers.auth.db_update_user_login", new_callable=AsyncMock):
             resp = client.get(
                 f"/api/auth/google/callback?code=abc&state={state}",
                 cookies={"contextus_oauth_state": state_cookie},
