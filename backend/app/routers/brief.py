@@ -1,10 +1,14 @@
 import asyncio
+import logging
 from fastapi import APIRouter, HTTPException
+
+logger = logging.getLogger(__name__)
 
 from app.models import LeadBrief
 from app.services.redis import get_session, get_knowledge_base
 from app.services.llm import generate_lead_brief
 from app.services.database import get_customer_config, db_mark_brief_sent
+from app.services.portal_db import db_save_brief
 from app.services.webhook import fire_webhook
 from app.services import analytics
 
@@ -27,6 +31,12 @@ async def generate_brief(session_id: str):
         raise HTTPException(status_code=404, detail="Knowledge base not found")
 
     brief = await generate_lead_brief(session)
+
+    # Persist brief before firing webhook — webhook failure must not lose the brief
+    try:
+        await db_save_brief(session_id, session.kb_id, brief.model_dump())
+    except Exception as e:
+        logger.error("brief persistence failed for %s: %s", session_id, e)
 
     config = await get_customer_config(session.kb_id)
     if config and config.get("webhook_url"):

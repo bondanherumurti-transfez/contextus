@@ -1,3 +1,4 @@
+import json
 import time
 import logging
 import asyncpg
@@ -24,30 +25,22 @@ async def db_get_user_by_id(user_id: str) -> UserRow | None:
 async def db_get_user_by_google_sub(google_sub: str) -> UserRow | None:
     if not DATABASE_URL:
         return None
-    try:
-        pool = await get_pool()
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow("SELECT * FROM users WHERE google_sub = $1", google_sub)
-        return dict(row) if row else None
-    except Exception as e:
-        logger.error("db_get_user_by_google_sub error: %s", e)
-        return None
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT * FROM users WHERE google_sub = $1", google_sub)
+    return dict(row) if row else None
 
 
 async def db_get_user_by_email_no_sub(email: str) -> UserRow | None:
     """Find a pre-seeded user (google_sub IS NULL) by email — seed-then-login path."""
     if not DATABASE_URL:
         return None
-    try:
-        pool = await get_pool()
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT * FROM users WHERE email = $1 AND google_sub IS NULL", email
-            )
-        return dict(row) if row else None
-    except Exception as e:
-        logger.error("db_get_user_by_email_no_sub error: %s", e)
-        return None
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM users WHERE email = $1 AND google_sub IS NULL", email
+        )
+    return dict(row) if row else None
 
 
 async def db_create_user(email: str, google_sub: str, display_name: str | None) -> UserRow:
@@ -212,3 +205,94 @@ async def db_revoke_site(email: str, kb_id: str) -> bool:
             row["user_id"], kb_id,
         )
     return result == "DELETE 1"
+
+
+async def db_save_brief(session_id: str, kb_id: str, brief_data: dict) -> None:
+    """Upsert brief to briefs table. Called before webhook fire.
+
+    DB failure is logged and swallowed — callers must not propagate it.
+    """
+    if not DATABASE_URL:
+        return
+    now = int(time.time())
+    try:
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """
+                INSERT INTO briefs (session_id, kb_id, data, created_at)
+                VALUES ($1, $2, $3::jsonb, $4)
+                ON CONFLICT (session_id)
+                DO UPDATE SET data = EXCLUDED.data, created_at = EXCLUDED.created_at
+                """,
+                session_id, kb_id, json.dumps(brief_data), now,
+            )
+    except Exception as e:
+        logger.error("db_save_brief error for session %s: %s", session_id, e)
+
+
+async def db_list_sessions(
+    kb_id: str,
+    limit: int,
+    cursor_updated_at: int | None,
+) -> list[dict]:
+    """Sessions for a kb_id with brief join, sorted updated_at DESC."""
+    if not DATABASE_URL:
+        return []
+    try:
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT
+                    s.session_id,
+                    s.created_at,
+                    EXTRACT(EPOCH FROM s.updated_at)::BIGINT AS updated_at,
+                    s.message_count,
+                    s.contact_captured,
+                    s.contact_value,
+                    s.messages,
+                    s.brief_sent,
+                    b.data->>'qualification' AS qualification,
+                    b.data->>'quality_score' AS quality_score
+                FROM sessions s
+                LEFT JOIN briefs b ON b.session_id = s.session_id
+                WHERE s.kb_id = $1
+                  AND ($2::BIGINT IS NULL OR EXTRACT(EPOCH FROM s.updated_at)::BIGINT < $2::BIGINT)
+                ORDER BY s.updated_at DESC
+                LIMIT $3
+                """,
+                kb_id, cursor_updated_at, limit,
+            )
+        return [dict(r) for r in rows]
+    except Exception as e:
+        logger.error("db_list_sessions error for kb_id %s: %s", kb_id, e)
+        return []
+
+
+async def db_get_session(session_id: str) -> dict | None:
+    """Full session row + brief data. Returns None if not found. Re-raises on DB error."""
+    if not DATABASE_URL:
+        return None
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT
+                s.session_id,
+                s.kb_id,
+                s.created_at,
+                EXTRACT(EPOCH FROM s.updated_at)::BIGINT AS updated_at,
+                s.message_count,
+                s.messages,
+                s.contact_captured,
+                s.contact_value,
+                s.brief_sent,
+                b.data AS brief_data
+            FROM sessions s
+            LEFT JOIN briefs b ON b.session_id = s.session_id
+            WHERE s.session_id = $1
+            """,
+            session_id,
+        )
+    return dict(row) if row else None
