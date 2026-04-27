@@ -44,6 +44,9 @@ Neon schema additions for the contextus portal: `users`, `user_sites`, `briefs` 
 **Phase 1 (Portal) — Auth + sites endpoint: complete.**
 Google OAuth flow with CSRF-protected state cookie, HTTP-only signed session cookie (`itsdangerous`, 30-day TTL), `get_current_user` and `get_current_user_for_kb` FastAPI dependencies. Seed-then-login path: users pre-seeded by email get `google_sub` set on first Google login. Admin endpoints for site ownership claim/revoke (supports finfloo handover). `GET /api/portal/sites` returns all kb_ids the user has access to via a single LEFT JOIN query. 32 new tests (unit + integration).
 
+**Phase 2 (Portal) — Brief persistence + inbox endpoints: complete.**
+`POST /api/brief/{session_id}` now upserts the generated brief to the `briefs` table before firing the webhook — DB failure is logged and swallowed so the endpoint always returns 200. Two new read-only inbox endpoints: `GET /api/portal/sessions?kb_id=` lists conversations with brief qualification tags and message preview (cursor-based pagination, `EXTRACT(EPOCH)` normalises `TIMESTAMPTZ updated_at` to epoch int); `GET /api/portal/sessions/{session_id}` returns the full transcript and brief data (or `null`). Both endpoints enforce tenant isolation. 21 new tests (brief persistence + inbox).
+
 ---
 
 ## Portal: inviting a user (pre-seed method)
