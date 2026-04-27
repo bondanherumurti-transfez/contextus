@@ -210,7 +210,9 @@ async def google_callback(
             else:
                 logger.warning("google_callback: sign-in rejected — email not pre-seeded: %s", email)
                 portal_url = os.getenv("PORTAL_FRONTEND_URL", "")
-                return RedirectResponse(f"{portal_url}/login?error=not_invited", status_code=302)
+                resp = RedirectResponse(f"{portal_url}/login?error=not_invited", status_code=302)
+                resp.delete_cookie(STATE_COOKIE)
+                return resp
     except Exception as e:
         logger.error("google_callback: DB error during user upsert: %s", e)
         raise HTTPException(503, {"error": "service temporarily unavailable"})

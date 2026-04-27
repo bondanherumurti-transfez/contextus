@@ -1,4 +1,3 @@
-import base64
 import json
 import time
 import logging
@@ -26,30 +25,22 @@ async def db_get_user_by_id(user_id: str) -> UserRow | None:
 async def db_get_user_by_google_sub(google_sub: str) -> UserRow | None:
     if not DATABASE_URL:
         return None
-    try:
-        pool = await get_pool()
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow("SELECT * FROM users WHERE google_sub = $1", google_sub)
-        return dict(row) if row else None
-    except Exception as e:
-        logger.error("db_get_user_by_google_sub error: %s", e)
-        return None
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT * FROM users WHERE google_sub = $1", google_sub)
+    return dict(row) if row else None
 
 
 async def db_get_user_by_email_no_sub(email: str) -> UserRow | None:
     """Find a pre-seeded user (google_sub IS NULL) by email — seed-then-login path."""
     if not DATABASE_URL:
         return None
-    try:
-        pool = await get_pool()
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT * FROM users WHERE email = $1 AND google_sub IS NULL", email
-            )
-        return dict(row) if row else None
-    except Exception as e:
-        logger.error("db_get_user_by_email_no_sub error: %s", e)
-        return None
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM users WHERE email = $1 AND google_sub IS NULL", email
+        )
+    return dict(row) if row else None
 
 
 async def db_create_user(email: str, google_sub: str, display_name: str | None) -> UserRow:
@@ -256,7 +247,7 @@ async def db_list_sessions(
                 SELECT
                     s.session_id,
                     s.created_at,
-                    s.updated_at,
+                    EXTRACT(EPOCH FROM s.updated_at)::BIGINT AS updated_at,
                     s.message_count,
                     s.contact_captured,
                     s.contact_value,
@@ -267,7 +258,7 @@ async def db_list_sessions(
                 FROM sessions s
                 LEFT JOIN briefs b ON b.session_id = s.session_id
                 WHERE s.kb_id = $1
-                  AND ($2::BIGINT IS NULL OR s.updated_at < $2::BIGINT)
+                  AND ($2::BIGINT IS NULL OR EXTRACT(EPOCH FROM s.updated_at)::BIGINT < $2::BIGINT)
                 ORDER BY s.updated_at DESC
                 LIMIT $3
                 """,
@@ -280,32 +271,28 @@ async def db_list_sessions(
 
 
 async def db_get_session(session_id: str) -> dict | None:
-    """Full session row + brief data. Returns None if not found."""
+    """Full session row + brief data. Returns None if not found. Re-raises on DB error."""
     if not DATABASE_URL:
         return None
-    try:
-        pool = await get_pool()
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow(
-                """
-                SELECT
-                    s.session_id,
-                    s.kb_id,
-                    s.created_at,
-                    s.updated_at,
-                    s.message_count,
-                    s.messages,
-                    s.contact_captured,
-                    s.contact_value,
-                    s.brief_sent,
-                    b.data AS brief_data
-                FROM sessions s
-                LEFT JOIN briefs b ON b.session_id = s.session_id
-                WHERE s.session_id = $1
-                """,
-                session_id,
-            )
-        return dict(row) if row else None
-    except Exception as e:
-        logger.error("db_get_session error for session %s: %s", session_id, e)
-        return None
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT
+                s.session_id,
+                s.kb_id,
+                s.created_at,
+                EXTRACT(EPOCH FROM s.updated_at)::BIGINT AS updated_at,
+                s.message_count,
+                s.messages,
+                s.contact_captured,
+                s.contact_value,
+                s.brief_sent,
+                b.data AS brief_data
+            FROM sessions s
+            LEFT JOIN briefs b ON b.session_id = s.session_id
+            WHERE s.session_id = $1
+            """,
+            session_id,
+        )
+    return dict(row) if row else None

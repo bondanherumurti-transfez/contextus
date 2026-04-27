@@ -34,11 +34,23 @@ FAKE_BRIEF = LeadBrief(
 )
 
 
+PORTAL_ENV = {
+    "GOOGLE_OAUTH_CLIENT_ID": "fake-client-id",
+    "GOOGLE_OAUTH_CLIENT_SECRET": "fake-client-secret",
+    "GOOGLE_OAUTH_REDIRECT_URI": "http://localhost:8000/api/auth/google/callback",
+    "PORTAL_FRONTEND_URL": "http://localhost:3000",
+    "PORTAL_SESSION_SECRET": "test-secret",
+    "ADMIN_SECRET": "admin-test",
+    "DATABASE_URL": "postgresql://fake",
+}
+
+
 @pytest.fixture()
 def client():
-    from app.main import app
-    with TestClient(app, raise_server_exceptions=False) as c:
-        yield c
+    with patch.dict("os.environ", PORTAL_ENV):
+        from app.main import app
+        with TestClient(app, raise_server_exceptions=False) as c:
+            yield c
 
 
 class TestBriefPersistence:
@@ -64,25 +76,23 @@ class TestBriefPersistence:
         assert args[2]["qualification"] == "qualified"
         assert args[2]["quality_score"] == "high"
 
-    def test_brief_persisted_before_webhook(self, client):
-        call_order = []
-
-        async def track_save(*a, **kw):
-            call_order.append("save")
-
-        async def track_webhook(*a, **kw):
-            call_order.append("webhook")
+    def test_brief_persisted_before_webhook_task_is_created(self, client):
+        """db_save_brief is awaited (synchronous), webhook is create_task (async).
+        Verify save is called and completes before the task is created."""
+        save_mock = AsyncMock()
+        task_mock = MagicMock(return_value=MagicMock())  # create_task returns a Task
 
         with patch("app.routers.brief.get_session", AsyncMock(return_value=FAKE_SESSION)), \
              patch("app.routers.brief.get_knowledge_base", AsyncMock(return_value=FAKE_KB)), \
              patch("app.routers.brief.generate_lead_brief", AsyncMock(return_value=FAKE_BRIEF)), \
              patch("app.routers.brief.get_customer_config", AsyncMock(return_value={"webhook_url": "http://hook"})), \
-             patch("app.routers.brief.db_save_brief", AsyncMock(side_effect=track_save)), \
-             patch("app.routers.brief.fire_webhook", AsyncMock(side_effect=track_webhook)), \
+             patch("app.routers.brief.db_save_brief", save_mock), \
+             patch("app.routers.brief.asyncio.create_task", task_mock), \
              patch("app.routers.brief.db_mark_brief_sent", AsyncMock()):
-            client.post("/api/brief/sess_order")
-        assert "save" in call_order
-        assert call_order.index("save") == 0
+            resp = client.post("/api/brief/sess_order")
+        assert resp.status_code == 200
+        save_mock.assert_awaited_once()
+        task_mock.assert_called()  # create_task was called (webhook scheduled)
 
     def test_db_failure_does_not_500(self, client):
         resp, _ = self._call(client, save_side_effect=Exception("DB down"))

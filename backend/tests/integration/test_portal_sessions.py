@@ -193,6 +193,20 @@ class TestListSessions:
             )
         assert resp.json()["next_cursor"] is None
 
+    def test_messages_as_json_string_is_parsed(self, client):
+        import json
+        row = {**FAKE_SESSION_ROW, "messages": json.dumps(MESSAGES)}
+        cookie = _session_cookie("usr_aaa")
+        with patch("app.routers.auth.db_get_user_by_id", AsyncMock(return_value=FAKE_USER_A)), \
+             patch("app.routers.auth.db_user_has_kb_access", AsyncMock(return_value=True)), \
+             patch("app.routers.portal.db_list_sessions", AsyncMock(return_value=[row])):
+            resp = client.get(
+                "/api/portal/sessions?kb_id=kb_finfloo",
+                cookies={"contextus_portal_session": cookie},
+            )
+        assert resp.status_code == 200
+        assert resp.json()["sessions"][0]["preview"] == "do you handle restaurants?"
+
     def test_missing_kb_id_returns_422(self, client):
         cookie = _session_cookie("usr_aaa")
         with patch("app.routers.auth.db_get_user_by_id", AsyncMock(return_value=FAKE_USER_A)):
@@ -260,6 +274,20 @@ class TestGetSessionDetail:
         msgs = resp.json()["session"]["messages"]
         assert msgs[0]["role"] == "bot"
         assert msgs[1]["role"] == "user"
+
+    def test_brief_data_as_json_string_is_parsed(self, client):
+        import json
+        row = {**FAKE_SESSION_ROW, "brief_data": json.dumps(FAKE_BRIEF)}
+        cookie = _session_cookie("usr_aaa")
+        with patch("app.routers.auth.db_get_user_by_id", AsyncMock(return_value=FAKE_USER_A)), \
+             patch("app.routers.portal.db_get_session", AsyncMock(return_value=row)), \
+             patch("app.routers.portal.db_user_has_kb_access", AsyncMock(return_value=True)):
+            resp = client.get(
+                "/api/portal/sessions/sess_001",
+                cookies={"contextus_portal_session": cookie},
+            )
+        assert resp.status_code == 200
+        assert resp.json()["brief"]["qualification"] == "qualified"
 
     def test_session_not_found_returns_404(self, client):
         cookie = _session_cookie("usr_aaa")
