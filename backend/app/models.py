@@ -130,3 +130,38 @@ class SiteItem(BaseModel):
 
 class SitesResponse(BaseModel):
     sites: list[SiteItem]
+
+
+class SessionListItem(BaseModel):
+    session_id: str
+    created_at: int
+    updated_at: int
+    message_count: int
+    contact_captured: bool
+    contact_value: str | None
+    preview: str
+    qualification: str | None
+    quality_score: str | None
+    brief_sent: bool
+
+
+class SessionListResponse(BaseModel):
+    sessions: list[SessionListItem]
+    next_cursor: str | None
+
+
+class SessionDetailData(BaseModel):
+    session_id: str
+    kb_id: str
+    created_at: int
+    updated_at: int
+    message_count: int
+    messages: list[dict]
+    contact_captured: bool
+    contact_value: str | None
+    brief_sent: bool
+
+
+class SessionDetailResponse(BaseModel):
+    session: SessionDetailData
+    brief: dict | None
