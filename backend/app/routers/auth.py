@@ -137,8 +137,19 @@ async def google_start():
 
 
 @router.get("/api/auth/google/callback")
-async def google_callback(request: Request, code: str | None = None, state: str | None = None):
+async def google_callback(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+):
     _require_all_portal_env()
+
+    # User clicked "Cancel" on Google's consent screen
+    if error:
+        logger.info("google_callback: user cancelled or denied — error=%s", error)
+        portal_url = os.getenv("PORTAL_FRONTEND_URL", "")
+        return RedirectResponse(f"{portal_url}/login?error=auth_failed", status_code=302)
 
     # ① Verify CSRF state
     signed_state = request.cookies.get(STATE_COOKIE)

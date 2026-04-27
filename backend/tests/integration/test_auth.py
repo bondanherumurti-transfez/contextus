@@ -82,6 +82,14 @@ class TestGoogleCallback:
 
         return mock_client, mock_http
 
+    def test_user_cancel_redirects_to_login_error(self, client):
+        resp = client.get(
+            "/api/auth/google/callback?error=access_denied",
+            follow_redirects=False,
+        )
+        assert resp.status_code == 302
+        assert "/login?error=auth_failed" in resp.headers["location"]
+
     def test_state_mismatch_returns_400(self, client):
         state_cookie = _signed_state("correct-state")
         resp = client.get(
