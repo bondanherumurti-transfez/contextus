@@ -9,6 +9,7 @@ from app.services.redis import redis, scan_all_sessions, save_session
 from app.services.llm import generate_lead_brief
 from app.services.notion import post_lead_brief_to_notion
 from app.services.database import get_customer_config
+from app.services.portal_db import db_save_brief
 from app.services.webhook import fire_webhook
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,11 @@ async def process_sessions(x_cron_secret: str | None = Header(default=None)):
 
         try:
             brief = await generate_lead_brief(session)
+
+            try:
+                await db_save_brief(session.session_id, session.kb_id, brief.model_dump())
+            except Exception as e:
+                logger.error("db_save_brief failed for %s: %s", session.session_id, e)
 
             # Look up per-customer Notion DB
             customer_config = (
