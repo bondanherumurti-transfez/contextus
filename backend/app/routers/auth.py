@@ -149,7 +149,9 @@ async def google_callback(
     if error:
         logger.info("google_callback: user cancelled or denied — error=%s", error)
         portal_url = os.getenv("PORTAL_FRONTEND_URL", "")
-        return RedirectResponse(f"{portal_url}/login?error=auth_failed", status_code=302)
+        resp = RedirectResponse(f"{portal_url}/login?error=auth_failed", status_code=302)
+        resp.delete_cookie(STATE_COOKIE)
+        return resp
 
     # ① Verify CSRF state
     signed_state = request.cookies.get(STATE_COOKIE)
@@ -189,12 +191,12 @@ async def google_callback(
     display_name = info.get("name")
     now = int(time.time())
 
-    # ④ Upsert user — lookup order matters:
+    # ④ Resolve user — invite-only, lookup order matters:
     # 1. Try google_sub — covers normal returning-user case.
-    # 2. If no match, try email + google_sub IS NULL — covers users pre-created
-    #    via POST /api/crawl/seed with owner_email before their first login.
+    # 2. If no match, try email + google_sub IS NULL — covers users pre-seeded
+    #    via POST /api/admin/sites/claim before their first login.
     #    Atomically set google_sub on match to prevent this path running twice.
-    # 3. Neither match → insert new user.
+    # 3. Neither match → reject (not pre-seeded); redirect to not_invited.
     try:
         user = await db_get_user_by_google_sub(google_sub)
         if user:
@@ -206,7 +208,9 @@ async def google_callback(
                 await db_update_user_login(seeded_user["user_id"], display_name, now)
                 user = seeded_user
             else:
-                user = await db_create_user(email, google_sub, display_name)
+                logger.warning("google_callback: sign-in rejected — email not pre-seeded: %s", email)
+                portal_url = os.getenv("PORTAL_FRONTEND_URL", "")
+                return RedirectResponse(f"{portal_url}/login?error=not_invited", status_code=302)
     except Exception as e:
         logger.error("google_callback: DB error during user upsert: %s", e)
         raise HTTPException(503, {"error": "service temporarily unavailable"})
