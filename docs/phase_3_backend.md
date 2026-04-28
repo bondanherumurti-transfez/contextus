@@ -1,10 +1,10 @@
 # Phase 3 — Backend KB endpoints
 
 **Repo:** `contextus`
-**Status:** Ready to implement. Phase 2 (brief persistence + inbox endpoints) must be merged first.
+**Status:** Implemented. This document is retained as a historical implementation spec/reference; the Phase 3 KB endpoints and tests exist in the repository on `feat/phase-3-kb-endpoints`.
 **Unblocks:** Frontend PR 6 (KB tab read-only) and PR 7 (KB write surfaces).
 
-This document covers two sequential PRs. They must land in order — KB read first, then KB writes.
+This document described two sequential PRs as originally planned. They landed in order — KB read first (PR E), then KB writes (PR F).
 
 ---
 
@@ -24,7 +24,7 @@ The frontend calls:
 4. `PATCH /api/portal/kb/greeting` — set greeting message (wireframe 04)
 5. `PATCH /api/portal/kb/custom-instructions` — set custom instructions (wireframe 05)
 
-There is also a widget-level change: `GET /api/session` must start returning `greeting` so the widget picks up portal-set greetings without needing a script attribute change.
+There is also a widget-level change: `POST /api/session` must start returning `greeting` so the widget picks up portal-set greetings without needing a script attribute change.
 
 ---
 
@@ -323,7 +323,7 @@ class PortalCustomInstructionsRequest(BaseModel):
 
 ### `/api/session` — add `greeting` to response
 
-Modify the existing `GET /api/session` endpoint (in whichever router it lives — not a new route).
+Modify the existing `POST /api/session` endpoint (in whichever router it lives — not a new route).
 
 Add `greeting: str | None` to `SessionResponse`:
 
@@ -507,7 +507,7 @@ Frontend KB tab works end-to-end (wireframes 03, 04, 05, 10)
 > - `PATCH /api/portal/kb/pills` — update 3 quick-reply pills
 > - `PATCH /api/portal/kb/greeting` — set/clear greeting (stored in customer_configs.greeting)
 > - `PATCH /api/portal/kb/custom-instructions` — set/clear custom instructions
-> - `GET /api/session` — additive: now returns `greeting: string | null`
+> - `POST /api/session` — additive: now returns `greeting: string | null`
 >
 > Admin endpoints (`/api/crawl/{kb_id}/pills` etc.) are untouched. Portal endpoints share core business logic via extracted helpers.
 >

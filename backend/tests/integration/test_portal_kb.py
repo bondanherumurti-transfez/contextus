@@ -502,6 +502,7 @@ class TestPortalGreeting:
         cookie = _session_cookie("usr_aaa")
         with patch("app.routers.auth.db_get_user_by_id", AsyncMock(return_value=FAKE_USER_A)), \
              patch("app.routers.auth.db_user_has_kb_access", AsyncMock(return_value=True)), \
+             patch("app.routers.portal.get_knowledge_base", AsyncMock(return_value=_make_kb(_FAKE_KB_COMPLETE))), \
              patch("app.routers.portal.db_update_greeting", AsyncMock(return_value=None)):
             resp = client.patch(
                 "/api/portal/kb/greeting",
@@ -518,6 +519,7 @@ class TestPortalGreeting:
             captured["greeting"] = greeting
         with patch("app.routers.auth.db_get_user_by_id", AsyncMock(return_value=FAKE_USER_A)), \
              patch("app.routers.auth.db_user_has_kb_access", AsyncMock(return_value=True)), \
+             patch("app.routers.portal.get_knowledge_base", AsyncMock(return_value=_make_kb(_FAKE_KB_COMPLETE))), \
              patch("app.routers.portal.db_update_greeting", mock_update):
             resp = client.patch(
                 "/api/portal/kb/greeting",
@@ -534,6 +536,7 @@ class TestPortalGreeting:
             captured["greeting"] = greeting
         with patch("app.routers.auth.db_get_user_by_id", AsyncMock(return_value=FAKE_USER_A)), \
              patch("app.routers.auth.db_user_has_kb_access", AsyncMock(return_value=True)), \
+             patch("app.routers.portal.get_knowledge_base", AsyncMock(return_value=_make_kb(_FAKE_KB_COMPLETE))), \
              patch("app.routers.portal.db_update_greeting", mock_update):
             resp = client.patch(
                 "/api/portal/kb/greeting",
@@ -561,6 +564,7 @@ class TestPortalGreeting:
             captured["greeting"] = greeting
         with patch("app.routers.auth.db_get_user_by_id", AsyncMock(return_value=FAKE_USER_A)), \
              patch("app.routers.auth.db_user_has_kb_access", AsyncMock(return_value=True)), \
+             patch("app.routers.portal.get_knowledge_base", AsyncMock(return_value=_make_kb(_FAKE_KB_COMPLETE))), \
              patch("app.routers.portal.db_update_greeting", mock_update):
             resp = client.patch(
                 "/api/portal/kb/greeting",
@@ -569,6 +573,18 @@ class TestPortalGreeting:
             )
         assert resp.status_code == 200
         assert captured["greeting"] == "Hello!"
+
+    def test_unknown_kb_returns_404(self, client):
+        cookie = _session_cookie("usr_aaa")
+        with patch("app.routers.auth.db_get_user_by_id", AsyncMock(return_value=FAKE_USER_A)), \
+             patch("app.routers.auth.db_user_has_kb_access", AsyncMock(return_value=True)), \
+             patch("app.routers.portal.get_knowledge_base", AsyncMock(return_value=None)):
+            resp = client.patch(
+                "/api/portal/kb/greeting",
+                json={"kb_id": "kb_unknown", "greeting": "Hello"},
+                cookies={"contextus_portal_session": cookie},
+            )
+        assert resp.status_code == 404
 
     def test_tenant_isolation_returns_403(self, client):
         cookie = _session_cookie("usr_bbb")

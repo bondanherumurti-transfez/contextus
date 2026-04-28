@@ -266,6 +266,10 @@ async def portal_update_greeting(
     if value is not None and len(value) > 200:
         raise HTTPException(422, {"error": "greeting must be at most 200 characters"})
 
+    kb = await get_knowledge_base(body.kb_id)
+    if not kb:
+        raise HTTPException(404, {"error": "kb not found"})
+
     try:
         await db_update_greeting(body.kb_id, value)
     except Exception as e:
