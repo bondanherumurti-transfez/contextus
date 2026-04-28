@@ -206,6 +206,70 @@ async def get_crawl_status(job_id: str):
     return kb
 
 
+async def enrich_kb(
+    kb: KnowledgeBase,
+    kb_id: str,
+    answers: dict[str, str],
+    permanent: bool = False,
+) -> CompanyProfile:
+    """Append Q&A chunks, regenerate company profile, and save. Caller handles auth + status check."""
+    from nanoid import generate as gen_id
+
+    for question, answer in answers.items():
+        if answer.strip():
+            chunk = Chunk(
+                id=gen_id(size=10),
+                source=f"interview:{question}",
+                text=answer,
+                word_count=len(answer.split()),
+            )
+            kb.chunks.append(chunk)
+
+    if not answers or not any(v.strip() for v in answers.values()):
+        if not kb.company_profile:
+            raise HTTPException(status_code=400, detail="No answers provided and knowledge base has no company profile")
+        return kb.company_profile
+
+    if kb.chunks:
+        new_profile = await generate_company_profile(kb.chunks, f"enriched:{kb_id}")
+        kb.company_profile = new_profile
+        kb.quality_tier = assess_quality_tier(kb.chunks)
+
+    if not kb.company_profile:
+        raise HTTPException(status_code=400, detail="No answers provided and knowledge base has no company profile")
+
+    await save_knowledge_base(kb_id, kb, permanent=permanent, ttl=None if permanent else 1800)
+    return kb.company_profile
+
+
+async def update_pills_kb(
+    kb: KnowledgeBase,
+    kb_id: str,
+    pills: list[str],
+    permanent: bool = False,
+) -> None:
+    """Update suggested pills and save. Caller handles auth + validation."""
+    kb.suggested_pills = pills
+    if permanent:
+        await save_knowledge_base(kb_id, kb, permanent=True, ttl=None)
+    else:
+        await save_knowledge_base(kb_id, kb)
+
+
+async def update_custom_instructions_kb(
+    kb: KnowledgeBase,
+    kb_id: str,
+    value: str | None,
+    permanent: bool = False,
+) -> None:
+    """Update custom instructions and save. Caller handles auth + validation."""
+    kb.company_profile.custom_instructions = value  # type: ignore[union-attr]
+    if permanent:
+        await save_knowledge_base(kb_id, kb, permanent=True, ttl=None)
+    else:
+        await save_knowledge_base(kb_id, kb)
+
+
 @router.post("/crawl/{job_id}/enrich", response_model=CompanyProfile)
 async def enrich_knowledge_base(
     job_id: str,
@@ -220,35 +284,7 @@ async def enrich_knowledge_base(
         raise HTTPException(status_code=400, detail="Job not complete yet")
 
     permanent = await _check_permanent_and_auth(job_id, x_admin_secret)
-
-    from nanoid import generate as gen_id
-
-    for question, answer in body.answers.items():
-        if answer.strip():
-            chunk = Chunk(
-                id=gen_id(size=10),
-                source=f"interview:{question}",
-                text=answer,
-                word_count=len(answer.split()),
-            )
-            kb.chunks.append(chunk)
-
-    if not body.answers or not any(v.strip() for v in body.answers.values()):
-        if not kb.company_profile:
-            raise HTTPException(status_code=400, detail="No answers provided and knowledge base has no company profile")
-        return kb.company_profile
-
-    if kb.chunks:
-        new_profile = await generate_company_profile(kb.chunks, f"enriched:{job_id}")
-        kb.company_profile = new_profile
-        kb.quality_tier = assess_quality_tier(kb.chunks)
-
-    if not kb.company_profile:
-        raise HTTPException(status_code=400, detail="No answers provided and knowledge base has no company profile")
-
-    await save_knowledge_base(job_id, kb, permanent=permanent, ttl=None if permanent else 1800)
-
-    return kb.company_profile
+    return await enrich_kb(kb, job_id, body.answers, permanent)
 
 
 @router.patch("/crawl/{job_id}/pills")
@@ -271,13 +307,7 @@ async def update_pills(
         raise HTTPException(status_code=400, detail="Pills must be non-empty strings")
 
     permanent = await _check_permanent_and_auth(job_id, x_admin_secret)
-
-    kb.suggested_pills = body.pills
-    if permanent:
-        await save_knowledge_base(job_id, kb, permanent=True, ttl=None)
-    else:
-        await save_knowledge_base(job_id, kb)
-
+    await update_pills_kb(kb, job_id, body.pills, permanent)
     return {"job_id": job_id, "suggested_pills": kb.suggested_pills}
 
 
@@ -306,11 +336,5 @@ async def update_custom_instructions(
     value = value or None
 
     permanent = await _check_permanent_and_auth(job_id, x_admin_secret)
-
-    kb.company_profile.custom_instructions = value
-    if permanent:
-        await save_knowledge_base(job_id, kb, permanent=True, ttl=None)
-    else:
-        await save_knowledge_base(job_id, kb)
-
+    await update_custom_instructions_kb(kb, job_id, value, permanent)
     return {"job_id": job_id, "custom_instructions": kb.company_profile.custom_instructions}

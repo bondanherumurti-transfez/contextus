@@ -4,6 +4,7 @@ from nanoid import generate
 import time
 
 from app.models import Session, SessionRequest, SessionResponse
+from app.services.database import get_customer_config
 from app.services.redis import get_knowledge_base, save_session, get_session
 from app.services import analytics
 
@@ -52,9 +53,12 @@ async def create_session(body: SessionRequest, request: Request):
         properties={"source_domain": source_domain},
     )
 
+    config = await get_customer_config(body.knowledge_base_id)
+    greeting = config.get("greeting") if config else None
+
     pills = kb.suggested_pills if kb.suggested_pills else []
     name = kb.company_profile.name if kb.company_profile else ""
-    return SessionResponse(session_id=session_id, pills=pills, language=kb.language, name=name)
+    return SessionResponse(session_id=session_id, pills=pills, language=kb.language, name=name, greeting=greeting)
 
 
 @router.get("/session/{session_id}")
