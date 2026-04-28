@@ -231,7 +231,9 @@ async def enrich_kb(
         return kb.company_profile
 
     if kb.chunks:
+        old_custom_instructions = kb.company_profile.custom_instructions if kb.company_profile else None
         new_profile = await generate_company_profile(kb.chunks, f"enriched:{kb_id}")
+        new_profile.custom_instructions = old_custom_instructions
         kb.company_profile = new_profile
         kb.quality_tier = assess_quality_tier(kb.chunks)
 
