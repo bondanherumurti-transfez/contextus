@@ -106,6 +106,7 @@ class SessionResponse(BaseModel):
     pills: list[str] = []
     language: str = "en"
     name: str = ""
+    greeting: str | None = None
 
 
 class ChatRequest(BaseModel):
@@ -165,3 +166,52 @@ class SessionDetailData(BaseModel):
 class SessionDetailResponse(BaseModel):
     session: SessionDetailData
     brief: dict | None
+
+
+# ── Phase 3: KB endpoints ─────────────────────────────────────────────────────
+
+class EnrichedChunk(BaseModel):
+    id: str
+    question: str
+    answer: str
+    word_count: int
+
+
+class CompanyProfileResponse(BaseModel):
+    name: str | None
+    industry: str | None
+    services: str | None
+    out_of_scope: str | None
+    summary: str | None
+    last_crawled_at: int | None
+    pages_indexed: int | None
+
+
+class KBResponse(BaseModel):
+    kb_id: str
+    company_profile: CompanyProfileResponse | None
+    enriched_chunks: list[EnrichedChunk]
+    pills: list[str]
+    greeting: str | None
+    custom_instructions: str | None
+
+
+class PortalEnrichRequest(BaseModel):
+    kb_id: str
+    question: str
+    answer: str
+
+
+class PortalPillsRequest(BaseModel):
+    kb_id: str
+    pills: list[str]
+
+
+class PortalGreetingRequest(BaseModel):
+    kb_id: str
+    greeting: str | None
+
+
+class PortalCustomInstructionsRequest(BaseModel):
+    kb_id: str
+    custom_instructions: str | None

@@ -270,6 +270,45 @@ async def db_list_sessions(
         return []
 
 
+async def db_get_kb(kb_id: str) -> dict | None:
+    """Returns KB data + greeting for kb_id. Re-raises on DB error. None if not found."""
+    if not DATABASE_URL:
+        return None
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT
+                kb.data,
+                kb.updated_at,
+                cc.greeting
+            FROM knowledge_bases kb
+            LEFT JOIN customer_configs cc ON cc.kb_id = kb.kb_id
+            WHERE kb.kb_id = $1
+            """,
+            kb_id,
+        )
+    if not row:
+        return None
+    return {
+        "kb_data": row["data"],
+        "updated_at": row["updated_at"],
+        "greeting": row["greeting"],
+    }
+
+
+async def db_update_greeting(kb_id: str, greeting: str | None) -> None:
+    """Set or clear customer_configs.greeting. Re-raises on DB error."""
+    if not DATABASE_URL:
+        return
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE customer_configs SET greeting = $1 WHERE kb_id = $2",
+            greeting, kb_id,
+        )
+
+
 async def db_get_session(session_id: str) -> dict | None:
     """Full session row + brief data. Returns None if not found. Re-raises on DB error."""
     if not DATABASE_URL:

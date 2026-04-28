@@ -47,6 +47,12 @@ Google OAuth flow with CSRF-protected state cookie, HTTP-only signed session coo
 **Phase 2 (Portal) — Brief persistence + inbox endpoints: complete.**
 `POST /api/brief/{session_id}` and `POST /api/jobs/process-sessions` (cron path) both now upsert the generated brief to the `briefs` table before firing the webhook — DB failure is logged and swallowed so endpoints always return 200. Two new read-only inbox endpoints: `GET /api/portal/sessions?kb_id=` lists conversations with brief qualification tags and message preview (cursor-based pagination, `EXTRACT(EPOCH)` normalises `TIMESTAMPTZ updated_at` to epoch int); `GET /api/portal/sessions/{session_id}` returns the full transcript and brief data (or `null`). Both endpoints enforce tenant isolation. 26 new tests (brief persistence + jobs cron + inbox).
 
+**Phase 3A (Portal) — KB read endpoint: complete.**
+`GET /api/portal/kb?kb_id=` returns the full knowledge base for the portal KB tab. Joins `knowledge_bases` (company profile, chunks, pills, custom instructions) with `customer_configs` (greeting). `enriched_chunks` are derived by filtering chunks with `source` prefix `interview:` — the question is extracted from the source, so the frontend renders Q&A pairs directly. `company_profile.services` and `out_of_scope` are flattened to comma-joined strings for display. Tenant-isolated via `get_current_user_for_kb`. 14 new integration tests.
+
+**Phase 3B (Portal) — KB write endpoints + session greeting: complete.**
+Four new portal write endpoints: `POST /api/portal/kb/enrich` adds a Q&A pair (rate-limited: 10 requests per 10 minutes per user); `PATCH /api/portal/kb/pills` updates the three quick-reply pills (exactly 3 non-empty strings); `PATCH /api/portal/kb/greeting` sets or clears the greeting stored in `customer_configs.greeting` (trims whitespace, empty string → NULL); `PATCH /api/portal/kb/custom-instructions` sets or clears custom instructions (max 2000 chars, requires existing `company_profile`). Enrich, pills, and custom-instructions share core helpers extracted from the admin crawl endpoints — no business logic duplication. `GET /api/session` now returns `greeting: string | null` (additive, backwards-compatible). 31 new integration tests.
+
 ---
 
 ## Portal: inviting a user (pre-seed method)
@@ -867,6 +873,8 @@ Fonts: **DM Sans** (400, 500, 700) + **DM Mono** (400, 500) — Google Fonts.
 | 3.8 — Test hardening | **Done** | Backend unit/resilience tests (41), widget error tests (17), backend CI workflow |
 | 3.9 — Bubbles appearance | **Done** | `data-appearance="bubbles"` — floating pill FAB, staggered animation, session refresh, 15 tests |
 | 3.10 — Session archiving | **Done** | Write-through to Neon on every turn; `brief_sent` flagged after brief; 8 new tests |
+| Phase 3A (Portal) | **Done** | `GET /api/portal/kb` — KB read endpoint; enriched_chunks derivation; 14 tests |
+| Phase 3B (Portal) | **Done** | KB write endpoints (enrich, pills, greeting, custom instructions) + session greeting; 31 tests |
 | 4 — Lead delivery | Not started | WhatsApp/email delivery of lead briefs |
 | 5 — Platform plugins | Not started | WordPress, Wix (build at traction) |
 
