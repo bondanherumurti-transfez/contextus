@@ -106,7 +106,112 @@ class SessionResponse(BaseModel):
     pills: list[str] = []
     language: str = "en"
     name: str = ""
+    greeting: str | None = None
 
 
 class ChatRequest(BaseModel):
     message: str
+
+
+class UserResponse(BaseModel):
+    user_id: str
+    email: str
+    display_name: str | None
+
+
+class SiteItem(BaseModel):
+    kb_id: str
+    url: str | None
+    name: str | None
+    token: str
+    created_at: int
+    last_crawled_at: int | None
+    pages_indexed: int | None
+
+
+class SitesResponse(BaseModel):
+    sites: list[SiteItem]
+
+
+class SessionListItem(BaseModel):
+    session_id: str
+    created_at: int
+    updated_at: int
+    message_count: int
+    contact_captured: bool
+    contact_value: str | None
+    preview: str
+    qualification: str | None
+    quality_score: str | None
+    brief_sent: bool
+
+
+class SessionListResponse(BaseModel):
+    sessions: list[SessionListItem]
+    next_cursor: str | None
+
+
+class SessionDetailData(BaseModel):
+    session_id: str
+    kb_id: str
+    created_at: int
+    updated_at: int
+    message_count: int
+    messages: list[dict]
+    contact_captured: bool
+    contact_value: str | None
+    brief_sent: bool
+
+
+class SessionDetailResponse(BaseModel):
+    session: SessionDetailData
+    brief: dict | None
+
+
+# ── Phase 3: KB endpoints ─────────────────────────────────────────────────────
+
+class EnrichedChunk(BaseModel):
+    id: str
+    question: str
+    answer: str
+    word_count: int
+
+
+class CompanyProfileResponse(BaseModel):
+    name: str | None
+    industry: str | None
+    services: str | None
+    out_of_scope: str | None
+    summary: str | None
+    last_crawled_at: int | None
+    pages_indexed: int | None
+
+
+class KBResponse(BaseModel):
+    kb_id: str
+    company_profile: CompanyProfileResponse | None
+    enriched_chunks: list[EnrichedChunk]
+    pills: list[str]
+    greeting: str | None
+    custom_instructions: str | None
+
+
+class PortalEnrichRequest(BaseModel):
+    kb_id: str
+    question: str
+    answer: str
+
+
+class PortalPillsRequest(BaseModel):
+    kb_id: str
+    pills: list[str]
+
+
+class PortalGreetingRequest(BaseModel):
+    kb_id: str
+    greeting: str | None
+
+
+class PortalCustomInstructionsRequest(BaseModel):
+    kb_id: str
+    custom_instructions: str | None

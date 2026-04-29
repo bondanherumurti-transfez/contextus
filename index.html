@@ -152,8 +152,26 @@ body.id .lang-en{display:none!important}
 @keyframes mi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .ma{animation:mi .3s ease forwards}
 </style>
+<style>
+.ann-bar{position:fixed;top:0;left:0;right:0;z-index:101;min-height:36px;background:#1D9E75;display:flex;align-items:center;justify-content:center;padding:0 1.5rem}
+.ann-bar a{display:inline-flex;align-items:center;gap:10px;text-decoration:none;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;color:rgba(255,255,255,0.85);white-space:nowrap}
+.ann-bar a:hover{color:#fff}
+.ann-sep{color:rgba(255,255,255,0.4)}
+.ann-cta{color:#fff;font-weight:500}
+.ann-short{display:none;color:#fff;font-weight:500}
+@media(max-width:540px){.ann-full{display:none}.ann-short{display:inline}}
+nav{top:36px!important}
+.hero{padding-top:calc(8rem + 36px)!important}
+</style>
 </head>
 <body>
+
+<div class="ann-bar">
+  <a href="/finfloo">
+    <span class="ann-full">Customer story <span class="ann-sep">·</span> <span class="ann-cta">Finfloo booked 5 meetings in week one — Read the story →</span></span>
+    <span class="ann-short">Finfloo: 5 meetings in week 1 — Read →</span>
+  </a>
+</div>
 
 <nav><div class="container">
   <a href="#" class="logo"><svg width="26" height="26" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg><span class="logo-text">contextus</span></a>
@@ -339,6 +357,14 @@ body.id .lang-en{display:none!important}
       <div class="br"><div class="br-l">QUALITY</div><div class="br-v"><strong>High</strong> — coherent conversation, specific inquiry, contact info provided.</div></div>
     </div>
   </div>
+</div></section>
+
+<section style="padding:2.5rem var(--px);background:var(--g50);border-top:.5px solid var(--g300);border-bottom:.5px solid var(--g300)"><div class="container" style="display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap">
+  <div>
+    <div style="font-family:var(--mono);font-size:11px;letter-spacing:1px;color:var(--g400);text-transform:uppercase;margin-bottom:.35rem">Customer story · Finfloo · Jakarta</div>
+    <p style="font-size:.95rem;font-weight:500;color:var(--g800);line-height:1.4">100+ conversations and 5 booked meetings in the first week.</p>
+  </div>
+  <a href="/finfloo" style="font-size:13px;font-weight:500;color:var(--black);text-decoration:none;white-space:nowrap;border:.5px solid var(--g300);padding:8px 16px;border-radius:5px;background:var(--white);transition:background .15s">Read the story →</a>
 </div></section>
 
 <section class="cta" id="ea"><div class="container">

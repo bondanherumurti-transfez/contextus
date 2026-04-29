@@ -110,3 +110,7 @@ temp/
 *.tar.gz
 *.rar
 *.7z
+
+# AI analysis artifacts
+repomix-output.xml
+test-results/
