@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Finfloo case study — contextus</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="How Finfloo turned a sleeping WhatsApp admin into a 24/7 lead machine — in one week.">
+<meta name="color-scheme" content="light only">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300;1,9..40,400;1,9..40,500&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  /* ── Design tokens ──────────────────────────────────────────── */
+  :root {
+    --black:        #000000;
+    --g900:         #111111;
+    --g800:         #222222;
+    --g700:         #444444;
+    --g600:         #666666;
+    --g500:         #888888;
+    --g400:         #bbbbbb;
+    --g300:         #e0e0e0;
+    --g200:         #ebebeb;
+    --g100:         #f5f5f5;
+    --g50:          #fafafa;
+    --white:        #ffffff;
+
+    --fg-1:         var(--black);
+    --fg-2:         var(--g800);
+    --fg-3:         var(--g600);
+    --fg-muted:     var(--g500);
+    --fg-faint:     var(--g400);
+    --bg-canvas:    var(--white);
+    --bg-subtle:    var(--g50);
+    --border:       var(--g300);
+
+    --teal:         #1D9E75;
+    --teal-deep:    #15805e;
+    --teal-bg:      #e1f5ee;
+    --teal-fg:      #0f6e56;
+
+    --sans:  'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono:  'DM Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+    --fw-light:    300;
+    --fw-regular:  400;
+    --fw-medium:   500;
+    --fw-bold:     700;
+
+    --r-xs:   5px;
+    --r-sm:   6px;
+    --r-md:   8px;
+    --r-lg:   12px;
+    --r-xl:   14px;
+    --r-2xl:  16px;
+    --r-full: 9999px;
+
+    --tracking-mono: 1.5px;
+    --lh-prose: 1.7;
+
+    --ease:       ease;
+    --dur-quick:  150ms;
+
+    --z-nav: 100;
+  }
+
+  /* ── Reset ─────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; color-scheme: light; }
+  body { font-family: var(--sans); background: var(--bg-canvas); color: var(--fg-1); line-height: var(--lh-prose); -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+  @media (prefers-color-scheme: dark) { :root { color-scheme: light !important } body { background: #fff !important; color: #000 !important } }
+
+  /* ── Layout shell ─────────────────────────────────────────── */
+  .cs-shell    { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  .cs-narrow   { max-width: 720px; margin: 0 auto; }
+  .cs-section  { padding: 96px 0; border-top: 0.5px solid var(--border); }
+
+  /* ── Top nav (matches home) ───────────────────────────────── */
+  .cs-nav { position: fixed; top: 0; left: 0; right: 0; z-index: var(--z-nav); background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 0.5px solid var(--border); }
+  .cs-nav-inner { max-width: 1080px; margin: 0 auto; padding: 0.875rem 24px; display: flex; align-items: center; justify-content: space-between; }
+  .cs-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--black); }
+  .cs-logo svg { display: block; flex-shrink: 0; }
+  .cs-logo-text { font-weight: var(--fw-medium); font-size: 15px; letter-spacing: -0.3px; line-height: 26px; display: block; }
+  .cs-nav-cta  { font-size: 13px; font-weight: var(--fw-medium); padding: 6px 16px; border-radius: 5px; text-decoration: none; background: var(--black); color: var(--white); transition: opacity 0.15s; }
+  .cs-nav-cta:hover { opacity: 0.8; }
+
+  /* ── Hero (dark) ──────────────────────────────────────────── */
+  .cs-hero { background: #0a0a0a; color: var(--white); padding: 120px 0 0; position: relative; overflow: hidden; }
+  .cs-hero::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 80% 60% at 75% 30%, rgba(29,158,117,0.18), transparent 70%); pointer-events: none; }
+  .cs-hero-shell { max-width: 1080px; margin: 0 auto; position: relative; padding: 0 24px; }
+  .cs-hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 80px; align-items: center; padding-bottom: 96px; }
+  @media (max-width: 920px) { .cs-hero-grid { grid-template-columns: 1fr; gap: 56px; padding-bottom: 64px; } }
+
+  .cs-hero-eyebrow { display: inline-flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 11px; letter-spacing: var(--tracking-mono); text-transform: uppercase; color: rgba(255,255,255,0.5); margin-bottom: 28px; }
+  .cs-hero-eyebrow::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px var(--teal); flex-shrink: 0; }
+  .cs-hero-eyebrow-sep { color: rgba(255,255,255,0.25); }
+
+  .cs-hero h1 { font-size: clamp(2rem, 4.5vw, 3rem); font-weight: var(--fw-medium); letter-spacing: -1px; line-height: 1.08; color: var(--white); margin-bottom: 24px; text-wrap: balance; }
+  .cs-hero h1 em { font-style: normal; color: var(--teal); }
+  .cs-hero-sub { font-size: 1.05rem; line-height: 1.65; color: rgba(255,255,255,0.7); max-width: 520px; margin-bottom: 40px; }
+
+  .cs-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .cs-chip  { display: inline-flex; align-items: baseline; gap: 8px; padding: 10px 14px; border: 0.5px solid rgba(255,255,255,0.18); border-radius: var(--r-full); background: rgba(255,255,255,0.04); font-size: 13px; color: rgba(255,255,255,0.85); }
+  .cs-chip strong { font-weight: var(--fw-medium); color: var(--white); font-size: 15px; letter-spacing: -0.3px; }
+
+  .cs-shot { margin: 0; border-radius: var(--r-lg); overflow: hidden; box-shadow: 0 32px 80px rgba(0,0,0,0.45), 0 8px 24px rgba(0,0,0,0.3); transform: rotate(-1deg); transition: transform 400ms var(--ease); background: #0a0a0a; }
+  .cs-shot:hover { transform: rotate(0deg); }
+  .cs-shot img { display: block; width: 100%; height: auto; }
+
+  /* ── Eyebrow + section heads ──────────────────────────────── */
+  .cs-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: var(--tracking-mono); text-transform: uppercase; color: var(--fg-muted); display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .cs-eyebrow::before { content: ""; width: 24px; height: 1px; background: var(--g300); flex-shrink: 0; }
+  .cs-eyebrow .cs-num { color: var(--fg-1); }
+  .cs-h2 { font-size: clamp(1.75rem, 3.2vw, 2.25rem); font-weight: var(--fw-medium); letter-spacing: -0.5px; line-height: 1.2; color: var(--fg-1); margin-bottom: 16px; text-wrap: balance; }
+  .cs-h2 em { font-style: normal; color: var(--teal); }
+  .cs-lead { font-size: 1.05rem; color: var(--fg-3); line-height: 1.65; max-width: 580px; }
+
+  /* ── About ───────────────────────────────────────────────── */
+  .cs-about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+  @media (max-width: 760px) { .cs-about-grid { grid-template-columns: 1fr; gap: 32px; } }
+  .cs-facts { border-left: 0.5px solid var(--border); padding-left: 32px; display: flex; flex-direction: column; gap: 18px; }
+  .cs-fact { display: grid; grid-template-columns: 100px 1fr; gap: 16px; align-items: baseline; }
+  .cs-fact-l { font-family: var(--mono); font-size: 11px; letter-spacing: 0.5px; color: var(--fg-muted); text-transform: uppercase; }
+  .cs-fact-v { font-size: 14px; color: var(--fg-2); line-height: 1.5; }
+  .cs-fact-v strong { color: var(--fg-1); font-weight: var(--fw-medium); }
+
+  /* ── Challenge ───────────────────────────────────────────── */
+  .cs-challenge { background: var(--bg-subtle); }
+  .cs-pains { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 48px; border: 0.5px solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--white); }
+  @media (max-width: 700px) { .cs-pains { grid-template-columns: 1fr; } }
+  .cs-pain { padding: 32px 28px; border-right: 0.5px solid var(--border); border-bottom: 0.5px solid var(--border); }
+  .cs-pain:nth-child(2n) { border-right: none; }
+  .cs-pain:nth-last-child(-n+2) { border-bottom: none; }
+  @media (max-width: 700px) {
+    .cs-pain { border-right: none; border-bottom: 0.5px solid var(--border); }
+    .cs-pain:last-child { border-bottom: none; }
+    .cs-pain:nth-last-child(-n+2) { border-bottom: 0.5px solid var(--border); }
+    .cs-pain:last-child { border-bottom: none; }
+  }
+  .cs-pain-n { font-family: var(--mono); font-size: 11px; letter-spacing: 0.5px; color: var(--fg-faint); margin-bottom: 14px; }
+  .cs-pain-t { font-size: 17px; font-weight: var(--fw-medium); letter-spacing: -0.3px; line-height: 1.4; color: var(--fg-1); }
+
+  /* ── Solution / 3-step ───────────────────────────────────── */
+  .cs-steps { display: flex; flex-direction: column; margin-top: 56px; }
+  .cs-step  { display: grid; grid-template-columns: 56px 1fr auto; gap: 28px; padding: 28px 0; border-top: 0.5px solid var(--border); align-items: start; }
+  .cs-step:last-child { border-bottom: 0.5px solid var(--border); }
+  .cs-step-n { font-family: var(--mono); font-size: 28px; font-weight: var(--fw-medium); color: var(--g300); padding-top: 4px; }
+  .cs-step-h { font-size: 18px; font-weight: var(--fw-medium); letter-spacing: -0.3px; color: var(--fg-1); margin-bottom: 6px; }
+  .cs-step-d { font-size: 15px; color: var(--fg-3); line-height: 1.6; max-width: 520px; }
+  .cs-step-tag { font-family: var(--mono); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--teal-fg); background: var(--teal-bg); padding: 5px 10px; border-radius: var(--r-full); white-space: nowrap; }
+  @media (max-width: 700px) {
+    .cs-step { grid-template-columns: 40px 1fr; gap: 16px; }
+    .cs-step-tag { grid-column: 2; margin-top: 4px; justify-self: start; }
+  }
+
+  /* ── Prompt tuning ───────────────────────────────────────── */
+  .cs-prompts { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 48px; }
+  @media (max-width: 760px) { .cs-prompts { grid-template-columns: 1fr; } }
+  .cs-prompt { border: 0.5px solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--white); display: flex; flex-direction: column; }
+  .cs-prompt-h { padding: 12px 16px; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; gap: 10px; background: var(--bg-subtle); }
+  .cs-prompt-tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--fg-muted); padding: 3px 8px; border-radius: var(--r-full); border: 0.5px solid var(--border); background: var(--white); }
+  .cs-prompt-l { font-family: var(--mono); font-size: 11px; letter-spacing: 0.5px; color: var(--fg-2); }
+  .cs-prompt-b { padding: 20px; font-size: 14px; line-height: 1.7; color: var(--fg-2); flex: 1; }
+  .cs-prompt-b::before { content: "\201C"; font-family: var(--sans); font-size: 32px; line-height: 0; vertical-align: -8px; color: var(--g300); margin-right: 4px; }
+  .cs-prompt-b::after  { content: "\201D"; font-family: var(--sans); font-size: 32px; line-height: 0; vertical-align: -16px; color: var(--g300); margin-left: 2px; }
+
+  .cs-prompt.is-after { border-color: var(--teal); box-shadow: 0 0 0 1px var(--teal); }
+  .cs-prompt.is-after .cs-prompt-h { background: var(--teal-bg); border-bottom-color: var(--teal); }
+  .cs-prompt.is-after .cs-prompt-tag { color: var(--white); background: var(--teal); border-color: var(--teal); }
+  .cs-prompt.is-after .cs-prompt-l { color: var(--teal-fg); }
+  .cs-prompt.is-after .cs-prompt-b { color: var(--teal-fg); background: rgba(225,245,238,0.35); }
+  .cs-prompt.is-after .cs-prompt-b::before,
+  .cs-prompt.is-after .cs-prompt-b::after { color: var(--teal); }
+
+  .cs-changes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 32px; }
+  @media (max-width: 760px) { .cs-changes { grid-template-columns: 1fr; } }
+  .cs-change { padding: 24px; border: 0.5px solid var(--border); border-radius: var(--r-md); background: var(--white); }
+  .cs-change-i { width: 28px; height: 28px; border-radius: 6px; background: var(--teal-bg); color: var(--teal-fg); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 12px; font-weight: var(--fw-medium); margin-bottom: 16px; }
+  .cs-change-h { font-size: 15px; font-weight: var(--fw-medium); letter-spacing: -0.2px; color: var(--fg-1); margin-bottom: 8px; line-height: 1.4; }
+  .cs-change-d { font-size: 13px; line-height: 1.6; color: var(--fg-3); }
+
+  /* ── Results (dark bookend) ──────────────────────────────── */
+  .cs-results { background: #0a0a0a; color: var(--white); border-top: none; }
+  .cs-results .cs-eyebrow { color: rgba(255,255,255,0.45); }
+  .cs-results .cs-eyebrow::before { background: rgba(255,255,255,0.15); }
+  .cs-results .cs-eyebrow .cs-num { color: var(--white); }
+  .cs-results .cs-h2 { color: var(--white); }
+  .cs-results-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 56px; border-top: 0.5px solid rgba(255,255,255,0.12); border-bottom: 0.5px solid rgba(255,255,255,0.12); }
+  @media (max-width: 760px) { .cs-results-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .cs-results-grid { grid-template-columns: 1fr; } }
+  .cs-metric { padding: 40px 28px; border-right: 0.5px solid rgba(255,255,255,0.12); }
+  .cs-metric:last-child { border-right: none; }
+  @media (max-width: 760px) {
+    .cs-metric:nth-child(2n) { border-right: none; }
+    .cs-metric:nth-child(-n+2) { border-bottom: 0.5px solid rgba(255,255,255,0.12); }
+  }
+  @media (max-width: 480px) {
+    .cs-metric { border-right: none; border-bottom: 0.5px solid rgba(255,255,255,0.12); }
+    .cs-metric:last-child { border-bottom: none; }
+  }
+  .cs-metric-l { font-family: var(--mono); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,0.45); margin-bottom: 16px; }
+  .cs-metric-v { font-size: clamp(2.5rem, 5vw, 3.5rem); font-weight: var(--fw-medium); letter-spacing: -1.5px; line-height: 1; color: var(--white); }
+  .cs-metric.is-accent .cs-metric-v { color: var(--teal); }
+  .cs-metric-d { font-size: 13px; color: rgba(255,255,255,0.55); margin-top: 12px; line-height: 1.5; }
+  .cs-results-foot { margin-top: 48px; max-width: 580px; font-size: 1rem; line-height: 1.65; color: rgba(255,255,255,0.7); }
+
+  /* ── Testimonial ─────────────────────────────────────────── */
+  .cs-quote-block { padding: 0 16px; }
+  .cs-quote { font-size: clamp(1.5rem, 3vw, 2rem); font-weight: var(--fw-medium); letter-spacing: -0.5px; line-height: 1.35; color: var(--fg-1); position: relative; padding-left: 24px; border-left: 2px solid var(--teal); text-wrap: balance; }
+  .cs-attr  { margin-top: 28px; padding-left: 24px; display: flex; align-items: center; gap: 14px; }
+  .cs-attr-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--g100); display: flex; align-items: center; justify-content: center; font-family: var(--sans); font-weight: var(--fw-medium); font-size: 14px; color: var(--fg-2); border: 0.5px solid var(--border); flex-shrink: 0; }
+  .cs-attr-line1 { font-size: 14px; font-weight: var(--fw-medium); color: var(--fg-1); }
+  .cs-attr-line2 { font-family: var(--mono); font-size: 11px; color: var(--fg-muted); letter-spacing: 0.3px; margin-top: 2px; }
+
+  /* ── CTA ─────────────────────────────────────────────────── */
+  .cs-cta-section { text-align: center; }
+  .cs-cta-section .cs-eyebrow { justify-content: center; }
+  .cs-cta-section .cs-eyebrow::before { display: none; }
+  .cs-cta-section .cs-h2 { max-width: 640px; margin-left: auto; margin-right: auto; }
+  .cs-cta-sub { color: var(--fg-3); margin: 0 auto 36px; max-width: 480px; font-size: 1.05rem; line-height: 1.6; }
+  .cs-cta-btns { display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .cs-btn-primary,
+  .cs-btn-secondary { display: inline-flex; align-items: center; gap: 8px; padding: 14px 24px; border-radius: var(--r-md); font-size: 15px; font-weight: var(--fw-medium); text-decoration: none; transition: opacity var(--dur-quick) var(--ease), transform var(--dur-quick) var(--ease), background var(--dur-quick) var(--ease); border: 0.5px solid transparent; }
+  .cs-btn-primary   { background: var(--teal); color: var(--white); }
+  .cs-btn-primary:hover { background: var(--teal-deep); transform: translateY(-1px); }
+  .cs-btn-secondary { background: transparent; color: var(--fg-1); border-color: var(--border); }
+  .cs-btn-secondary:hover { background: var(--bg-subtle); }
+  .cs-btn-arrow { transition: transform var(--dur-quick) var(--ease); }
+  .cs-btn-primary:hover .cs-btn-arrow { transform: translateX(2px); }
+
+  /* ── Footer ──────────────────────────────────────────────── */
+  .cs-footer { padding: 32px 24px; border-top: 0.5px solid var(--border); }
+  .cs-footer-inner { max-width: 1080px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; font-family: var(--mono); font-size: 11px; color: var(--fg-faint); letter-spacing: 0.3px; }
+  .cs-footer-inner a { color: var(--fg-muted); text-decoration: none; }
+  .cs-footer-inner a:hover { color: var(--fg-1); }
+</style>
+</head>
+<body>
+
+<!-- ───── Top nav ───── -->
+<nav class="cs-nav">
+  <div class="cs-nav-inner">
+    <a href="/" class="cs-logo">
+      <svg width="26" height="26" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="'DM Sans',sans-serif" font-size="34" font-weight="700" fill="#fff">C</text></svg>
+      <span class="cs-logo-text">contextus</span>
+    </a>
+    <a href="/try" class="cs-nav-cta">Try it free →</a>
+  </div>
+</nav>
+
+<!-- ───── 01 · Hero ───── -->
+<header class="cs-hero">
+  <div class="cs-hero-shell">
+    <div class="cs-hero-grid">
+      <div>
+        <div class="cs-hero-eyebrow">
+          <span>Customer story</span>
+          <span class="cs-hero-eyebrow-sep">·</span>
+          <span>Tax &amp; bookkeeping consulting</span>
+          <span class="cs-hero-eyebrow-sep">·</span>
+          <span>Jakarta, Indonesia</span>
+        </div>
+        <h1>How Finfloo turned a sleeping WhatsApp admin into a <em>24/7 lead machine</em> — in one week.</h1>
+        <p class="cs-hero-sub">Finfloo is a Jakarta-based bookkeeping and tax consulting firm. Before Contextus, their only inbound channel was a WhatsApp admin limited to working hours. One week after going live, their AI agent never sleeps — and never misses an opportunity.</p>
+        <div class="cs-chips">
+          <div class="cs-chip"><strong>100+</strong> conversations / week 1</div>
+          <div class="cs-chip"><strong>10</strong> quality leads</div>
+          <div class="cs-chip"><strong>5</strong> meetings booked</div>
+          <div class="cs-chip"><strong>24/7</strong> availability</div>
+        </div>
+      </div>
+
+      <figure class="cs-shot" aria-label="Contextus widget live on finfloo.com">
+        <img src="finfloo-screenshot.png" alt="The contextus widget embedded on finfloo.com, showing three suggested-question pills next to the Finfloo hero." loading="eager" decoding="async">
+      </figure>
+    </div>
+  </div>
+</header>
+
+<!-- ───── 02 · About Finfloo ───── -->
+<section class="cs-section">
+  <div class="cs-shell">
+    <div class="cs-about-grid">
+      <div>
+        <div class="cs-eyebrow"><span class="cs-num">02</span><span>About the client</span></div>
+        <h2 class="cs-h2">Finfloo runs the books for Indonesia's small businesses.</h2>
+        <p class="cs-lead">Finfloo.com is a bookkeeping and tax consulting practice — #1 in their niche — serving individuals and SMBs across Indonesia with SPT filing, corporate tax, and financial report preparation.</p>
+      </div>
+      <div class="cs-facts">
+        <div class="cs-fact"><span class="cs-fact-l">Industry</span><span class="cs-fact-v">Bookkeeping &amp; tax consulting</span></div>
+        <div class="cs-fact"><span class="cs-fact-l">Headquarters</span><span class="cs-fact-v">Jakarta, Indonesia</span></div>
+        <div class="cs-fact"><span class="cs-fact-l">Market</span><span class="cs-fact-v">Individuals &amp; SMBs across Indonesia</span></div>
+        <div class="cs-fact"><span class="cs-fact-l">Services</span><span class="cs-fact-v">SPT filing, corporate tax, financial reporting</span></div>
+        <div class="cs-fact"><span class="cs-fact-l">Position</span><span class="cs-fact-v"><strong>#1</strong> in their niche</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───── 03 · Challenge ───── -->
+<section class="cs-section cs-challenge">
+  <div class="cs-shell cs-narrow">
+    <div class="cs-eyebrow"><span class="cs-num">03</span><span>The challenge</span></div>
+    <h2 class="cs-h2">Leads don't follow office hours.</h2>
+    <p class="cs-lead">Finfloo's only inbound channel was a single WhatsApp admin — fine during business hours, silent the rest of the time. Every evening inquiry was an opportunity already cooling.</p>
+  </div>
+  <div class="cs-shell" style="margin-top:48px">
+    <div class="cs-pains">
+      <div class="cs-pain">
+        <div class="cs-pain-n">01</div>
+        <div class="cs-pain-t">Single WhatsApp admin — available working hours only.</div>
+      </div>
+      <div class="cs-pain">
+        <div class="cs-pain-n">02</div>
+        <div class="cs-pain-t">Every staff turnover reset institutional knowledge.</div>
+      </div>
+      <div class="cs-pain">
+        <div class="cs-pain-n">03</div>
+        <div class="cs-pain-t">Evening and weekend inquiries went unanswered.</div>
+      </div>
+      <div class="cs-pain">
+        <div class="cs-pain-n">04</div>
+        <div class="cs-pain-t">No qualification — every chat needed a full human conversation before knowing if the lead was serious.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───── 04 · Solution ───── -->
+<section class="cs-section">
+  <div class="cs-shell cs-narrow">
+    <div class="cs-eyebrow"><span class="cs-num">04</span><span>The solution</span></div>
+    <h2 class="cs-h2">An AI agent that knows Finfloo's services — and <em>never logs off</em>.</h2>
+    <p class="cs-lead">One script tag. The widget reads finfloo.com on install, learns the services, and starts conversations the moment a visitor lands — in Bahasa or English, day or night.</p>
+
+    <div class="cs-steps">
+      <div class="cs-step">
+        <div class="cs-step-n">01</div>
+        <div>
+          <div class="cs-step-h">Install</div>
+          <div class="cs-step-d">Drop one script tag into finfloo.com. The widget crawls the site, ingests the services catalogue, and is live in minutes — no developers needed.</div>
+        </div>
+        <div class="cs-step-tag">≤ 5 min</div>
+      </div>
+      <div class="cs-step">
+        <div class="cs-step-n">02</div>
+        <div>
+          <div class="cs-step-h">Converse</div>
+          <div class="cs-step-d">Visitors ask in Bahasa or English. The agent answers in the same language, scoped to bookkeeping, tax filing, and financial reporting — Finfloo's actual service surface.</div>
+        </div>
+        <div class="cs-step-tag">24/7</div>
+      </div>
+      <div class="cs-step">
+        <div class="cs-step-n">03</div>
+        <div>
+          <div class="cs-step-h">Hand off</div>
+          <div class="cs-step-d">When a visitor is qualified, the agent collects contact details and produces a structured lead brief — so Finfloo's team only opens conversations that are already warm.</div>
+        </div>
+        <div class="cs-step-tag">Lead brief</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───── 05 · Prompt tuning ───── -->
+<section class="cs-section cs-challenge">
+  <div class="cs-shell cs-narrow">
+    <div class="cs-eyebrow"><span class="cs-num">05</span><span>Prompt tuning journey</span></div>
+    <h2 class="cs-h2">The first version worked. The tuned version <em>converted</em> — and earned trust.</h2>
+    <p class="cs-lead">Going live in a week is fast. Going live <span style="color:var(--fg-1);font-weight:500;">well</span> took three deliberate adjustments — each one small in word count, large in outcome.</p>
+  </div>
+
+  <div class="cs-shell">
+    <div class="cs-prompts">
+      <div class="cs-prompt">
+        <div class="cs-prompt-h">
+          <span class="cs-prompt-tag">v1</span>
+          <span class="cs-prompt-l">Before — generic, extractive</span>
+        </div>
+        <div class="cs-prompt-b">Hi! How can I help you today? We offer tax services for individuals and businesses. Feel free to ask anything.</div>
+      </div>
+      <div class="cs-prompt is-after">
+        <div class="cs-prompt-h">
+          <span class="cs-prompt-tag">v2</span>
+          <span class="cs-prompt-l">After — scoped, consultative, in language</span>
+        </div>
+        <div class="cs-prompt-b">Halo! Saya bantu konsultasi pajak dan pembukuan untuk pribadi dan bisnis di Finfloo. Lagi butuh bantuan untuk apa — SPT tahunan, laporan keuangan, atau pajak perusahaan? Saya akan bantu arahkan ke solusi yang paling sesuai kondisi Anda.</div>
+      </div>
+    </div>
+
+    <div class="cs-changes">
+      <div class="cs-change">
+        <div class="cs-change-i">01</div>
+        <div class="cs-change-h">Scoped to real services</div>
+        <div class="cs-change-d">Agent speaks only to bookkeeping, tax filing, and financial reporting — what Finfloo actually does. No vague "we do business stuff."</div>
+      </div>
+      <div class="cs-change">
+        <div class="cs-change-i">02</div>
+        <div class="cs-change-h">Empathic over extractive</div>
+        <div class="cs-change-d">Shifted from aggressively collecting visitor data to a consultative, domain-expert posture. The agent asks to understand, not to harvest — mirroring how a knowledgeable tax advisor would engage a new client.</div>
+      </div>
+      <div class="cs-change">
+        <div class="cs-change-i">03</div>
+        <div class="cs-change-h">Scam &amp; fraud guardrails</div>
+        <div class="cs-change-d">Detects and deflects social engineering, impersonation, and attempts to manipulate the agent — protecting Finfloo's reputation and visitor trust.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───── 06 · Results ───── -->
+<section class="cs-section cs-results">
+  <div class="cs-shell">
+    <div class="cs-eyebrow"><span class="cs-num">06</span><span>Results</span></div>
+    <h2 class="cs-h2">Week 1. Real numbers.</h2>
+
+    <div class="cs-results-grid">
+      <div class="cs-metric">
+        <div class="cs-metric-l">Total chats</div>
+        <div class="cs-metric-v">100<span style="font-size:0.6em;letter-spacing:-0.5px">+</span></div>
+        <div class="cs-metric-d">Conversations the WhatsApp admin would never have seen.</div>
+      </div>
+      <div class="cs-metric">
+        <div class="cs-metric-l">Quality leads</div>
+        <div class="cs-metric-v">10</div>
+        <div class="cs-metric-d">Visitors who met Finfloo's qualification bar.</div>
+      </div>
+      <div class="cs-metric is-accent">
+        <div class="cs-metric-l">Qualification rate</div>
+        <div class="cs-metric-v">10<span style="font-size:0.6em;letter-spacing:-0.5px">%</span></div>
+        <div class="cs-metric-d">Of every conversation, 1 in 10 is a real opportunity.</div>
+      </div>
+      <div class="cs-metric is-accent">
+        <div class="cs-metric-l">Meetings booked</div>
+        <div class="cs-metric-v">5</div>
+        <div class="cs-metric-d">In 7 days. From a channel that didn't exist the week before.</div>
+      </div>
+    </div>
+
+    <p class="cs-results-foot">A 10% qualification rate means Finfloo's team only picks up conversations that are already warm. <span style="color:var(--white)">5 meetings in 7 days</span> — from a channel that didn't exist the week before.</p>
+  </div>
+</section>
+
+<!-- ───── 07 · Testimonial ───── -->
+<section class="cs-section">
+  <div class="cs-shell cs-narrow">
+    <div class="cs-eyebrow"><span class="cs-num">07</span><span>In their words</span></div>
+    <div class="cs-quote-block">
+      <blockquote class="cs-quote">"With Contextus, we maximized every opportunity we want to catch. This AI agent really never sleeps to pursue inbound sales opportunity."</blockquote>
+      <div class="cs-attr">
+        <div class="cs-attr-avatar">AA</div>
+        <div>
+          <div class="cs-attr-line1">Arini Astari · Founder, Finfloo</div>
+          <div class="cs-attr-line2">finfloo.com · Jakarta</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───── 08 · CTA ───── -->
+<section class="cs-section cs-cta-section" id="cta">
+  <div class="cs-shell cs-narrow">
+    <div class="cs-eyebrow"><span class="cs-num">08</span><span>Your turn</span></div>
+    <h2 class="cs-h2">Ready to stop missing leads after hours?</h2>
+    <p class="cs-cta-sub">Contextus takes minutes to set up and starts qualifying leads from day one. No developers needed.</p>
+    <div class="cs-cta-btns">
+      <a href="/join" class="cs-btn-primary">Get early access <span class="cs-btn-arrow">→</span></a>
+      <a href="/#hiw" class="cs-btn-secondary">See how it works</a>
+    </div>
+  </div>
+</section>
+
+<footer class="cs-footer">
+  <div class="cs-footer-inner">
+    <span>© contextus 2026</span>
+    <a href="/finfloo">getcontextus.dev/finfloo</a>
+  </div>
+</footer>
+
+<script defer src="/_vercel/insights/script.js"></script>
+<script
+  src="/widget/floating.js"
+  data-contextus-id="landing-page"
+  data-greeting="Hi! 👋 Curious how contextus worked for Finfloo? Ask me anything."
+  data-badge="1"
+  data-position="bottom-right"
+  data-offset="20"
+  data-knowledge-base-id="demo"
+  async
+></script>
+</body>
+</html>
