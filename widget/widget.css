@@ -32,6 +32,7 @@ html.ctx-expanded .ctx-input-area {
 }
 
 #contextus-widget {
+  box-sizing: border-box;
   color-scheme: light;
   font-family: 'DM Sans', sans-serif;
   font-size: 15px;

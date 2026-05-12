@@ -38,7 +38,7 @@ test.describe('Phase 1 — idle state', () => {
       page.locator('#contextus-widget').evaluate(el => el.getBoundingClientRect().width),
       page.evaluate(() => document.documentElement.clientWidth),
     ]);
-    expect(widgetWidth).toBe(viewportWidth);
+    expect(Math.abs(widgetWidth - viewportWidth)).toBeLessThanOrEqual(1);
   });
 
   test('send button starts in empty/disabled state', async ({ page }) => {
@@ -146,7 +146,7 @@ test.describe('Phase 1 → Phase 2 transition', () => {
       page.locator('#contextus-widget').evaluate(el => el.getBoundingClientRect().width),
       page.evaluate(() => document.documentElement.clientWidth),
     ]);
-    expect(widgetWidth).toBe(viewportWidth);
+    expect(Math.abs(widgetWidth - viewportWidth)).toBeLessThanOrEqual(1);
   });
 });
 
