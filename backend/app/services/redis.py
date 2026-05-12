@@ -33,7 +33,10 @@ async def save_knowledge_base(
         from app.services.database import db_save_knowledge_base
 
         await db_save_knowledge_base(data)
-        await redis.set(kb_key(job_id), data.model_dump_json())
+        try:
+            await redis.set(kb_key(job_id), data.model_dump_json())
+        except Exception as e:
+            logger.warning("save_knowledge_base: Redis cache write failed (non-fatal): %s", e)
     else:
         await redis.set(kb_key(job_id), data.model_dump_json(), ex=ttl)
 
@@ -49,7 +52,10 @@ async def get_knowledge_base(job_id: str) -> KnowledgeBase | None:
                 job_id,
                 kb.status,
             )
-            await redis.set(kb_key(job_id), kb.model_dump_json())
+            try:
+                await redis.set(kb_key(job_id), kb.model_dump_json())
+            except Exception as cache_err:
+                logger.warning("get_knowledge_base: Redis cache write failed (non-fatal): %s", cache_err)
             return kb
     except Exception as e:
         logger.warning("Neon lookup failed, falling back to Redis: %s", e)

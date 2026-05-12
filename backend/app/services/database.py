@@ -161,6 +161,11 @@ async def db_get_knowledge_base(kb_id: str) -> KnowledgeBase | None:
             return KnowledgeBase.model_validate_json(row["data"])
     except Exception as e:
         logger.error("db_get_knowledge_base error: %s", e)
+        if _pool is not None:
+            try:
+                await _pool.close()
+            except Exception:
+                pass
         _pool = None
     return None
 

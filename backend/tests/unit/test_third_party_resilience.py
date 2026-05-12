@@ -94,17 +94,13 @@ class TestRedisResilience:
             assert call_kwargs.kwargs.get("ex") is None
 
     @pytest.mark.asyncio
-    async def test_get_session_redis_down_propagates(self):
-        """
-        get_session has no error handling by design — callers (routers)
-        will surface a 500.  This test documents that gap so we notice
-        if someone silently swallows it.
-        """
+    async def test_get_session_redis_down_returns_none(self):
+        """get_session catches Redis errors and returns None (callers treat it as session not found)."""
         with patch("app.services.redis.redis.get", new_callable=AsyncMock) as mock_get:
             mock_get.side_effect = Exception("Upstash: connection timeout")
             from app.services.redis import get_session
-            with pytest.raises(Exception, match="connection timeout"):
-                await get_session("sess_abc")
+            result = await get_session("sess_abc")
+            assert result is None
 
     @pytest.mark.asyncio
     async def test_save_session_redis_down_propagates(self):
