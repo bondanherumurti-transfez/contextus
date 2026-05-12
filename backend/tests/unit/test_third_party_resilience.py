@@ -58,6 +58,42 @@ class TestRedisResilience:
             assert result.job_id == "job_abc"
 
     @pytest.mark.asyncio
+    async def test_get_knowledge_base_neon_success_warms_redis(self):
+        """Successful Neon read → Redis is written with no TTL (permanent cache)."""
+        import time as _time
+        from app.models import KnowledgeBase
+        kb = KnowledgeBase(
+            job_id="continuum-id", status="complete", created_at=int(_time.time()), chunks=[]
+        )
+        with patch("app.services.database.db_get_knowledge_base", new_callable=AsyncMock) as mock_db, \
+             patch("app.services.redis.redis.set", new_callable=AsyncMock) as mock_set:
+            mock_db.return_value = kb
+            from app.services.redis import get_knowledge_base
+            result = await get_knowledge_base("continuum-id")
+            assert result is not None
+            mock_set.assert_called_once()
+            call_kwargs = mock_set.call_args
+            # no TTL — ex must be absent or None
+            assert call_kwargs.kwargs.get("ex") is None
+
+    @pytest.mark.asyncio
+    async def test_save_knowledge_base_permanent_writes_to_redis(self):
+        """save_knowledge_base(permanent=True) writes to both Neon and Redis with no TTL."""
+        import time as _time
+        from app.models import KnowledgeBase
+        kb = KnowledgeBase(
+            job_id="continuum-id", status="complete", created_at=int(_time.time()), chunks=[]
+        )
+        with patch("app.services.database.db_save_knowledge_base", new_callable=AsyncMock) as mock_db, \
+             patch("app.services.redis.redis.set", new_callable=AsyncMock) as mock_set:
+            from app.services.redis import save_knowledge_base
+            await save_knowledge_base("continuum-id", kb, permanent=True)
+            mock_db.assert_called_once()
+            mock_set.assert_called_once()
+            call_kwargs = mock_set.call_args
+            assert call_kwargs.kwargs.get("ex") is None
+
+    @pytest.mark.asyncio
     async def test_get_session_redis_down_propagates(self):
         """
         get_session has no error handling by design — callers (routers)
@@ -137,6 +173,19 @@ class TestNeonResilience:
             from app.services.database import db_get_knowledge_base
             result = await db_get_knowledge_base("kb_abc")
             assert result is None
+
+    @pytest.mark.asyncio
+    async def test_db_get_knowledge_base_resets_pool_on_error(self):
+        """Pool error → _pool is reset to None so next call gets a fresh pool."""
+        import app.services.database as db_module
+        with patch("app.services.database.get_pool", new_callable=AsyncMock) as mock_pool, \
+             patch("app.services.database.DATABASE_URL", "postgresql://fake"):
+            mock_pool.side_effect = Exception("Neon: SSL connection closed unexpectedly")
+            db_module._pool = object()  # simulate a stale non-None pool
+            from app.services.database import db_get_knowledge_base
+            result = await db_get_knowledge_base("continuum-id")
+            assert result is None
+            assert db_module._pool is None
 
     @pytest.mark.asyncio
     async def test_neon_schema_change_returns_none(self):

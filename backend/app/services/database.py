@@ -148,6 +148,7 @@ async def db_save_knowledge_base(kb: KnowledgeBase) -> None:
 
 
 async def db_get_knowledge_base(kb_id: str) -> KnowledgeBase | None:
+    global _pool
     if not DATABASE_URL:
         return None
     try:
@@ -160,6 +161,7 @@ async def db_get_knowledge_base(kb_id: str) -> KnowledgeBase | None:
             return KnowledgeBase.model_validate_json(row["data"])
     except Exception as e:
         logger.error("db_get_knowledge_base error: %s", e)
+        _pool = None
     return None
 
 

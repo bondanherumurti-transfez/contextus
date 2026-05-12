@@ -33,6 +33,7 @@ async def save_knowledge_base(
         from app.services.database import db_save_knowledge_base
 
         await db_save_knowledge_base(data)
+        await redis.set(kb_key(job_id), data.model_dump_json())
     else:
         await redis.set(kb_key(job_id), data.model_dump_json(), ex=ttl)
 
@@ -48,6 +49,7 @@ async def get_knowledge_base(job_id: str) -> KnowledgeBase | None:
                 job_id,
                 kb.status,
             )
+            await redis.set(kb_key(job_id), kb.model_dump_json())
             return kb
     except Exception as e:
         logger.warning("Neon lookup failed, falling back to Redis: %s", e)
