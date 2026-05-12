@@ -32,16 +32,23 @@ def extract_json(text: str) -> dict:
         raise
 
 
-client = AsyncOpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("OPENROUTER_API_KEY", ""),
-    timeout=60.0,
-    max_retries=3,
-    default_headers={
-        "HTTP-Referer": os.getenv("SITE_URL", "http://localhost:8000"),
-        "X-OpenRouter-Title": "contextus",
-    },
-)
+client: AsyncOpenAI | None = None
+
+
+def _get_client() -> AsyncOpenAI:
+    global client
+    if client is None:
+        client = AsyncOpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=os.getenv("OPENROUTER_API_KEY", ""),
+            timeout=60.0,
+            max_retries=3,
+            default_headers={
+                "HTTP-Referer": os.getenv("SITE_URL", "http://localhost:8000"),
+                "X-OpenRouter-Title": "contextus",
+            },
+        )
+    return client
 
 MODEL_PROFILE = os.getenv("MODEL_PROFILE", "anthropic/claude-3-haiku")
 MODEL_CHAT = os.getenv("MODEL_CHAT", "anthropic/claude-sonnet-4")
@@ -241,7 +248,7 @@ async def _call_profile_model(
         if lang_hint:
             user_content = f"NOTE: Generate all pill_suggestions in '{lang_hint}' language.\n\n" + user_content
 
-        response = await client.chat.completions.create(
+        response = await _get_client().chat.completions.create(
             model=MODEL_PROFILE,
             messages=[
                 {"role": "system", "content": PROFILE_SYSTEM_PROMPT},
@@ -343,7 +350,7 @@ async def stream_chat_response(
             chat_messages.append({"role": msg["role"], "content": msg["content"]})
         chat_messages.append({"role": "user", "content": user_message})
 
-        stream = await client.chat.completions.create(
+        stream = await _get_client().chat.completions.create(
             model=MODEL_CHAT, messages=chat_messages, stream=True, temperature=0.4
         )
 
@@ -366,7 +373,7 @@ async def generate_lead_brief(session: Session) -> LeadBrief:
             [f"{msg.role.upper()}: {msg.text}" for msg in session.messages]
         )
 
-        response = await client.chat.completions.create(
+        response = await _get_client().chat.completions.create(
             model=MODEL_BRIEF,
             messages=[
                 {"role": "system", "content": BRIEF_SYSTEM_PROMPT},
@@ -481,7 +488,7 @@ Then on a new line append exactly this token (do not explain it): WAITLIST_COMPL
 
 
 async def extract_waitlist_context(transcript: str) -> dict:
-    response = await client.chat.completions.create(
+    response = await _get_client().chat.completions.create(
         model=MODEL_PROFILE,
         messages=[
             {
