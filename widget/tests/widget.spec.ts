@@ -32,12 +32,13 @@ test.describe('Phase 1 — idle state', () => {
     expect(hasExpanded).toBe(false);
   });
 
-  test('widget max-width is at most 600px', async ({ page }) => {
+  test('widget fills 100% of iframe width (no max-width cap)', async ({ page }) => {
     await page.goto(WIDGET_URL);
-    const width = await page.locator('#contextus-widget').evaluate(el =>
-      el.getBoundingClientRect().width
-    );
-    expect(width).toBeLessThanOrEqual(600);
+    const [widgetWidth, viewportWidth] = await Promise.all([
+      page.locator('#contextus-widget').evaluate(el => el.getBoundingClientRect().width),
+      page.evaluate(() => document.documentElement.clientWidth),
+    ]);
+    expect(widgetWidth).toBe(viewportWidth);
   });
 
   test('send button starts in empty/disabled state', async ({ page }) => {
@@ -132,7 +133,7 @@ test.describe('Phase 1 → Phase 2 transition', () => {
     await expect(page.locator('.ctx-input')).toHaveValue('');
   });
 
-  test('max-width is preserved (≤600px) after expansion', async ({ page }) => {
+  test('100% width is preserved after expansion', async ({ page }) => {
     await mockChat(page);
     await page.goto(WIDGET_URL);
 
@@ -141,10 +142,11 @@ test.describe('Phase 1 → Phase 2 transition', () => {
 
     await expect(page.locator('html')).toHaveClass(/ctx-expanded/);
 
-    const width = await page.locator('#contextus-widget').evaluate(el =>
-      el.getBoundingClientRect().width
-    );
-    expect(width).toBeLessThanOrEqual(600);
+    const [widgetWidth, viewportWidth] = await Promise.all([
+      page.locator('#contextus-widget').evaluate(el => el.getBoundingClientRect().width),
+      page.evaluate(() => document.documentElement.clientWidth),
+    ]);
+    expect(widgetWidth).toBe(viewportWidth);
   });
 });
 
